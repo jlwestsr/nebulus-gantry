@@ -106,6 +106,10 @@ const Nebulus = {
                     </div>
 
                     <div class="sidebar-section">
+                         <div class="nav-item" onclick="window.location.href='/notes'">
+                            <div class="nav-icon">${Nebulus.Icons.fileText}</div>
+                            <span class="nav-label">Notes</span>
+                        </div>
                          <div class="nav-item" onclick="window.location.href='/workspace'">
                             <div class="nav-icon">${Nebulus.Icons.grid}</div>
                             <span class="nav-label">Manage Workspaces</span>
