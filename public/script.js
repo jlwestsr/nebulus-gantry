@@ -21,11 +21,11 @@ const Nebulus = {
         this.Theme.init();
         this.Sidebar.init();
         this.Search.init();
+        this.Models.init();
 
         // Chat-specific modules
         if (this.Utils.isChatPage()) {
             this.Chat.init();
-            this.Models.init();
             this.Dashboard.checkAndInject();
         }
 
