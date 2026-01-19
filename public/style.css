@@ -804,7 +804,7 @@ textarea.note-content {
 
 #model-toast {
     visibility: hidden;
-    min-width: 250px;
+    min-width: 120px;
     background-color: var(--bg-secondary);
     color: var(--text-primary);
     text-align: center;
