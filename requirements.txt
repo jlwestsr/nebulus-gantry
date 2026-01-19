@@ -8,3 +8,4 @@ docker
 pypdf
 flake8
 pytest
+httpx

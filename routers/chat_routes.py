@@ -104,7 +104,7 @@ async def delete_chat(chat_id: str, user=Depends(get_current_user), db=Depends(g
 @router.delete("/chats")
 async def delete_all_chats(user=Depends(get_current_user), db=Depends(get_db)):
     try:
-        from gantry.chat import delete_all_chats_for_user_db
+        from chat import delete_all_chats_for_user_db
 
         delete_all_chats_for_user_db(user.id, db)
         db.commit()

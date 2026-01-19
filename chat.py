@@ -615,6 +615,7 @@ async def generate_ai_response(chat_id, context_messages, settings, user_id):
     await msg.send()
 
     full_response = ""
+    full_usage = None  # Initialized here
     try:
         stream = await client.chat.completions.create(
             messages=context_messages,
@@ -623,7 +624,6 @@ async def generate_ai_response(chat_id, context_messages, settings, user_id):
             **completion_settings,
         )
 
-        full_usage = None
         async for part in stream:
             # Handle usage data if present
             if hasattr(part, "usage") and part.usage:

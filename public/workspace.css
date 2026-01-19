@@ -1,4 +1,10 @@
 /* Workspace specific styles */
+#workspace-app {
+    height: 100vh;
+    overflow-y: auto;
+    padding-bottom: 50px;
+}
+
 
 .workspace-stacked {
     display: flex;
