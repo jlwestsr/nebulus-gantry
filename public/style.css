@@ -1354,14 +1354,38 @@ button:has(svg.lucide-moon) {
 }
 
 /* Extracted Utilities & Notes Styles */
-.hidden { display: none !important; }
-.flex { display: flex; }
-.flex-1 { flex: 1; }
-.flex-center { align-items: center; justify-content: center; }
-.text-center { text-align: center; }
-.mb-2 { margin-bottom: 0.5rem; }
-.mb-3 { margin-bottom: 0.75rem; }
-.gap-2 { gap: 0.5rem; }
+.hidden {
+    display: none !important;
+}
+
+.flex {
+    display: flex;
+}
+
+.flex-1 {
+    flex: 1;
+}
+
+.flex-center {
+    align-items: center;
+    justify-content: center;
+}
+
+.text-center {
+    text-align: center;
+}
+
+.mb-2 {
+    margin-bottom: 0.5rem;
+}
+
+.mb-3 {
+    margin-bottom: 0.75rem;
+}
+
+.gap-2 {
+    gap: 0.5rem;
+}
 
 .loading-notes {
     padding: 10px;
@@ -1398,9 +1422,79 @@ button:has(svg.lucide-moon) {
     justify-content: center;
     color: var(--text-secondary);
     display: flex;
-    height: 100%; /* Ensure it takes full height of parent */
+    height: 100%;
+    /* Ensure it takes full height of parent */
 }
 
 /* Extracted JS Styles */
-.font-medium { font-weight: 500; }
-.pl-5 { padding-left: 20px; }
+.font-medium {
+    font-weight: 500;
+}
+
+.pl-5 {
+    padding-left: 20px;
+}
+
+/* Button System */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+    outline: none;
+    line-height: 1.2;
+}
+
+.btn-sm {
+    padding: 4px 10px;
+    font-size: 0.8rem;
+}
+
+.btn-primary {
+    background-color: var(--accent-color);
+    color: #ffffff;
+    border-color: var(--accent-color);
+}
+
+.btn-primary:hover {
+    background-color: #d00051;
+    /* Darker shade of accent */
+    border-color: #d00051;
+}
+
+.btn-secondary {
+    background-color: transparent;
+    color: var(--text-primary);
+    border-color: var(--border-color);
+}
+
+.btn-secondary:hover {
+    background-color: var(--bg-hover);
+    border-color: var(--text-secondary);
+}
+
+.btn-danger {
+    background-color: #dc2626;
+    color: #ffffff;
+    border-color: #dc2626;
+}
+
+.btn-danger:hover {
+    background-color: #b91c1c;
+    border-color: #b91c1c;
+}
+
+/* Additional Utilities */
+.ml-1 {
+    margin-left: 0.25rem;
+}
+
+.text-accent {
+    color: var(--accent-color);
+}
