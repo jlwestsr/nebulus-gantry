@@ -70,6 +70,10 @@ body.sidebar-collapsed {
     box-sizing: border-box;
 }
 
+#nebulus-sidebar * {
+    box-sizing: border-box;
+}
+
 body.sidebar-collapsed #nebulus-sidebar {
     width: var(--sidebar-collapsed-width);
 }
@@ -78,7 +82,7 @@ body.sidebar-collapsed #nebulus-sidebar {
 .sidebar-header {
     display: flex;
     align-items: center;
-    padding: 10px;
+    padding: 0 10px;
     margin-bottom: 20px;
     height: 50px;
     overflow: hidden;
