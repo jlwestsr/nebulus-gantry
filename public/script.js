@@ -158,26 +158,7 @@ const Nebulus = {
                         </div>
                     </div>
 
-                    <div class="suggestions-grid">
-                        <div class="suggestion-pill" onclick="Nebulus.Chat.setInput('Create image')">
-                            <span class="emoji">🎨</span> Create image
-                        </div>
-                        <div class="suggestion-pill" onclick="Nebulus.Chat.setInput('Create video')">
-                            <span class="emoji">🎥</span> Create video
-                        </div>
-                        <div class="suggestion-pill" onclick="Nebulus.Chat.setInput('Write anything')">
-                            <span class="emoji">✍️</span> Write anything
-                        </div>
-                        <div class="suggestion-pill" onclick="Nebulus.Chat.setInput('Help me learn')">
-                            <span class="emoji">🎓</span> Help me learn
-                        </div>
-                         <div class="suggestion-pill" onclick="Nebulus.Chat.setInput('Boost my day')">
-                            <span class="emoji">🚀</span> Boost my day
-                        </div>
-                         <div class="suggestion-pill" onclick="Nebulus.Chat.setInput('Stay organized')">
-                            <span class="emoji">📅</span> Stay organized
-                        </div>
-                    </div>
+
                 </div>
             </div>
         `,
