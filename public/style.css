@@ -1061,31 +1061,7 @@ div:has(> #model-data) {
 }
 
 /* Toast */
-#model-toast {
-    visibility: hidden;
-    min-width: 250px;
-    margin-left: -125px;
-    background-color: var(--bg-secondary);
-    color: var(--text-primary);
-    text-align: center;
-    border-radius: 8px;
-    padding: 16px;
-    position: fixed;
-    z-index: 10000;
-    left: 50%;
-    top: 30px;
-    font-size: 16px;
-    box-shadow: 0 4px 12px var(--shadow-color);
-    opacity: 0;
-    transition: opacity 0.3s, top 0.3s;
-    border: 1px solid var(--border-color);
-}
 
-#model-toast.show {
-    visibility: visible;
-    opacity: 1;
-    top: 50px;
-}
 
 /* Collapsible Category Headers - Features/25_notes_system */
 .category-header {
