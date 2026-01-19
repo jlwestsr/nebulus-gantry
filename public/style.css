@@ -67,6 +67,7 @@ body.sidebar-collapsed {
     padding: 10px;
     transition: width 0.3s ease, background-color 0.3s ease;
     overflow: hidden;
+    box-sizing: border-box;
 }
 
 body.sidebar-collapsed #nebulus-sidebar {
