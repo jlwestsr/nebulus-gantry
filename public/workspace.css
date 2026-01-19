@@ -13,14 +13,10 @@
     padding: 20px;
     max-width: 800px;
     margin: 0 auto;
-    /* Centering logic: relative to window, accounting for 260px sidebar */
-    position: relative;
-    left: -130px;
 }
 
 header {
-    position: relative;
-    left: -130px;
+    /* Standard positioning */
 }
 
 .subtitle {
