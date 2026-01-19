@@ -1,0 +1,16 @@
+services:
+  app:
+    build: .
+    container_name: gantry-standalone
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+      - /var/run/docker.sock:/var/run/docker.sock # Temporarily kept for sandbox.py
+    environment:
+      - OLLAMA_HOST=${OLLAMA_HOST:-http://host.docker.internal:11434}
+      - CHROMA_HOST=${CHROMA_HOST:-http://host.docker.internal:8000}
+      - CHAINLIT_AUTH_SECRET=${CHAINLIT_AUTH_SECRET:-dev-secret}
+      - DB_PATH=${DB_PATH:-sqlite:///./data/gantry.db}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
