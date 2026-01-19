@@ -16,4 +16,3 @@ def test_read_workspace_page(client):
     response = client.get("/workspace")
     assert response.status_code == 200
     assert "Nebulus - Workspace" in response.text
-
