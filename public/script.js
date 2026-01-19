@@ -801,8 +801,9 @@ const Nebulus = {
                     }
 
                     // Toast
+                    // Toast - Suppressed on initial load as per user request
                     if (hiddenDiv.getAttribute('data-shown') !== 'true') {
-                        Nebulus.Utils.showToast(`Model switched to ${modelName}`);
+                        // Nebulus.Utils.showToast(`Model switched to ${modelName}`); // Disabled
                         hiddenDiv.setAttribute('data-shown', 'true');
                     }
                 }
