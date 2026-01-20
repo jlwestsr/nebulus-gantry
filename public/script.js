@@ -672,24 +672,24 @@ const Nebulus = {
         setInput: function (text) {
             const textarea = document.querySelector('#chat-input, textarea');
             if (textarea) {
+                // Set value using React-compatible setter
                 const nativeTextAreaValueSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value").set;
                 nativeTextAreaValueSetter.call(textarea, text);
                 textarea.dispatchEvent(new Event('input', { bubbles: true }));
                 textarea.focus();
+
                 if (Nebulus.Dashboard) Nebulus.Dashboard.hide();
 
-                // Ensure dashboard is hidden (Safety Net)
-                if (Nebulus.Dashboard) Nebulus.Dashboard.hide();
-
+                // Small delay to allow React state to update / button to enable
                 setTimeout(() => {
-                    const event = new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', which: 13, keyCode: 13, bubbles: true, cancelable: true });
-                    textarea.dispatchEvent(event);
-                    setTimeout(() => {
-                        if (textarea.value === text) {
-                            const sendBtn = document.getElementById('chat-submit');
-                            if (sendBtn) sendBtn.click();
-                        }
-                    }, 200);
+                    const sendBtn = document.getElementById('chat-submit');
+                    if (sendBtn) {
+                        sendBtn.click();
+                    } else {
+                        // Fallback to Enter key if button not found
+                        const event = new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', which: 13, keyCode: 13, bubbles: true, cancelable: true });
+                        textarea.dispatchEvent(event);
+                    }
                 }, 100);
             }
         }
