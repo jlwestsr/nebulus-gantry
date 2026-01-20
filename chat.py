@@ -9,6 +9,7 @@ from exec.sandbox import run_code_in_sandbox
 from metrics.usage import log_usage
 import re
 from pypdf import PdfReader
+from services.entity_extractor import extract_entities
 
 # Configure Ollama client
 client = AsyncOpenAI(
@@ -78,7 +79,7 @@ def get_chat_history_db(chat_id, limit=20):
         return sorted(messages, key=lambda m: m.created_at)
 
 
-def save_user_message_db(chat_id, content, message_id):
+def save_user_message_db(chat_id, content, message_id, entities=None):
     with db_session() as db:
         # Check for existing message (Upsert for Edit)
         existing_msg = db.query(Message).filter(Message.cl_id == message_id).first()
@@ -86,11 +87,9 @@ def save_user_message_db(chat_id, content, message_id):
             # If content changed, it's an EDIT
             if existing_msg.content != content:
                 existing_msg.content = content
-                # Truncate history AFTER this message (Call helper directly if session permits or just inline if needed)
-                # But truncate_chat_after_db opens its own session.
-                # To avoid nested sessions, let's just do it here or refactor.
-                # Actually, truncate_chat_after_db is safe to call inside another session IF we refactor it to accept a db instance.
-                # For now, let's just do the logic here.
+                if entities:
+                    existing_msg.entities = entities
+                # Truncate history AFTER this message
                 target = existing_msg
                 db.query(Message).filter(Message.chat_id == chat_id).filter(
                     Message.created_at > target.created_at
@@ -102,6 +101,7 @@ def save_user_message_db(chat_id, content, message_id):
             author="user",
             content=content,
             cl_id=message_id,
+            entities=entities
         )
         db.add(user_msg)
 
@@ -521,8 +521,16 @@ async def main(message: cl.Message):
     if await handle_model_command(message, settings):
         return
 
+
+    # Extract Entities (Async)
+    entities = {}
+    try:
+        entities = await extract_entities(message.content)
+    except Exception as e:
+        print(f"Extraction failed: {e}")
+
     # Persist User Message (Async)
-    await cl.make_async(save_user_message_db)(chat_id, message.content, message.id)
+    await cl.make_async(save_user_message_db)(chat_id, message.content, message.id, entities)
 
     completion_settings = settings.copy()
     friendly_name = settings["model"]

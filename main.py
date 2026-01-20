@@ -3,7 +3,7 @@ from chainlit.utils import mount_chainlit
 from database import init_db, migrate_db, UsageLog, get_db
 from starlette.middleware import Middleware
 from middleware import AuthMiddleware
-from routers import auth_routes, chat_routes, notes_routes, workspace_routes
+from routers import auth_routes, chat_routes, notes_routes, workspace_routes, ltm_routes
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 import os
@@ -130,10 +130,14 @@ async def workspace_page():
 
 
 # Include routers
+from routers import auth_routes, chat_routes, notes_routes, workspace_routes, ltm_routes
+# ...
+# Include routers
 app.include_router(auth_routes.router)
 app.include_router(chat_routes.router)
 app.include_router(notes_routes.router)
 app.include_router(workspace_routes.router)
+app.include_router(ltm_routes.router)
 
 
 # Initialize Database on startup

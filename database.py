@@ -2,6 +2,7 @@ import os
 from contextlib import contextmanager
 from sqlalchemy import (
     create_engine,
+    JSON,
     Column,
     Integer,
     String,
@@ -12,6 +13,7 @@ from sqlalchemy import (
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 from datetime import datetime
+import json
 
 # Database Setup
 DB_PATH = os.getenv("DB_PATH", "sqlite:///./data/gantry.db")
@@ -69,6 +71,7 @@ class Chat(Base):
     user_id = Column(Integer, ForeignKey("users.id"))
     folder_id = Column(Integer, ForeignKey("folders.id"), nullable=True)
     title = Column(String, nullable=True)
+    metadata_json = Column(JSON, nullable=True)  # Store thread metadata
     created_at = Column(DateTime, default=datetime.utcnow)
 
     user = relationship("User", back_populates="chats")
@@ -86,6 +89,7 @@ class Message(Base):
     chat_id = Column(String, ForeignKey("chats.id"))
     author = Column(String)  # User or Assistant
     content = Column(String)
+    entities = Column(JSON, nullable=True)  # Store extracted entities
     created_at = Column(DateTime, default=datetime.utcnow)
 
     chat = relationship("Chat", back_populates="messages")
@@ -184,4 +188,16 @@ def migrate_db():
         except Exception as e:
             # cl_id likely exists or other error
             print(f"Migration cl_id check: {e}")
+            pass
+
+        try:
+            conn.execute(text("ALTER TABLE chats ADD COLUMN metadata_json JSON"))
+            print("Migration: Added metadata_json column to chats.")
+        except Exception:
+            pass            
+
+        try:
+            conn.execute(text("ALTER TABLE messages ADD COLUMN entities JSON"))
+            print("Migration: Added entities column to messages.")
+        except Exception:
             pass
