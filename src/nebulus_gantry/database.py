@@ -30,7 +30,11 @@ class Note(Base):
     content = Column(String, default="")
     category = Column(String, default="Uncategorized", nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
-    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    updated_at = Column(
+        DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc)
+    )
 
     user = relationship("User", back_populates="notes")
 

@@ -12,11 +12,11 @@ from nebulus_gantry.metrics.usage import log_usage
 import re
 from pypdf import PdfReader
 from nebulus_gantry.services.entity_extractor import extract_entities
-from nebulus_gantry.auth import verify_token, get_user, SECRET_KEY
+from nebulus_gantry.auth import verify_token, get_user
 
 # Configure Ollama client
 client = AsyncOpenAI(
-    base_url=os.getenv("OLLAMA_HOST", "http://localhost:11435") + "/v1",
+    base_url=os.getenv("OLLAMA_HOST", "http://host.docker.internal:11435") + "/v1",
     api_key="ollama",  # required but unused
 )
 
@@ -55,7 +55,6 @@ def update_model_setting_db(user_id, new_model):
             user.current_model = new_model
 
 
-
 def sync_model_from_db_helper(user_id):
     if not user_id:
         return None
@@ -79,7 +78,7 @@ def get_chat_history_db(chat_id, limit=20):
         return sorted(messages, key=lambda m: m.created_at)
 
 
-def save_user_message_db(chat_id, content, message_id, entities=None):
+def save_user_message_db(chat_id, content, message_id, entities=None, user_id=None):
     with db_session() as db:
         # Check for existing message (Upsert for Edit)
         existing_msg = db.query(Message).filter(Message.cl_id == message_id).first()
@@ -96,6 +95,19 @@ def save_user_message_db(chat_id, content, message_id, entities=None):
                 ).delete()
             return
 
+        # Check if Chat exists, if not create it (Lazy Init)
+        chat = db.query(Chat).filter(Chat.id == chat_id).first()
+        if not chat:
+            if user_id:
+                # Create the chat now since we have a message
+                new_chat = Chat(id=chat_id, user_id=user_id, title="New Chat")
+                db.add(new_chat)
+                db.flush()  # Ensure it exists for FK
+            else:
+                # Fallback or error logging if needed, but for now we proceed
+                # This might raise IntegrityError if FK constraint is strict
+                print(f"Warning: Attempting to save message for non-existent chat {chat_id} without user_id")
+
         user_msg = Message(
             chat_id=chat_id,
             author="user",
@@ -105,9 +117,11 @@ def save_user_message_db(chat_id, content, message_id, entities=None):
         )
         db.add(user_msg)
 
+        # Update title if it's the first message
         chat = db.query(Chat).filter(Chat.id == chat_id).first()
         if chat and chat.title == "New Chat":
-            chat.title = (content[:30] + "..") if len(content) > 30 else content
+            title_candidate = content[:30] + ".." if len(content) > 30 else content
+            chat.title = title_candidate
             db.add(chat)
 
 
@@ -274,7 +288,7 @@ def header_auth_callback(headers: dict) -> Optional[cl.User]:
     This populates cl.user and allows proper session initialization.
     """
     import http.cookies
-    
+
     # 1. Try to get standard "cookie" header
     cookie_str = headers.get("cookie") or headers.get("Cookie")
 
@@ -290,7 +304,7 @@ def header_auth_callback(headers: dict) -> Optional[cl.User]:
                     token = token.replace("Bearer ", "")
                 # remove optional quotes if present
                 token = token.strip('"')
-        except Exception as e:
+        except Exception:
             # Error parsing cookies
             pass
 
@@ -298,37 +312,32 @@ def header_auth_callback(headers: dict) -> Optional[cl.User]:
         username = verify_token(token)
         if username:
             return cl.User(identifier=username, metadata={"username": username})
-            
+
     # If no token, return None (Authentication failed)
     return None
 
 
 @cl.on_chat_start
 async def start():
-    chat_id = cl.user_session.get("id")
-
     # --- Authentication Logic ---
     user_id = 1
-    
+
     user = cl.user_session.get("user")
     if user:
         username = user.identifier
+
         # Resolve ID from DB
         def get_user_id_sync(uname):
             with db_session() as db:
-                 u = get_user(db, uname)
-                 return u.id if u else None
+                u = get_user(db, uname)
+                return u.id if u else None
 
         resolved_id = await cl.make_async(get_user_id_sync)(username)
         if resolved_id:
             user_id = resolved_id
-        else:
-            pass
-    else:
-        pass
 
     # Async DB Call
-    await cl.make_async(initialize_chat_db)(chat_id, user_id)
+    # Async DB Call
 
     # Fetch available models from Ollama
     try:
@@ -499,7 +508,8 @@ async def handle_attachments_and_vision(
         # Notify user of switch and trigger UI update via hidden div
         await cl.Message(
             author="System",
-            content="Switched to Llama 3.2 Vision for image analysis.<div id='model-data' data-model='Llama 3.2 Vision' style='display: none;'></div>",
+            content="Switched to Llama 3.2 Vision for image analysis."
+            "<div id='model-data' data-model='Llama 3.2 Vision' style='display: none;'></div>",
         ).send()
 
     return combined_content, images
@@ -539,7 +549,8 @@ async def handle_clear_all_command(message: cl.Message, user_id: int):
     # UI Feedback
     await message.remove()
     await cl.Message(
-        content=f"✅ Cleared {count} chats from history. Please refresh the page to see changes.<div id='bulk-delete-success-marker' style='display: none;'></div>"
+        content=f"✅ Cleared {count} chats from history. Please refresh the page to see changes."
+        f"<div id='bulk-delete-success-marker' style='display: none;'></div>"
     ).send()
 
     # Log action
@@ -583,7 +594,7 @@ async def main(message: cl.Message):
         print(f"Extraction failed: {e}")
 
     # Persist User Message (Async)
-    await cl.make_async(save_user_message_db)(chat_id, message.content, message.id, entities)
+    await cl.make_async(save_user_message_db)(chat_id, message.content, message.id, entities, user_id)
 
     completion_settings = settings.copy()
     friendly_name = settings["model"]

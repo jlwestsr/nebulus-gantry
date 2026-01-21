@@ -21,7 +21,8 @@ html.dark {
     --bg-primary: #0d1117;
     --bg-secondary: #161b22;
     --bg-hover: #1f242c;
-    --text-primary: #e6edf3;
+    --text-primary: #ffffff;
+    /* Pure White */
     --text-secondary: #7d8590;
     --border-color: #30363d;
     --shadow-color: rgba(0, 0, 0, 0.5);
@@ -70,100 +71,137 @@ body.sidebar-collapsed {
     box-sizing: border-box;
 }
 
+/* Sidebar Collapse Behavior */
+/* Sidebar Collapse Behavior */
 body.sidebar-collapsed #nebulus-sidebar {
     width: var(--sidebar-collapsed-width);
+    padding: 10px 0;
+    /* Remove horizontal padding to center icons */
 }
 
-/* Logo Area */
-.sidebar-header {
-    display: flex;
-    align-items: center;
-    padding: 10px;
-    margin-bottom: 20px;
-    height: 50px;
-    overflow: hidden;
-}
-
-.logo-text {
-    color: var(--text-primary);
-    font-size: 1.0rem;
-    /* Reduced from 1.1rem */
-    font-weight: 600;
-    white-space: nowrap;
-    opacity: 1;
-    transition: opacity 0.2s;
-}
-
+/* Logo: Hide text, keep icon */
 body.sidebar-collapsed .logo-text {
-    opacity: 0;
-    pointer-events: none;
+    display: none !important;
 }
 
-/* Navigation Items */
-.sidebar-logo-img {
-    height: 32px;
-    width: auto;
-    margin-right: 12px;
-    display: block;
-    opacity: 1;
-    transition: opacity 0.2s, width 0.3s;
+/* Ensure toggle button remains visible and positioned naturally */
+/* Ensure toggle button remains visible and positioned naturally */
+body.sidebar-collapsed .toggle-btn {
+    display: block !important;
+    position: static !important;
+    transform: none !important;
+    margin: 15px 0 0 0;
+    color: white !important;
+    /* Force White */
+    display: flex !important;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+}
+
+body.sidebar-collapsed .sidebar-header {
+    justify-content: center;
+    align-items: center;
+    /* Ensure horizontal center */
+    padding: 0;
+    flex-direction: column;
+    height: auto;
+    margin-bottom: 20px;
+    display: flex !important;
+    /* Force flex to enable centering */
 }
 
 body.sidebar-collapsed .sidebar-logo-img {
-    opacity: 0;
-    width: 0;
-    margin-right: 0;
+    margin: 0;
+    opacity: 1;
+    width: 28px;
+    /* Slightly smaller for better balance */
+    height: 28px;
 }
 
-.nav-item {
+/* New Chat: Match standard nav item style */
+/* New Chat: Match standard nav item style */
+body.sidebar-collapsed .new-chat-btn {
+    padding: 0;
+    justify-content: center;
+    width: 100%;
+    height: auto;
+    margin: 0;
+    border-radius: 6px;
+    background: transparent;
+    cursor: pointer;
     display: flex;
     align-items: center;
-    padding: 6px 10px;
-    /* Standard comfortable padding */
-    color: var(--text-secondary);
-    text-decoration: none;
-    border-radius: 6px;
-    margin-bottom: 1px;
-    /* Minimal margin for list feel */
-    cursor: pointer;
-    transition: background-color 0.2s, color 0.2s;
-    white-space: nowrap;
-    overflow: hidden;
+    color: white !important;
+    /* Force White */
 }
 
-.nav-item:hover {
+body.sidebar-collapsed .new-chat-btn:hover {
     background-color: var(--bg-hover);
-    color: var(--text-primary);
 }
 
-.nav-item.active {
-    background-color: var(--bg-secondary);
-    color: var(--text-primary);
-    border-left: 3px solid var(--accent-color);
+body.sidebar-collapsed .new-chat-btn span:nth-child(2) {
+    display: none;
 }
 
-.nav-icon {
-    min-width: 24px;
+body.sidebar-collapsed .icon-plus {
+    margin: 0;
     display: flex;
+    align-items: center;
     justify-content: center;
-    margin-right: 12px;
-    font-size: 1.05rem;
-    /* Reduced from 1.2rem */
+    min-width: 24px;
+    height: 40px;
 }
 
-.nav-label {
-    opacity: 1;
-    transition: opacity 0.2s;
-    font-size: 0.9rem;
-    flex: 1;
-    min-width: 0;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+/* Ensure Search Icon matches exactly */
+body.sidebar-collapsed .nav-item {
+    justify-content: center;
+    padding: 0;
+    height: 40px;
+    /* Enforce standard height */
+    display: flex;
+    align-items: center;
+}
+
+body.sidebar-collapsed .nav-icon {
+    margin: 0;
+    font-size: 1.2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+}
+
+/* Hide Sections: My Stuff & Recent Chats */
+body.sidebar-collapsed .my-stuff-section,
+body.sidebar-collapsed .recent-chats-section,
+body.sidebar-collapsed .sidebar-section-title {
+    display: none !important;
+}
+
+/* Navigation Items: Center icons, hide labels */
+body.sidebar-collapsed .nav-item {
+    justify-content: center;
+    padding: 2px 0;
+    /* Reduced from 10px 0 */
+}
+
+body.sidebar-collapsed .nav-icon {
+    margin: 0;
 }
 
 body.sidebar-collapsed .nav-label {
-    opacity: 0;
+    display: none;
+}
+
+/* User Profile: Icon only */
+body.sidebar-collapsed .user-profile {
+    justify-content: center;
+    padding: 10px 0;
+}
+
+body.sidebar-collapsed .user-avatar {
+    margin: 0;
 }
 
 /* Sidebar Sections */
@@ -174,16 +212,16 @@ body.sidebar-collapsed .nav-label {
 }
 
 .sidebar-section {
-    margin-bottom: 24px;
-    padding: 0 10px;
+    margin-bottom: 30px;
+    padding: 0 2px;
 }
 
 .sidebar-section-title {
     font-size: 0.65rem;
-    /* Reduced from 0.75rem */
     font-weight: 500;
     color: var(--text-primary);
-    margin-bottom: 12px;
+    margin-bottom: 6px;
+    /* Reduced from 12px */
     padding-left: 10px;
 }
 
@@ -192,11 +230,14 @@ body.sidebar-collapsed .nav-label {
     display: flex;
     gap: 12px;
     padding: 0 5px;
+    justify-content: left;
 }
 
 .stuff-item {
-    width: 48px;
-    height: 48px;
+    width: 40px;
+    /* Reduced from 48px */
+    height: 40px;
+    /* Reduced from 48px */
     border-radius: 12px;
     background: var(--bg-hover);
     display: flex;
@@ -219,8 +260,8 @@ body.sidebar-collapsed .nav-label {
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.0rem;
-    /* Reduced from 1.2rem */
+    font-size: 0.8rem;
+    /* Reduced from 1.0rem */
 }
 
 .gradient-1 {
@@ -235,18 +276,40 @@ body.sidebar-collapsed .nav-label {
     background: linear-gradient(135deg, #d96570, #b0434e);
 }
 
+/* Navigation Items (Default/Expanded) */
+.nav-item {
+    display: flex;
+    align-items: center;
+    padding: 4px 0px;
+    margin: 2px 2px;
+    border-radius: 6px;
+    cursor: pointer;
+    color: var(--text-primary);
+    transition: background 0.2s, color 0.2s;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.nav-item:hover {
+    background-color: var(--bg-hover);
+    color: var(--text-primary);
+}
+
 /* New Chat Button (Pill) */
 .new-chat-btn {
     display: flex;
     align-items: center;
     background: var(--bg-secondary);
-    border-radius: 24px;
-    padding: 10px 16px;
-    margin: 10px 12px 20px 12px;
+    border-radius: 8px;
+    /* Standardize */
+    padding: 10px 12px;
+    margin: 10px 10px 20px 10px;
+    /* Match nav items margin */
     cursor: pointer;
     color: var(--text-secondary);
     transition: background 0.2s, color 0.2s;
-    width: fit-content;
+    width: auto;
+    /* Allow auto width but constrained by margins */
 }
 
 .new-chat-btn:hover {
@@ -255,25 +318,60 @@ body.sidebar-collapsed .nav-label {
 }
 
 .icon-plus {
-    font-size: 1.3rem;
-    /* Reduced from 1.5rem */
+    font-size: 1.1rem;
+    /* Reduced from 1.3rem */
     margin-right: 8px;
     line-height: 1;
 }
 
-/* Toggle Button */
-.toggle-btn {
-    position: absolute;
-    top: 15px;
-    right: 10px;
-    color: var(--text-secondary);
-    cursor: pointer;
-    padding: 5px;
-    display: none;
+/* Sidebar Header (Default/Expanded) */
+.sidebar-header {
+    display: flex;
+    align-items: center;
+    padding: 10px 10px 10px 15px;
+    height: 50px;
+    /* Explicit height */
+    position: relative;
+    /* For toggle button context */
 }
 
-#nebulus-sidebar:hover .toggle-btn {
-    display: block;
+.sidebar-logo-img {
+    width: 26px;
+    /* Reduced from 32px */
+    height: 26px;
+    /* Reduced from 32px */
+    margin-right: 12px;
+    transition: all 0.3s ease;
+}
+
+.logo-text {
+    font-size: 1.0rem;
+    /* Reduced from 1.2rem */
+    font-weight: 700;
+    color: var(--text-primary);
+    white-space: nowrap;
+    opacity: 1;
+    transition: opacity 0.2s;
+    letter-spacing: 1px;
+}
+
+/* Toggle Button (Default/Expanded) */
+.toggle-btn {
+    margin-left: auto;
+    /* Push to right */
+    color: var(--text-primary);
+    cursor: pointer;
+    padding: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: background 0.2s, color 0.2s;
+}
+
+.toggle-btn:hover {
+    background-color: var(--bg-hover);
+    color: var(--text-primary);
 }
 
 /* Divider */
@@ -291,13 +389,16 @@ body.sidebar-collapsed .nav-label {
     padding: 10px;
     color: var(--text-primary);
     cursor: pointer;
-    font-size: 0.9rem;
+    font-size: 0.75rem;
+    /* Reduced from 0.9rem */
     /* Explicit size */
 }
 
 .user-avatar {
-    width: 32px;
-    height: 32px;
+    width: 26px;
+    /* Reduced from 32px */
+    height: 26px;
+    /* Reduced from 32px */
     border-radius: 50%;
     background-color: var(--accent-color);
     margin-right: 10px;

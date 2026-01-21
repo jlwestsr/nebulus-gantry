@@ -32,7 +32,6 @@ async def list_models():
             "http://host.docker.internal:11434",
             "http://host.docker.internal:11435"
         ]
-        
         # Remove duplicates while preserving order
         unique_hosts = []
         [unique_hosts.append(h) for h in hosts if h not in unique_hosts]
@@ -53,7 +52,6 @@ async def list_models():
                 except Exception as e:
                     last_error = f"Failed to connect to {host}: {str(e)}"
                     continue
-            
             # If we get here, all failed
             return JSONResponse(
                 content={"error": f"Could not connect to Ollama. Last error: {last_error}", "tried": unique_hosts},

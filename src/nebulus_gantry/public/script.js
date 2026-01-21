@@ -78,20 +78,19 @@ const Nebulus = {
                     <img src="/public/sidebar_logo.png" alt="Logo" class="sidebar-logo-img">
                     <div class="logo-text">NEBULUS</div>
                     <div class="toggle-btn" id="sidebar-toggle">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+                        ${Nebulus.Icons.chevronLeft}
                     </div>
                 </div>
 
                 <div class="new-chat-container">
                      <div class="new-chat-btn" onclick="window.location.href='/'">
-                        <span class="icon-plus">+</span>
+                        <span class="icon-plus">${Nebulus.Icons.plus}</span>
                         <span>New chat</span>
                     </div>
                 </div>
 
                 <div class="sidebar-scroll-area">
-                    <div class="sidebar-section">
-                        <div class="sidebar-section-title">My Stuff</div>
+                    <div class="sidebar-section my-stuff-section">
                         <div class="my-stuff-grid">
                             <div class="stuff-item" title="Nebulus">
                                  <div class="stuff-icon gradient-1">N</div>
@@ -112,18 +111,19 @@ const Nebulus = {
                         </div>
                         <div class="nav-item" onclick="window.location.href='/workspace'">
                             <div class="nav-icon">${Nebulus.Icons.grid}</div>
-                            <span class="nav-label">Workspace Management</span>
+                            <span class="nav-label">Workspace</span>
                         </div>
                     </div>
 
                     <div class="sidebar-section">
-                        <div class="sidebar-section-title">Chats</div>
                          <div class="nav-item" onclick="Nebulus.Search.open(event)">
                             <div class="nav-icon">${Nebulus.Icons.search}</div>
                             <span class="nav-label">Search chats</span>
                         </div>
-                        <div id="recent-chats-list" class="recent-chats-list">
-                            ${recentChatsHTML || '<div style="padding: 10px; color: #555; font-size: 0.7rem;" class="nav-label">No recent chats</div>'}
+                        <div class="recent-chats-section">
+                            <div id="recent-chats-list" class="recent-chats-list">
+                                ${recentChatsHTML || '<div style="padding: 10px; color: #555; font-size: 0.7rem;" class="nav-label">No recent chats</div>'}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -198,19 +198,19 @@ const Nebulus = {
     },
 
     Icons: {
-        chevronLeft: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>`,
-        chevronRight: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>`,
+        chevronLeft: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>`,
+        chevronRight: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>`,
         moon: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>`,
         sun: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>`,
-        search: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7d8590" stroke-width="2" style="margin-right: 10px;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>`,
-        plus: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>`,
-        send: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>`,
+        search: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>`,
+        plus: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>`,
+        send: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>`,
         fileText: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>`,
         paperclip: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>`,
         image: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>`,
         grid: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>`,
-        copy: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-copy"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"></rect><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path></svg>`,
-        check: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check"><polyline points="20 6 9 17 4 12"></polyline></svg>`
+        copy: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-copy"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"></rect><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path></svg>`,
+        check: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check"><polyline points="20 6 9 17 4 12"></polyline></svg>`
     },
 
     /* =========================================
@@ -358,7 +358,7 @@ const Nebulus = {
                                     Nebulus.Utils.showToast('Failed to rename chat');
                                 }
                             })
-                            .catch(e => Nebulus.Utils.showToast('Error renaming chat'));
+                            .catch(() => Nebulus.Utils.showToast('Error renaming chat'));
                     }
                 });
             } else if (action === 'delete') {
@@ -380,7 +380,7 @@ const Nebulus = {
                                 Nebulus.Utils.showToast('Failed to delete chat');
                             }
                         })
-                        .catch(e => Nebulus.Utils.showToast('Error deleting chat'));
+                        .catch(() => Nebulus.Utils.showToast('Error deleting chat'));
                 });
             }
         },
@@ -410,6 +410,11 @@ const Nebulus = {
         applyState: function () {
             if (Nebulus.state.sidebarCollapsed) {
                 document.body.classList.add('sidebar-collapsed');
+            }
+            // Sync Icon
+            const toggleBtn = document.getElementById('sidebar-toggle');
+            if (toggleBtn) {
+                toggleBtn.innerHTML = Nebulus.state.sidebarCollapsed ? Nebulus.Icons.chevronRight : Nebulus.Icons.chevronLeft;
             }
         }
     },
@@ -625,7 +630,6 @@ const Nebulus = {
                     e.stopPropagation();
                     e.stopImmediatePropagation();
 
-                    console.log("[Nebulus] Intercepted /clear_all");
 
                     Nebulus.Modal.confirm(
                         "Delete All Chats",
@@ -808,7 +812,7 @@ const Nebulus = {
             }).then(res => res.json());
         },
 
-        generate: function (prompt, model) {
+        generate: function () {
             // Placeholder for direct generation if needed in future
             console.warn("Direct generation not implemented in client yet.");
         }
@@ -919,7 +923,7 @@ const Nebulus = {
                         Nebulus.Utils.showToast("Failed to switch model");
                     }
                 })
-                .catch(err => Nebulus.Utils.showToast("Error switching model"));
+                .catch(() => Nebulus.Utils.showToast("Error switching model"));
         }
     },
 
@@ -933,7 +937,9 @@ const Nebulus = {
             const themeObserver = new MutationObserver((mutations) => {
                 mutations.forEach((mutation) => {
                     if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
-                        const isDark = document.documentElement.classList.contains('dark');
+                        if (document.documentElement.classList.contains('dark')) {
+                            // Logic for dark mode if needed
+                        }
                     }
                 });
             });

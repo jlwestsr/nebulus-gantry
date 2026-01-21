@@ -351,8 +351,8 @@ Nebulus.Notes = {
             if (!note) return;
             Nebulus.Modal.prompt("Rename Note", "Enter a new title:", note.title, (newTitle) => {
                 if (newTitle && newTitle.trim()) {
-                    // We can reuse save logic or a specific rename call. 
-                    // Since we don't have a dedicated rename endpoint in `fetchNotes` logic, 
+                    // We can reuse save logic or a specific rename call.
+                    // Since we don't have a dedicated rename endpoint in `fetchNotes` logic,
                     // we'll update the local state and push the update via PUT.
                     // But we need to define the update payload carefully.
                     // The generic PUT updates everything. So we should likely fetch fresh or use known state.

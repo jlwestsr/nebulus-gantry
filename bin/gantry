@@ -14,14 +14,17 @@ case $COMMAND in
     echo "Available Commands:"
     echo "  start       Start the application server (wrapper for run_app)"
     echo "  test        Run unit tests (wrapper for run_tests)"
+    echo "  rebuild     Rebuild and restart containers (docker compose up -d --build)"
+    echo "  restart     Restart containers (docker compose restart)"
+    echo "  logs        View container logs (docker compose logs -f)"
     echo "  status      Check the operational status of services"
     echo "  help        Show this help message"
     exit 0
     ;;
-    
+
   status)
     echo "--- Gantry System Status ---"
-    
+
     # Check Uvicorn (App Server)
     if pgrep -f "nebulus_gantry.main:app" > /dev/null; then
       PID=$(pgrep -f "nebulus_gantry.main:app" | head -n 1)
@@ -36,7 +39,7 @@ case $COMMAND in
     else
       echo "❌ AI Engine (Ollama):   Stopped"
     fi
-    
+
     echo "-----------------------------"
     exit 0
     ;;
@@ -47,6 +50,20 @@ case $COMMAND in
 
   test)
     "$BIN_DIR/run_tests"
+    ;;
+
+  rebuild)
+    echo "Rebuilding and restarting Neo-Nebulus Gantry..."
+    docker compose up -d --build
+    ;;
+
+  logs)
+    docker compose logs -f
+    ;;
+
+  restart)
+    echo "Restarting containers..."
+    docker compose restart
     ;;
 
   *)

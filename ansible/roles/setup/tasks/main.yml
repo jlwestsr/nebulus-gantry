@@ -12,4 +12,4 @@
 - name: Install Requirements
   command: "{{ playbook_dir }}/../venv/bin/pip install -r requirements.txt"
   args:
-    chdir: "{{ playbook_dir }}/.." 
+    chdir: "{{ playbook_dir }}/.."

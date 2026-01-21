@@ -57,8 +57,9 @@ async def get_conversation(
     if not chat:
         raise HTTPException(status_code=404, detail="Conversation not found")
 
-    messages = db.query(Message).filter(Message.chat_id ==
-                                        conv_id).order_by(Message.created_at).all()
+    messages = db.query(Message).filter(
+        Message.chat_id == conv_id
+    ).order_by(Message.created_at).all()
 
     msg_list = []
     for m in messages:

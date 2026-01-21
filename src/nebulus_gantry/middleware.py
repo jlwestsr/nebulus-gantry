@@ -21,7 +21,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
                 "/logo",
                 "/models",
                 "/api/debug-session",
-                "/user", # ALLOW CHAINLIT TO HANDLE /user AUTH
+                "/user",  # ALLOW CHAINLIT TO HANDLE /user AUTH
             )
         ):
             return await call_next(request)

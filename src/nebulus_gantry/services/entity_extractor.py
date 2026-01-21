@@ -45,6 +45,6 @@ async def extract_entities(text: str, model: str = "llama3.1:latest") -> dict:
         content = response.choices[0].message.content
         data = json.loads(content)
         return data.get("entities", {})
-    except Exception as e:
+    except Exception:
         # print(f"Entity Extraction Error: {e}")
         return {}

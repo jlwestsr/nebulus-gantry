@@ -10,6 +10,7 @@ from ..auth import (
     create_access_token,
     verify_token,
 )
+from ..version import UI_CSS_VERSION
 
 import logging
 
@@ -66,13 +67,13 @@ def get_login_html(error: str = None):
                 <span>{error}</span>
             </div>
         """
-    
+
     return f"""
     <!DOCTYPE html>
     <html class="dark">
     <head>
         <title>Nebulus - Login</title>
-        <link rel="stylesheet" href="/public/style.css">
+        <link rel="stylesheet" href="/public/style.css?v={UI_CSS_VERSION}">
         <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
         <style>
             body {{
@@ -226,14 +227,14 @@ def login(request: Request, response: Response, username: str = Form(...), passw
             "display_name": user.username,
             "metadata": {"username": user.username, "role": user.role or "user"}
         })
-        
+
         # Populate Chainlit session
         user_data = {"identifier": user.username, "metadata": {"username": user.username}}
         request.session["user"] = user_data
         # Some versions of Chainlit or Starlette sessions might use different keys
-        request.session["_cl_user"] = user_data 
-        
-        
+        request.session["_cl_user"] = user_data
+
+
         response = RedirectResponse(url="/", status_code=303)
         response.set_cookie(
             key="access_token", value=access_token, httponly=True
@@ -268,7 +269,7 @@ def get_register_html(error: str = None):
     <html class="dark">
     <head>
         <title>Nebulus - Register</title>
-        <link rel="stylesheet" href="/public/style.css">
+        <link rel="stylesheet" href="/public/style.css?v={UI_CSS_VERSION}">
         <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
         <style>
              body {{

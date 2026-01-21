@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "CONTEXT.md",
+                "file": "agent/rules/ai_behavior.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "CONTEXT"
+              "title": "ai_behavior"
             }
           }
         ]
@@ -94,7 +94,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "CONTEXT.md",
+                "file": "agent/rules/ai_behavior.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -104,7 +104,7 @@
                 "unlinkedCollapsed": true
               },
               "icon": "links-coming-in",
-              "title": "Backlinks for CONTEXT"
+              "title": "Backlinks for ai_behavior"
             }
           },
           {
@@ -113,12 +113,12 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "CONTEXT.md",
+                "file": "agent/rules/ai_behavior.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               },
               "icon": "links-going-out",
-              "title": "Outgoing links from CONTEXT"
+              "title": "Outgoing links from ai_behavior"
             }
           },
           {
@@ -156,13 +156,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "CONTEXT.md",
+                "file": "agent/rules/ai_behavior.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Outline of CONTEXT"
+              "title": "Outline of ai_behavior"
             }
           }
         ]
@@ -185,6 +185,13 @@
   },
   "active": "42354bc4261d4b71",
   "lastOpenFiles": [
+    "tests/__pycache__/test_workspace.cpython-312-pytest-9.0.2.pyc",
+    "tests/__pycache__/test_notes.cpython-312-pytest-9.0.2.pyc",
+    "tests/__pycache__/test_api_general.cpython-312-pytest-9.0.2.pyc",
+    "eslint.config.js",
+    "data/gantry.db-journal",
+    "CONTEXT.md",
+    "src/nebulus_gantry/routers/__pycache__/chat_routes.cpython-311.pyc.133179810089008",
     "tests/test_workspace.py",
     "tests/test_notes.py",
     "tests/test_api_general.py",
@@ -193,12 +200,6 @@
     "docs/features/add_notes_nav.md",
     "pytest.ini",
     "venv/lib/python3.12/site-packages/anyio/streams/__pycache__/file.cpython-312-pytest-9.0.2.pyc",
-    "venv/lib/python3.12/site-packages/anyio/streams/__pycache__/text.cpython-312-pytest-9.0.2.pyc",
-    "venv/lib/python3.12/site-packages/anyio/_backends/__pycache__/_trio.cpython-312-pytest-9.0.2.pyc",
-    "venv/lib/python3.12/site-packages/anyio/_backends/__pycache__/_asyncio.cpython-312-pytest-9.0.2.pyc",
-    "venv/lib/python3.12/site-packages/anyio/_backends/__pycache__/_asyncio.cpython-312-pytest-9.0.2.pyc.1177349",
-    "venv/lib/python3.12/site-packages/anyio/_backends/__pycache__/__init__.cpython-312-pytest-9.0.2.pyc",
-    "venv/lib/python3.12/site-packages/anyio/__pycache__/pytest_plugin.cpython-312-pytest-9.0.2.pyc",
     "docs/features/login_improvements.md",
     "temp_favicon.png"
   ]

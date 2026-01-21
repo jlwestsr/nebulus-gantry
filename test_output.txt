@@ -31,7 +31,7 @@ db = <sqlalchemy.orm.session.Session object at 0x7b0e95e34320>
         user = User(id=1, username="testuser", email="test@example.com")
         db.add(user)
         db.commit()
-    
+
         metadata = {"project": "Nebula", "priority": "High"}
         response = client.post(
             "/api/conversations",
@@ -55,7 +55,7 @@ db = <sqlalchemy.orm.session.Session object at 0x7b0e959b17c0>
         chat = Chat(id=chat_id, user_id=1, title="Original", metadata_json={"tag": "v1"})
         db.add(chat)
         db.commit()
-    
+
         new_metadata = {"tag": "v2", "status": "active"}
         response = client.put(
             f"/api/conversations/{chat_id}",
@@ -77,18 +77,18 @@ db = <sqlalchemy.orm.session.Session object at 0x7b0e9505f4d0>
         chat = Chat(id=chat_id, user_id=1, title="Entity Chat")
         entities = {"Person": ["Alice"], "Tool": ["Git"]}
         msg = Message(chat_id=chat_id, author="user", content="Hi Alice, use Git", entities=entities)
-    
+
         db.add(chat)
         db.add(msg)
         db.commit()
-    
+
         response = client.get(f"/api/conversations/{chat_id}")
         assert response.status_code == 200
 >       data = response.json()
                ^^^^^^^^^^^^^^^
 
-tests/test_ltm_threads_entities.py:57: 
-_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_ltm_threads_entities.py:57:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 ../../../.python3_venv/lib/python3.12/site-packages/httpx/_models.py:832: in json
     return jsonlib.loads(self.content, **kwargs)
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -98,7 +98,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 /usr/lib/python3.12/json/decoder.py:337: in decode
     obj, end = self.raw_decode(s, idx=_w(s, 0).end())
                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 
 self = <json.decoder.JSONDecoder object at 0x7b0ef5848f20>
 s = '\n    <!DOCTYPE html>\n    <html class="dark">\n    <head>\n        <title>Nebulus - Login</title>\n        <link rel...ccount? Register here</a>\n                </div>\n            </form>\n        </div>\n    </body>\n    </html>\n    '
@@ -108,10 +108,10 @@ idx = 5
         """Decode a JSON document from ``s`` (a ``str`` beginning with
         a JSON document) and return a 2-tuple of the Python
         representation and the index in ``s`` where the document ended.
-    
+
         This can be used to decode a JSON document from a string that may
         have extraneous data at the end.
-    
+
         """
         try:
             obj, end = self.scan_once(s, idx)
@@ -140,21 +140,21 @@ database.py:22
     warnings.warn(message, UserWarning)
 
 main.py:144
-  /home/jlwestsr/projects/west_ai_labs/nebulus-gantry/main.py:144: DeprecationWarning: 
+  /home/jlwestsr/projects/west_ai_labs/nebulus-gantry/main.py:144: DeprecationWarning:
           on_event is deprecated, use lifespan event handlers instead.
-  
+
           Read more about it in the
           [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
-          
+
     @app.on_event("startup")
 
 ../../../.python3_venv/lib/python3.12/site-packages/fastapi/applications.py:4576
-  /home/jlwestsr/.python3_venv/lib/python3.12/site-packages/fastapi/applications.py:4576: DeprecationWarning: 
+  /home/jlwestsr/.python3_venv/lib/python3.12/site-packages/fastapi/applications.py:4576: DeprecationWarning:
           on_event is deprecated, use lifespan event handlers instead.
-  
+
           Read more about it in the
           [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
-          
+
     return self.router.on_event(event_type)
 
 tests/test_ltm_threads_entities.py::test_create_conversation_with_metadata

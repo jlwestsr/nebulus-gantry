@@ -3,6 +3,7 @@ from fastapi.responses import JSONResponse
 
 router = APIRouter()
 
+
 @router.get("/api/debug-session")
 def debug_session(request: Request):
     return JSONResponse(content={

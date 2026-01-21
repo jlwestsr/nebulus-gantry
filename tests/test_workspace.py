@@ -8,7 +8,7 @@ def test_list_models_mocked(client):
     # But `client` is global in `main`.
     # We can patch `main.client.models.list`.
 
-    with patch("main.client.models.list", new_callable=AsyncMock) as mock_list:
+    with patch("nebulus_gantry.main.client.models.list", new_callable=AsyncMock) as mock_list:
         # Mock return structure
         mock_list.return_value.data = [
             type('obj', (object,), {'id': 'llama3:latest'}),

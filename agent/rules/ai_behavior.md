@@ -44,6 +44,7 @@ When opening this project, the IDE looks first for rules in the local workspace 
 - **Namespacing**: Do not pollute `window`. Wrap logic in global objects (e.g., `Nebulus.Chat`, `Nebulus.Config`).
 - **Async/Await**: Use `fetch` with `async/await` for API calls.
 - **DOM Manipulation**: Use `document.querySelector` and `element.classList`. Avoid inline `style="..."`.
+- **Asset Versioning**: When modifying `style.css` or `script.js` (or other assets), you **MUST** increment the corresponding version constant in `src/nebulus_gantry/version.py` (e.g., `UI_CSS_VERSION`) to force a client-side cache refresh.
 
 ## 6. Testing & Quality Assurance
 - **Mandatory Unit Tests**:
@@ -71,6 +72,7 @@ When implementing a feature (e.g., "Add Memory Consolidation"):
 ## 9. Tool Usage
 - **Terminal**: Use terminal to verify file paths (`ls -F`, `tree`) before assuming structure.
 - **Browser**: Use the browser to check documentation for `FastAPI`, `SQLAlchemy`, or specific `ChromaDB` client versions.
+- **UI/JS Validation**: You **MUST** use the browser to visually verify ANY changes to CSS, HTML, or JavaScript. Do not rely on code review alone.
 - **Docker Validation (Mandatory)**: Whenever restarting or rebuilding Docker containers, you MUST immediately check the logs (e.g., `docker compose logs --tail=50`) to ensure the service launched without errors.
 
 ## 10. Agent Persona: "The Gantry Architect"

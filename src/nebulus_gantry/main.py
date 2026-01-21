@@ -1,29 +1,30 @@
-from fastapi import FastAPI, Depends, Request
+import os
+from dotenv import load_dotenv
+
+from fastapi import FastAPI, Depends
+from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.middleware import Middleware
 from chainlit.utils import mount_chainlit
+from sqlalchemy.orm import Session
+from sqlalchemy import func
+from openai import AsyncOpenAI
+
 from .database import init_db, migrate_db, UsageLog, get_db
-from fastapi.responses import HTMLResponse, JSONResponse
-from fastapi.staticfiles import StaticFiles
-import os
-from dotenv import load_dotenv
+from .routers import auth_routes, chat_routes, notes_routes, workspace_routes, ltm_routes, debug_routes
+from .middleware import AuthMiddleware
+from .ops.ollama import create_model, generate_modelfile
+from .ui.pages import get_notes_page, get_workspace_page
 
 # Load environment variables
 load_dotenv()
 
 
-from .routers import auth_routes, chat_routes, notes_routes, workspace_routes, ltm_routes, debug_routes
-from .middleware import AuthMiddleware
-from openai import AsyncOpenAI
-from .ops.ollama import create_model, generate_modelfile
-from .ui.pages import get_notes_page, get_workspace_page
-from sqlalchemy.orm import Session
-from sqlalchemy import func
-from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
-
 # Import CHAINLIT_AUTH_SECRET if needed, or assume env
 SECRET_KEY = os.environ.get("CHAINLIT_AUTH_SECRET", "supersecret-dev-key-change-me-in-prod")
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -42,8 +43,6 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 app.mount(
     "/public", StaticFiles(directory=os.path.join(BASE_DIR, "public")), name="public"
 )
-
-
 
 
 @app.get("/favicon.ico", include_in_schema=False)
@@ -174,9 +173,6 @@ app.include_router(notes_routes.router)
 app.include_router(workspace_routes.router)
 app.include_router(ltm_routes.router)
 app.include_router(debug_routes.router)
-
-
-
 
 # Mount Chainlit app on root
 mount_chainlit(app=app, target=os.path.join(BASE_DIR, "chat.py"), path="/")
