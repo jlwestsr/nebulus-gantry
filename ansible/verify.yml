@@ -1,0 +1,16 @@
+---
+- name: Verify Nebulus Gantry Environment
+  hosts: local
+  gather_facts: no
+  tasks:
+    - name: Verify venv exists
+      stat:
+        path: "{{ playbook_dir }}/../venv"
+      register: venv_stat
+      failed_when: not venv_stat.stat.exists
+
+    - name: Verify pip in venv
+      stat:
+        path: "{{ playbook_dir }}/../venv/bin/pip"
+      register: pip_stat
+      failed_when: not pip_stat.stat.exists

@@ -1,5 +1,5 @@
-from database import Chat, Message, User
-from unittest.mock import patch, AsyncMock
+from nebulus_gantry.database import Chat, Message, User
+
 
 def test_create_conversation_with_metadata(client, db):
     # Seed User
@@ -21,6 +21,7 @@ def test_create_conversation_with_metadata(client, db):
     chat = db.query(Chat).filter(Chat.id == data["id"]).first()
     assert chat.metadata_json == metadata
 
+
 def test_update_conversation_metadata(client, db):
     # Setup
     chat_id = "test-uuid-meta-update"
@@ -41,13 +42,15 @@ def test_update_conversation_metadata(client, db):
     chat = db.query(Chat).filter(Chat.id == chat_id).first()
     assert chat.metadata_json == new_metadata
 
+
 def test_get_conversation_entities(client, db):
     # Setup
     chat_id = "test-uuid-entities"
     chat = Chat(id=chat_id, user_id=1, title="Entity Chat")
     entities = {"Person": ["Alice"], "Tool": ["Git"]}
-    msg = Message(chat_id=chat_id, author="user", content="Hi Alice, use Git", entities=entities)
-    
+    msg = Message(chat_id=chat_id, author="user",
+                  content="Hi Alice, use Git", entities=entities)
+
     db.add(chat)
     db.add(msg)
     db.commit()

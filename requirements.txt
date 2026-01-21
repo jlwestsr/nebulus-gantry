@@ -8,3 +8,6 @@ docker
 pypdf
 flake8
 pytest
+itsdangerous
+gunicorn
+uvicorn

@@ -1,0 +1,202 @@
+{
+  "main": {
+    "id": "e35f95ef37ab4367",
+    "type": "split",
+    "children": [
+      {
+        "id": "e83998d390eb6647",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "42354bc4261d4b71",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "CONTEXT.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "CONTEXT"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "b916bc182c3cd32a",
+    "type": "split",
+    "children": [
+      {
+        "id": "e235b8f1dde4fe88",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "ac1690fcf5621c71",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false
+              },
+              "icon": "lucide-folder-closed",
+              "title": "Files"
+            }
+          },
+          {
+            "id": "47d732cafaf0b332",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "Search"
+            }
+          },
+          {
+            "id": "113f2a614d8892af",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {},
+              "icon": "lucide-bookmark",
+              "title": "Bookmarks"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "right": {
+    "id": "b929d386f0be8d84",
+    "type": "split",
+    "children": [
+      {
+        "id": "19f3d88958f4081c",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "db4f92af009606de",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "file": "CONTEXT.md",
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "Backlinks for CONTEXT"
+            }
+          },
+          {
+            "id": "c4cfd1947b09286e",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "file": "CONTEXT.md",
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "Outgoing links from CONTEXT"
+            }
+          },
+          {
+            "id": "99d2331d0844532c",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "Tags"
+            }
+          },
+          {
+            "id": "641820f4899a0819",
+            "type": "leaf",
+            "state": {
+              "type": "all-properties",
+              "state": {
+                "sortOrder": "frequency",
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-archive",
+              "title": "All properties"
+            }
+          },
+          {
+            "id": "69142c6175dc68f7",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "file": "CONTEXT.md",
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "Outline of CONTEXT"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:Open quick switcher": false,
+      "graph:Open graph view": false,
+      "canvas:Create new canvas": false,
+      "daily-notes:Open today's daily note": false,
+      "templates:Insert template": false,
+      "command-palette:Open command palette": false,
+      "bases:Create new base": false
+    }
+  },
+  "active": "42354bc4261d4b71",
+  "lastOpenFiles": [
+    "pytest.ini",
+    "venv/lib/python3.12/site-packages/anyio/streams/__pycache__/file.cpython-312-pytest-9.0.2.pyc",
+    "venv/lib/python3.12/site-packages/anyio/streams/__pycache__/text.cpython-312-pytest-9.0.2.pyc",
+    "venv/lib/python3.12/site-packages/anyio/_backends/__pycache__/_trio.cpython-312-pytest-9.0.2.pyc",
+    "venv/lib/python3.12/site-packages/anyio/_backends/__pycache__/_asyncio.cpython-312-pytest-9.0.2.pyc",
+    "venv/lib/python3.12/site-packages/anyio/_backends/__pycache__/_asyncio.cpython-312-pytest-9.0.2.pyc.1177349",
+    "venv/lib/python3.12/site-packages/anyio/_backends/__pycache__/__init__.cpython-312-pytest-9.0.2.pyc",
+    "venv/lib/python3.12/site-packages/anyio/__pycache__/pytest_plugin.cpython-312-pytest-9.0.2.pyc",
+    "venv/lib/python3.12/site-packages/anyio/_core/__pycache__/_tempfile.cpython-312-pytest-9.0.2.pyc",
+    "venv/lib/python3.12/site-packages/anyio/_core/__pycache__/_subprocesses.cpython-312-pytest-9.0.2.pyc",
+    "venv/lib/python3.12/site-packages/anyio/streams/__pycache__/memory.cpython-312-pytest-9.0.2.pyc",
+    "docs/features/login_improvements.md",
+    "temp_favicon.png"
+  ]
+}
