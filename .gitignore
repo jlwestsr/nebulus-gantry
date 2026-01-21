@@ -20,6 +20,7 @@ dmypy.json
 # IDEs
 .vscode/
 .idea/
+.obsidian/
 *.swp
 .DS_Store
 
@@ -37,3 +38,5 @@ build/
 *.sqlite3
 .files/
 data/
+reference_nebulus
+reference_open-webui

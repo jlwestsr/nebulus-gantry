@@ -11,6 +11,13 @@ Nebulus Gantry is a local AI workspace and interface that serves as a bridge bet
 **STOP & READ**: Before performing any work, you **MUST** review the detailed standards in:
 👉 **[.agent/rules/ai_behavior.md](.agent/rules/ai_behavior.md)**
 
+### Reference Material (READ-ONLY)
+
+The following directories are symlinks to external projects provided for architectural reference only. **ABSOLUTELY NO CHANGES** are permitted in these directories:
+
+* `reference_nebulus/`: The core Nebulus logic.
+* `reference_open-webui/`: The Open WebUI project.
+
 **The 4 Pillars of Gantry Development:**
 
 1. **The VENV Mandate**: System-level Python usage is strictly FORBIDDEN. You must verify `./venv/` is active before running `pip` or `python`.
@@ -46,6 +53,8 @@ Nebulus Gantry is a local AI workspace and interface that serves as a bridge bet
 The project follows a strict separation of concerns:
 
 nebulus-gantry/
+├── reference_nebulus/         # [READ-ONLY] Nebulus Reference
+├── reference_open-webui/      # [READ-ONLY] Open WebUI Reference
 ├── ansible/                   # Environment provisioning
 ├── bin/                       # Executable scripts (run_app, run_tests)
 ├── scripts/                   # Setup scripts (bootstrap.sh)
