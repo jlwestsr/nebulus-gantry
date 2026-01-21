@@ -7,7 +7,7 @@ Nebulus Gantry is a local AI workspace and interface that serves as a bridge bet
 
 ## 🚨 Critical Operational Rules 🚨
 **STOP & READ**: Before performing any work, you **MUST** review the detailed standards in:
-👉 **[agent/rules/ai_behavior.md](agent/rules/ai_behavior.md)**
+👉 **[.agent/rules/ai_behavior.md](.agent/rules/ai_behavior.md)**
 
 **The 4 Pillars of Gantry Development:**
 1.  **The VENV Mandate**: System-level Python usage is strictly FORBIDDEN. You must verify `./venv/` is active before running `pip` or `python`.
