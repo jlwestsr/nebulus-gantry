@@ -19,7 +19,7 @@ import json
 
 # Configure Ollama client
 client = AsyncOpenAI(
-    base_url=os.getenv("OLLAMA_HOST", "http://host.docker.internal:11435") + "/v1",
+    base_url=os.getenv("OLLAMA_HOST", "http://localhost:11435") + "/v1",
     api_key="ollama",  # required but unused
 )
 

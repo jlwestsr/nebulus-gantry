@@ -8,7 +8,7 @@ class LTMTool:
         """
         Initialize connection to ChromaDB for LTM access.
         """
-        self.host = os.getenv("CHROMA_HOST", "http://host.docker.internal:8000")
+        self.host = os.getenv("CHROMA_HOST", "http://localhost:8001")
         # Parse host/port
         if "://" in self.host:
             base = self.host.split("://")[1]
