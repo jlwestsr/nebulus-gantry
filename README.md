@@ -7,6 +7,7 @@ The frontend and chat interface for the Nebulus AI ecosystem.
 Gantry exposes REST endpoints for external agent interaction:
 
 ### LTM (Long Term Memory)
+
 Base path: `/api/conversations`
 
 - `POST /`: Create a new conversation thread.
@@ -19,6 +20,7 @@ Base path: `/api/conversations`
 Gantry can be run independently, but requires access to a Nebulus (Ollama/Chroma) backend.
 
 ### Prerequisites
+
 - Docker & Docker Compose
 - Python 3.12+ (for local dev)
 - A running instance of Nebulus (or compatible Ollama endpoint)

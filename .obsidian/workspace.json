@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "agent/rules/ai_behavior.md",
+                "file": "CONTEXT.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "ai_behavior"
+              "title": "CONTEXT"
             }
           }
         ]
@@ -94,7 +94,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "agent/rules/ai_behavior.md",
+                "file": "CONTEXT.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -104,7 +104,7 @@
                 "unlinkedCollapsed": true
               },
               "icon": "links-coming-in",
-              "title": "Backlinks for ai_behavior"
+              "title": "Backlinks for CONTEXT"
             }
           },
           {
@@ -113,12 +113,12 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "agent/rules/ai_behavior.md",
+                "file": "CONTEXT.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               },
               "icon": "links-going-out",
-              "title": "Outgoing links from ai_behavior"
+              "title": "Outgoing links from CONTEXT"
             }
           },
           {
@@ -156,13 +156,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "agent/rules/ai_behavior.md",
+                "file": "CONTEXT.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Outline of ai_behavior"
+              "title": "Outline of CONTEXT"
             }
           }
         ]
@@ -185,6 +185,12 @@
   },
   "active": "42354bc4261d4b71",
   "lastOpenFiles": [
+    "agent/workflows/auto_formatting.md",
+    "agent/rules/gantry_project_rules.md",
+    "agent/rules/ai_behavior.md",
+    "agent/workflows",
+    "agent/rules",
+    "agent",
     "tests/__pycache__/test_workspace.cpython-312-pytest-9.0.2.pyc",
     "tests/__pycache__/test_notes.cpython-312-pytest-9.0.2.pyc",
     "tests/__pycache__/test_api_general.cpython-312-pytest-9.0.2.pyc",
@@ -193,13 +199,9 @@
     "CONTEXT.md",
     "src/nebulus_gantry/routers/__pycache__/chat_routes.cpython-311.pyc.133179810089008",
     "tests/test_workspace.py",
-    "tests/test_notes.py",
-    "tests/test_api_general.py",
     "docs/features/refine_workspace_ui.md",
     "docs/features/refine_notes_ui.md",
     "docs/features/add_notes_nav.md",
-    "pytest.ini",
-    "venv/lib/python3.12/site-packages/anyio/streams/__pycache__/file.cpython-312-pytest-9.0.2.pyc",
     "docs/features/login_improvements.md",
     "temp_favicon.png"
   ]

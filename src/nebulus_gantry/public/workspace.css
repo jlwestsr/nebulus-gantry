@@ -16,10 +16,12 @@
     width: 100%;
     margin: 0 auto;
     box-sizing: border-box;
+
     /* Enable scrolling for this container, filling remaining height */
     overflow-y: auto;
     flex: 1;
     padding-left: 40px;
+
     /* Ensure padding-bottom so last item isn't cut off */
     padding-bottom: 50px;
 }
@@ -44,7 +46,9 @@ header h1 {
     background: var(--bg-secondary);
     border: 1px solid var(--border-color);
     border-radius: 8px;
+
     /* overflow: hidden; Removed to prevent clipping if content expands strangely, though usually needed for corners. */
+
     /* Instead we rely on children respecting borders or just use hidden if sizing is correct. */
     overflow: visible;
     display: flex;
@@ -53,7 +57,7 @@ header h1 {
 }
 
 .card:hover {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 4px 12px rgb(0 0 0 / 20%);
 }
 
 .card-header {
@@ -75,7 +79,9 @@ header h1 {
 .card-body {
     padding: 15px;
     flex: 0 0 auto;
+
     /* Allow auto height based on content */
+
     /* Allow card to grow with content, relying on page scrolling */
     min-height: 200px;
 }
@@ -106,13 +112,13 @@ header h1 {
     justify-content: space-between;
     align-items: center;
     padding: 10px;
-    background: rgba(255, 255, 255, 0.02);
+    background: rgb(255 255 255 / 2%);
     border-radius: 4px;
     transition: background 0.2s;
 }
 
 .list-item:hover {
-    background: rgba(255, 255, 255, 0.05);
+    background: rgb(255 255 255 / 5%);
 }
 
 .list-item-content {
@@ -147,7 +153,7 @@ header h1 {
 
 .icon-btn:hover {
     color: var(--text-primary);
-    background: rgba(255, 255, 255, 0.1);
+    background: rgb(255 255 255 / 10%);
 }
 
 .status-badge {
@@ -159,12 +165,12 @@ header h1 {
 }
 
 .status-badge.ready {
-    background: rgba(76, 175, 80, 0.2);
+    background: rgb(76 175 80 / 20%);
     color: #4caf50;
 }
 
 .status-badge.indexing {
-    background: rgba(255, 193, 7, 0.2);
+    background: rgb(255 193 7 / 20%);
     color: #ffc107;
 }
 
@@ -182,7 +188,7 @@ header h1 {
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.7);
+    background: rgb(0 0 0 / 70%);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -239,12 +245,12 @@ header h1 {
 }
 
 .status-msg.success {
-    background: rgba(34, 197, 94, 0.1);
+    background: rgb(34 197 94 / 10%);
     color: #22c55e;
 }
 
 .status-msg.error {
-    background: rgba(239, 68, 68, 0.1);
+    background: rgb(239 68 68 / 10%);
     color: #ef4444;
 }
 

@@ -15,7 +15,7 @@ When opening this project, the IDE looks first for rules in the local workspace 
 
 | Type | Default File Path | Use Case |
 |------|-------------------|----------|
-| **Workspace Rule** | `nebulus-gantry/agent/rules/` | Project-specific coding standards (Strict Venv, FastAPI patterns). |
+| **Workspace Rule** | `nebulus-gantry/.agent/rules/` | Project-specific coding standards (Strict Venv, FastAPI patterns). |
 | **Global Rule** | `~/.gemini/GEMINI.md` | Universal behavior guidelines across all projects. |
 
 ## 1. Operational Guardrails (CRITICAL)
