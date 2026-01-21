@@ -185,6 +185,12 @@
   },
   "active": "42354bc4261d4b71",
   "lastOpenFiles": [
+    "tests/test_workspace.py",
+    "tests/test_notes.py",
+    "tests/test_api_general.py",
+    "docs/features/refine_workspace_ui.md",
+    "docs/features/refine_notes_ui.md",
+    "docs/features/add_notes_nav.md",
     "pytest.ini",
     "venv/lib/python3.12/site-packages/anyio/streams/__pycache__/file.cpython-312-pytest-9.0.2.pyc",
     "venv/lib/python3.12/site-packages/anyio/streams/__pycache__/text.cpython-312-pytest-9.0.2.pyc",
@@ -193,9 +199,6 @@
     "venv/lib/python3.12/site-packages/anyio/_backends/__pycache__/_asyncio.cpython-312-pytest-9.0.2.pyc.1177349",
     "venv/lib/python3.12/site-packages/anyio/_backends/__pycache__/__init__.cpython-312-pytest-9.0.2.pyc",
     "venv/lib/python3.12/site-packages/anyio/__pycache__/pytest_plugin.cpython-312-pytest-9.0.2.pyc",
-    "venv/lib/python3.12/site-packages/anyio/_core/__pycache__/_tempfile.cpython-312-pytest-9.0.2.pyc",
-    "venv/lib/python3.12/site-packages/anyio/_core/__pycache__/_subprocesses.cpython-312-pytest-9.0.2.pyc",
-    "venv/lib/python3.12/site-packages/anyio/streams/__pycache__/memory.cpython-312-pytest-9.0.2.pyc",
     "docs/features/login_improvements.md",
     "temp_favicon.png"
   ]

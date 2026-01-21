@@ -8,7 +8,7 @@ services:
       - .:/app
       - /var/run/docker.sock:/var/run/docker.sock # Temporarily kept for sandbox.py
     environment:
-      - OLLAMA_HOST=http://host.docker.internal:11435
+      - OLLAMA_HOST=${OLLAMA_HOST:-http://host.docker.internal:11435}
       - CHROMA_HOST=${CHROMA_HOST:-http://host.docker.internal:8000}
       - CHAINLIT_AUTH_SECRET=development_secret_key
       - CHAINLIT_CUSTOM_AUTH=true

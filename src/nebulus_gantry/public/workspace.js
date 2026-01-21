@@ -63,7 +63,7 @@ Nebulus.Workspace = {
                     list.innerHTML = '<div style="padding:10px; color:var(--text-secondary)">No models found. Pull one!</div>';
                 }
             } catch (e) {
-                list.innerHTML = `<div style="color:var(--danger)">Error loading models: ${e.message}</div>`;
+                list.innerHTML = `<div class="text-danger">Error loading models: ${e.message}</div>`;
             }
         },
 
@@ -149,7 +149,7 @@ Nebulus.Workspace = {
                     });
                 }
             } catch (e) {
-                list.innerHTML = `<div style="color:var(--danger)">Error loading tools: ${e.message}</div>`;
+                list.innerHTML = `<div class="text-danger">Error loading tools: ${e.message}</div>`;
             }
         }
     },
@@ -262,7 +262,7 @@ Nebulus.Workspace = {
                     });
                 }
             } catch (e) {
-                list.innerHTML = `<div style="color:var(--danger)">Error loading knowledge: ${e.message}</div>`;
+                list.innerHTML = `<div class="text-danger">Error loading knowledge: ${e.message}</div>`;
             }
         }
     }
