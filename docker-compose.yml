@@ -1,3 +1,4 @@
+---
 services:
   app:
     build: .
@@ -6,7 +7,7 @@ services:
       - "8000:8000"
     volumes:
       - .:/app
-      - /var/run/docker.sock:/var/run/docker.sock # Temporarily kept for sandbox.py
+      - /var/run/docker.sock:/var/run/docker.sock # Temporarily kept for sandbox.py  # yamllint disable-line rule:line-length
     environment:
       - OLLAMA_HOST=${OLLAMA_HOST:-http://host.docker.internal:11435}
       - CHROMA_HOST=${CHROMA_HOST:-http://host.docker.internal:8000}
