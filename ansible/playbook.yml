@@ -1,6 +1,6 @@
 ---
 - name: Setup Nebulus Gantry Environment
   hosts: local
-  gather_facts: no
+  gather_facts: false
   roles:
     - setup

@@ -1,16 +1,22 @@
 repos:
 -   repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.5.0
+    rev: v6.0.0
     hooks:
     -   id: trailing-whitespace
     -   id: end-of-file-fixer
     -   id: check-yaml
 
 -   repo: https://github.com/PyCQA/flake8
-    rev: 6.1.0
+    rev: 7.3.0
     hooks:
     -   id: flake8
         args: [--max-line-length=120]
+
+-   repo: https://github.com/ansible/ansible-lint
+    rev: v26.1.1
+    hooks:
+    -   id: ansible-lint
+        language_version: python3.12
 
 -   repo: local
     hooks:
