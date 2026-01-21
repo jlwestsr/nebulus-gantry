@@ -54,7 +54,7 @@ When opening this project, the IDE looks first for rules in the local workspace 
 - **Mandatory Unit Tests**:
     - **Backend**: New API endpoints must have tests in `tests/routers/`. Services must have tests in `tests/services/`.
     - **Frontend**: If complex logic exists (e.g., Markdown parsing), add a simple JS test or verification step.
-- **System Verification**: Run `./scripts/run_tests.sh` (or `pytest`) before finalizing work.
+- **System Verification**: Run `./bin/run_tests` (or `pytest`) before finalizing work.
 
 ## 7. Development Workflow
 - **Conventional Commits**: Use `feat:`, `fix:`, `docs:`, `chore:`.
@@ -69,7 +69,7 @@ Adhere to the specific strict workflow for each commit type:
 1.  **Docs**: Create `docs/features/name.md` from template.
 2.  **Branch**: `git checkout -b feat/feature-name`
 3.  **Work**: Implement changes (Backend first: Models->Services->Routers, then Frontend).
-4.  **Verify**: Run `scripts/run_tests.sh`.
+4.  **Verify**: Run `bin/run_tests`.
 5.  **Merge**: `git merge feat/feature-name` into `develop`.
 6.  **Push**: **CRITICAL**: Ask for permission -> `git push origin develop`.
 
@@ -77,7 +77,7 @@ Adhere to the specific strict workflow for each commit type:
 1.  **Reproduce**: Create failing test/script.
 2.  **Branch**: `git checkout -b fix/issue-description`
 3.  **Fix**: Implement fix.
-4.  **Verify**: Pass reproduction script AND `scripts/run_tests.sh`.
+4.  **Verify**: Pass reproduction script AND `bin/run_tests`.
 5.  **Merge**: `git merge fix/issue-description` into `develop`.
 6.  **Push**: **CRITICAL**: Ask for permission -> `git push origin develop`.
 
@@ -91,7 +91,7 @@ Adhere to the specific strict workflow for each commit type:
 #### 7.4 Maintenance (`chore`)
 1.  **Branch**: `git checkout -b chore/description`
 2.  **Work**: Update configs, dependencies, or gitignore.
-3.  **Verify**: Run `scripts/run_tests.sh`.
+3.  **Verify**: Run `bin/run_tests`.
 4.  **Merge**: `git merge chore/description` into `develop`.
 5.  **Push**: **CRITICAL**: Ask for permission -> `git push origin develop`.
 
