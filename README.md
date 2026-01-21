@@ -29,7 +29,7 @@ Gantry can be run independently, but requires access to a Nebulus (Ollama/Chroma
 
 ```bash
 # Start Gantry
-docker-compose up --build
+./bin/gantry start
 ```
 
 ### Configuration

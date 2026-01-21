@@ -92,26 +92,28 @@ cd ~/projects/west_ai_labs/nebulus-gantry
 ./scripts/bootstrap.sh
 ```
 
-### 2. Running the App
+### 2. Running Application & Tests (The ONE Way)
+
+All operations **MUST** be performed via the **Gantry CLI**. Custom scripts (`bin/run_app`, `bin/run_tests`) have been **deprecated/removed**.
 
 ```bash
-# Start the server
-./bin/run_app
+# Start the full stack (Docker)
+./bin/gantry start
+
+# Stop the stack
+./bin/gantry stop
+
+# Run unit tests (Local)
+./bin/gantry test
+
+# Check container status
+./bin/gantry status
+
+# Rebuild containers (e.g. after requirements.txt change)
+./bin/gantry rebuild
+
+# View logs
+./bin/gantry logs
 ```
 
-### 3. Verification
-
-Before committing code, run the full test suite:
-
-```bash
-./bin/run_tests
-```
-
-### 4. CLI Toolset
-
-Use the `bin/gantry` wrapper for common operations:
-
-* **Status**: `bin/gantry status` (Check services)
-* **Start**: `bin/gantry start` (Run application)
-* **Test**: `bin/gantry test` (Run unit tests)
-* **Help**: `bin/gantry help` (Show commands)
+**Rule**: NEW CLI/Script definitions MUST be implemented as subcommands in `bin/gantry`. Do not create standalone scripts in `bin/`.
