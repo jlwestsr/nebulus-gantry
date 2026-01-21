@@ -112,6 +112,9 @@ All operations **MUST** be performed via the **Gantry CLI**. Custom scripts (`bi
 # Rebuild containers (e.g. after requirements.txt change)
 ./bin/gantry rebuild
 
+# Run full pre-commit validation
+./bin/gantry validate
+
 # View logs
 ./bin/gantry logs
 ```

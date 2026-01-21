@@ -19,6 +19,7 @@ case $COMMAND in
     echo "  restart     Restart containers"
     echo "  logs        View container logs"
     echo "  status      Check container status"
+    echo "  validate    Run pre-commit hooks on all files"
     echo "  help        Show this help message"
     exit 0
     ;;
@@ -59,6 +60,11 @@ case $COMMAND in
   restart)
     echo "Restarting containers..."
     docker compose restart
+    ;;
+
+  validate)
+    echo "Running pre-commit validation on all files..."
+    pre-commit run --all-files
     ;;
 
   *)
