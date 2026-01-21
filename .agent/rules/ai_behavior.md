@@ -21,6 +21,7 @@ When opening this project, the IDE looks first for rules in the local workspace 
 ## 1. Operational Guardrails (CRITICAL)
 
 - **The VENV Mandate**: You generally CANNOT run `pip install` or `python` commands using the system interpreter. You **MUST** assume the virtual environment is active (`source venv/bin/activate`) or explicitly call `./venv/bin/python`.
+  - **Global Venv Prohibition**: Do NOT use the global `python_venv`. You must switch to the project-specific `./venv` IMMEDIATELY upon starting a session in the terminal.
 - **Pre-Commit Verification**: Before marking any task as complete, the agent MUST run `pytest` and ensure all tests pass.
 - **Linting Compliance**:
   - **Markdown**: Must pass `markdownlint`.
