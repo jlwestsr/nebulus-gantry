@@ -19,7 +19,7 @@ import json
 
 # Configure Ollama client
 client = AsyncOpenAI(
-    base_url=os.getenv("OLLAMA_HOST", "http://localhost:11435") + "/v1",
+    base_url=os.getenv("OLLAMA_HOST", "http://host.docker.internal:11435") + "/v1",
     api_key="ollama",  # required but unused
 )
 
@@ -321,7 +321,7 @@ def header_auth_callback(headers: dict) -> Optional[cl.User]:
 
 
 @cl.on_chat_start
-async def start():
+async def setup_chat_session():
     # --- Authentication Logic ---
     user_id = 1
 
@@ -338,9 +338,6 @@ async def start():
         resolved_id = await cl.make_async(get_user_id_sync)(username)
         if resolved_id:
             user_id = resolved_id
-
-    # Async DB Call
-    # Async DB Call
 
     # Fetch available models from Ollama
     try:
@@ -375,6 +372,30 @@ async def start():
     await cl.Message(
         content=f"<div id='model-data' data-model='{settings['model']}' style='display: none;'></div>"
     ).send()
+
+
+@cl.on_chat_start
+async def start():
+    await setup_chat_session()
+
+
+@cl.on_chat_resume
+async def on_chat_resume(thread):
+    await setup_chat_session()
+
+    chat_id = thread["id"]
+    messages = await cl.make_async(get_chat_history_db)(chat_id)
+
+    for msg in messages:
+        author = "User" if msg.author.lower() == "user" else "Nebulus"
+
+        # Ensure we send cl.Message with correct type metadata if possible
+        # but cl.Message infers from author usually or defaults.
+        await cl.Message(
+            content=msg.content,
+            author=author,
+            created_at=msg.created_at.isoformat() if msg.created_at else None
+        ).send()
 
 
 async def handle_model_command(message: cl.Message, settings: dict):

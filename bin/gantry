@@ -12,44 +12,39 @@ case $COMMAND in
     echo "Usage: bin/gantry [command]"
     echo ""
     echo "Available Commands:"
-    echo "  start       Start the application server (wrapper for run_app)"
-    echo "  test        Run unit tests (wrapper for run_tests)"
-    echo "  rebuild     Rebuild and restart containers (docker compose up -d --build)"
-    echo "  restart     Restart containers (docker compose restart)"
-    echo "  logs        View container logs (docker compose logs -f)"
-    echo "  status      Check the operational status of services"
+    echo "  start       Start Gantry stack (docker compose up --build)"
+    echo "  stop        Stop Gantry stack (docker compose down)"
+    echo "  test        Run local unit tests"
+    echo "  rebuild     Rebuild and restart containers (detached)"
+    echo "  restart     Restart containers"
+    echo "  logs        View container logs"
+    echo "  status      Check container status"
     echo "  help        Show this help message"
     exit 0
     ;;
 
   status)
-    echo "--- Gantry System Status ---"
-
-    # Check Uvicorn (App Server)
-    if pgrep -f "nebulus_gantry.main:app" > /dev/null; then
-      PID=$(pgrep -f "nebulus_gantry.main:app" | head -n 1)
-      echo "✅ App Server (Uvicorn): Running (PID: $PID)"
-    else
-      echo "❌ App Server (Uvicorn): Stopped"
-    fi
-
-    # Check Ollama (AI Engine)
-    if pgrep -x "ollama" > /dev/null || pgrep -f "ollama serve" > /dev/null; then
-      echo "✅ AI Engine (Ollama):   Running"
-    else
-      echo "❌ AI Engine (Ollama):   Stopped"
-    fi
-
+    echo "--- Gantry Container Status ---"
+    docker compose ps
     echo "-----------------------------"
     exit 0
     ;;
 
   start)
-    "$BIN_DIR/run_app"
+    echo "Starting Gantry via Docker..."
+    docker compose up --build
+    ;;
+
+  stop)
+    echo "Stopping Gantry..."
+    docker compose down
     ;;
 
   test)
-    "$BIN_DIR/run_tests"
+    echo "Running tests requires local venv or docker exec. Attempting local venv..."
+    PROJECT_ROOT="$BIN_DIR/.."
+    export PYTHONPATH="$PROJECT_ROOT/src:$PYTHONPATH"
+    "$PROJECT_ROOT/venv/bin/pytest" "$PROJECT_ROOT/tests/"
     ;;
 
   rebuild)

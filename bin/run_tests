@@ -1,7 +1,0 @@
-#!/bin/bash
-# Resolve project root (one level up from this script)
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$SCRIPT_DIR/.."
-
-export PYTHONPATH="$PROJECT_ROOT/src:$PYTHONPATH"
-"$PROJECT_ROOT/venv/bin/pytest" "$PROJECT_ROOT/tests/"

@@ -6,7 +6,7 @@ from typing import List, Dict, Any
 
 
 class GantryMcpClient:
-    def __init__(self, host: str = "http://localhost:8002"):
+    def __init__(self, host: str = "http://host.docker.internal:8000"):
         """
         Initialize MCP Client.
         Default host assumes connection from Gantry container to MCP container via Docker DNS.
