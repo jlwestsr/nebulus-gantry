@@ -22,7 +22,7 @@ When opening this project, the IDE looks first for rules in the local workspace 
 
 - **The VENV Mandate**: You generally CANNOT run `pip install` or `python` commands using the system interpreter. You **MUST** assume the virtual environment is active (`source venv/bin/activate`) or explicitly call `./venv/bin/python`.
   - **Global Venv Prohibition**: Do NOT use the global `python_venv`. You must switch to the project-specific `./venv` IMMEDIATELY upon starting a session in the terminal.
-- **Pre-Commit Verification**: Before marking any task as complete, the agent MUST run `pytest` and ensure all tests pass.
+- **Pre-Commit Verification**: Before marking any task as complete, the agent MUST run `pytest` and ensure all tests pass. **You MUST watch the logs in the terminal to ensure everything passes and address ANY warnings.**
 - **Linting Compliance**:
   - **Markdown**: Must pass `markdownlint`.
   - **YAML**: Must pass `yamllint`.
@@ -113,6 +113,11 @@ Adhere to the specific strict workflow for each commit type:
 3. **Verify**: Run `bin/run_tests`.
 4. **Merge**: `git merge chore/description` into `develop`.
 5. **Push**: **CRITICAL**: Ask for permission -> `git push origin develop`.
+
+### 7.5 Post-Verification & Cleanup
+
+- **Process Cleanup**: You generally must terminate long-running background processes (like `uvicorn`, `run_app`, or `nebulus dev`) after verification is complete, unless explicitly asked to keep them running.
+- **Container Synchronizaton**: If `requirements.txt`, `Dockerfile`, `.chainlit/config.toml`, or `src/nebulus_gantry/version.py` (Asset Versioning) is modified, you must either running `docker compose up --build -d` for the relevant service or explicitly notify the user that a rebuild/restart is required.
 
 ## 8. Tool Usage
 

@@ -48,6 +48,17 @@ The following directories are symlinks to external projects provided for archite
   * **CSS**: Style elements using **class attributes** (avoid inline styles).
   * **Theme**: CSS Variables for theming.
 
+### Asset Versioning & Cache Busting
+
+To ensure users receive updated CSS/JS assets, we use a query parameter versioning strategy (e.g., `style.css?v=44`).
+
+**CRITICAL: When modifying `public/style.css` or `public/script.js`, you MUST update the version number in TWO places:**
+
+1. **Codebase (Custom Pages)**: Increment `UI_CSS_VERSION` or `UI_JS_VERSION` in `src/nebulus_gantry/version.py`.
+2. **Chainlit Config (Main App)**: Update `custom_css` or `custom_js` paths in `.chainlit/config.toml` (e.g., `custom_css = "/public/style.css?v=44"`).
+
+**After updating `.chainlit/config.toml`, you MUST rebuild/restart the Docker container for changes to take effect.**
+
 ## Directory Structure
 
 The project follows a strict separation of concerns:

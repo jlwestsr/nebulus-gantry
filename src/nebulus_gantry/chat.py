@@ -13,6 +13,9 @@ import re
 from pypdf import PdfReader
 from nebulus_gantry.services.entity_extractor import extract_entities
 from nebulus_gantry.auth import verify_token, get_user
+from nebulus_gantry.services.mcp_client import get_mcp_client
+from nebulus_gantry.tools.ltm import get_ltm_tool
+import json
 
 # Configure Ollama client
 client = AsyncOpenAI(
@@ -674,60 +677,92 @@ async def on_feedback(feedback):
     )
 
 
-async def generate_ai_response(chat_id, context_messages, settings, user_id):
-    """
-    Helper to call LLM, stream response, and attach actions.
-    Used by main, on_regenerate, and /regenerate command.
-    """
-    completion_settings = settings.copy()
-    friendly_name = settings["model"]
-    completion_settings["model"] = FRIENDLY_TO_RAW.get(friendly_name, friendly_name)
-
-    msg = cl.Message(content="")
-    await msg.send()
-
-    full_response = ""
-    full_usage = None
+async def _stream_llm_response(context_messages, tools, settings):
+    """Handles the API call to the LLM."""
     try:
         stream = await client.chat.completions.create(
             messages=context_messages,
             stream=True,
             stream_options={"include_usage": True},
-            **completion_settings,
+            tools=tools if tools else None,
+            tool_choice="auto" if tools else None,
+            **settings,
         )
-
-        full_usage = None
-        async for part in stream:
-            # Handle usage data if present
-            if hasattr(part, "usage") and part.usage:
-                full_usage = part.usage
-                total_tokens = part.usage.total_tokens
-
-                # Add to footer
-                full_response += f"\n\n---\n*Tokens: {total_tokens}*"
-                msg.content = process_thinking_tags(full_response)
-                await msg.update()
-
-            token = (
-                part.choices[0].delta.content
-                if (hasattr(part, "choices") and len(part.choices) > 0)
-                else ""
-            )
-            if token:
-                await msg.stream_token(token)
-                full_response += token
+        return stream
     except Exception as e:
-        print(f"Error exploring model: {e}")
-        error_msg = f"Error generating response: {e}"
-        msg.content = error_msg
+        print(f"Error calling LLM: {e}")
+        raise e
+
+
+async def _execute_tools(tool_calls_buffer, mcp, ltm, context_messages):
+    """Executes tools found in the buffer and updates context."""
+    reconstructed_calls = []
+    for idx in sorted(tool_calls_buffer.keys()):
+        t = tool_calls_buffer[idx]
+        reconstructed_calls.append({
+            "id": t["id"] or f"call_{uuid.uuid4()}",
+            "type": "function",
+            "function": {
+                "name": t["name"],
+                "arguments": t["arguments"]
+            }
+        })
+
+    for tc in reconstructed_calls:
+        fn_name = tc["function"]["name"]
+        fn_args_str = tc["function"]["arguments"]
+        call_id = tc["id"]
+
+        try:
+            args = json.loads(fn_args_str)
+        except Exception:
+            args = {}
+
+        async with cl.Step(name=fn_name) as step:
+            step.input = fn_args_str
+            result_str = ""
+
+            if fn_name == "search_chat_history":
+                result_str = ltm.search_chat_history(args.get("query", ""))
+            else:
+                result_str = await mcp.call_tool(fn_name, args)
+
+            step.output = result_str
+
+            context_messages.append({
+                "role": "tool",
+                "tool_call_id": call_id,
+                "content": result_str
+            })
+    return reconstructed_calls
+
+
+async def _handle_tool_calls(tool_calls_buffer, mcp, ltm, context_messages, msg, full_response):
+    reconstructed_calls = await _execute_tools(tool_calls_buffer, mcp, ltm, context_messages)
+
+    context_messages.append({
+        "role": "assistant",
+        "content": full_response or None,
+        "tool_calls": reconstructed_calls
+    })
+
+    if full_response:
+        msg.content = process_thinking_tags(full_response)
         await msg.update()
-        full_response = error_msg
+    else:
+        msg.content = "🛠️ Consulting tools..."
+        await msg.update()
 
-    # Final pass to ensure formatting
-    msg.content = process_thinking_tags(full_response)
 
-    # Attach action directly to message update
-    # This is more reliable than action.send() for the initial response
+async def _handle_final_response(msg, full_response, full_usage, completion_settings, chat_id, user_id):
+    """Processes the final LLM response, adding metadata and actions."""
+    # Update footer with tokens
+    if full_usage:
+        full_response += f"\n\n---\n*Tokens: {full_usage.total_tokens}*"
+        msg.content = process_thinking_tags(full_response)
+        await msg.update()
+
+    # Attach Regenerate Action
     action = cl.Action(
         name="regenerate",
         value="regenerate",
@@ -736,14 +771,10 @@ async def generate_ai_response(chat_id, context_messages, settings, user_id):
         payload={"value": "regenerate"},
     )
     msg.actions = [action]
-    await msg.update()
 
-    # Detect code blocks and attach Run action
+    # Detect Python
     code_blocks = re.findall(r"```(python|python3)\n(.*?)```", full_response, re.DOTALL)
     if code_blocks:
-        # Take the last block for now or multiple? Let's just do one action for the last block to keep UI clean
-        # or separate actions if we can.
-        # Simple for now: If *any* python code, attach "Run Code" for the *last* block found.
         lang, code = code_blocks[-1]
         run_action = cl.Action(
             name="run_code",
@@ -753,12 +784,13 @@ async def generate_ai_response(chat_id, context_messages, settings, user_id):
             payload={"language": lang, "code": code},
         )
         msg.actions.append(run_action)
-        await msg.update()
 
-    # Persist AI Message (Async)
+    await msg.update()
+
+    # Persist Main AI Response
     await cl.make_async(save_ai_message_db)(chat_id, full_response, msg.id)
 
-    # Log usage after message is persisted
+    # Log usage
     if full_usage:
         with db_session() as db:
             ai_msg = db.query(Message).filter(Message.cl_id == msg.id).first()
@@ -772,3 +804,100 @@ async def generate_ai_response(chat_id, context_messages, settings, user_id):
                     full_usage.prompt_tokens,
                     full_usage.completion_tokens,
                 )
+
+
+async def generate_ai_response(chat_id, context_messages, settings, user_id):
+    """
+    Helper to call LLM, stream response, and attach actions.
+    Supports Tool Calling (MCP + LTM) with a recursive execution loop.
+    """
+    completion_settings = settings.copy()
+    friendly_name = settings["model"]
+    completion_settings["model"] = FRIENDLY_TO_RAW.get(friendly_name, friendly_name)
+
+    # --- Tool Preparation ---
+    mcp = get_mcp_client()
+    ltm = get_ltm_tool()
+
+    # 1. Fetch Tools
+    tools = await mcp.list_tools()
+
+    # 2. Add LTM Tool
+    tools.append({
+        "type": "function",
+        "function": {
+            "name": "search_chat_history",
+            "description": "Search the long-term chat history for semantic matches. Use this when the user asks about past conversations or specific topics discussed previously.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "The semantic search query."
+                    }
+                },
+                "required": ["query"]
+            }
+        }
+    })
+
+    MAX_TURNS = 5
+    current_turn = 0
+
+    while current_turn < MAX_TURNS:
+        current_turn += 1
+
+        msg = cl.Message(content="")
+        await msg.send()
+
+        full_response = ""
+        tool_calls_buffer = {}  # index -> entries
+        full_usage = None
+
+        try:
+            stream = await _stream_llm_response(context_messages, tools, completion_settings)
+
+            async for part in stream:
+                if hasattr(part, "usage") and part.usage:
+                    full_usage = part.usage
+
+                delta = part.choices[0].delta if (hasattr(part, "choices") and len(part.choices) > 0) else None
+
+                if not delta:
+                    continue
+
+                if delta.tool_calls:
+                    for tc in delta.tool_calls:
+                        idx = tc.index
+                        if idx not in tool_calls_buffer:
+                            tool_calls_buffer[idx] = {
+                                "id": tc.id,
+                                "type": tc.type,
+                                "name": tc.function.name or "",
+                                "arguments": tc.function.arguments or ""
+                            }
+                        else:
+                            if tc.function and tc.function.arguments:
+                                tool_calls_buffer[idx]["arguments"] += tc.function.arguments
+
+                if delta.content:
+                    await msg.stream_token(delta.content)
+                    full_response += delta.content
+
+            # --- End of Stream for this Turn ---
+
+            if tool_calls_buffer:
+                await _handle_tool_calls(tool_calls_buffer, mcp, ltm, context_messages, msg, full_response)
+                continue
+
+            else:
+                # No tool calls, this is the final response
+                await _handle_final_response(msg, full_response, full_usage, completion_settings, chat_id, user_id)
+                return
+
+        except Exception as e:
+            print(f"Error exploring model: {e}")
+            error_msg = f"Error generating response: {e}"
+            msg.content = error_msg
+            await msg.update()
+            return

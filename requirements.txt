@@ -12,3 +12,6 @@ itsdangerous
 gunicorn
 uvicorn
 httpx
+mcp
+chromadb
+pytest-asyncio

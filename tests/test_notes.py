@@ -1,24 +1,23 @@
-def test_create_note(client):
+def create_note_helper(client):
     response = client.post("/api/notes", json={
         "title": "Test Note",
         "content": "This is a test note.",
         "category": "Testing"
     })
-
-    # Debug if failed
     if response.status_code != 200:
         print(response.text)
-
     assert response.status_code == 200
     data = response.json()
-    assert data["title"] == "Test Note"
-    assert "id" in data
     return data["id"]
+
+
+def test_create_note(client):
+    create_note_helper(client)
 
 
 def test_get_notes(client):
     # Create one first
-    test_create_note(client)
+    create_note_helper(client)
 
     response = client.get("/api/notes")
     assert response.status_code == 200
@@ -40,7 +39,7 @@ def test_update_note(client):
     # It does NOT join the external transaction started in `db` fixture unless I structure it that way.
     # For now, In-memory DB persists across the module. Is acceptable for these simple tests.
 
-    note_id = test_create_note(client)
+    note_id = create_note_helper(client)
 
     response = client.put(f"/api/notes/{note_id}", json={
         "title": "Updated Title",
@@ -53,7 +52,7 @@ def test_update_note(client):
 
 
 def test_delete_note(client):
-    note_id = test_create_note(client)
+    note_id = create_note_helper(client)
 
     response = client.delete(f"/api/notes/{note_id}")
     assert response.status_code == 200

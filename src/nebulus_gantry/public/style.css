@@ -1538,11 +1538,11 @@ button:has(svg.lucide-moon) {
 /* Toast Notifications */
 #model-toast {
     position: fixed;
-    top: 20px;
+    top: 70px;
     right: 20px;
     background-color: var(--bg-secondary);
     color: var(--text-primary);
-    padding: 12px 20px;
+    padding: 8px 12px;
     border-radius: 8px;
     box-shadow: 0 4px 12px rgb(0 0 0 / 15%);
     z-index: 10002;
