@@ -4,6 +4,7 @@ from pydantic import BaseModel
 import os
 from openai import AsyncOpenAI
 import httpx
+from nebulus_gantry.services.mcp_client import get_mcp_client
 
 router = APIRouter(prefix="/api/workspace", tags=["workspace"])
 
@@ -114,44 +115,37 @@ async def delete_model(name: str):
 
 # --- Tools ---
 
+# In-memory mock persistence for MVP
+DISABLED_TOOLS = set()
+
 
 @router.get("/tools")
 async def list_tools():
-    """List enabled/available MCP tools (Mock for now or introspect MCP)."""
-    # Since MCP is internal to the server process (FastMCP), we might need to expose them.
-    # We can inspect the 'mcp' object if we import it, or just use a static list for MVP.
-    # The MCP definitions are in mcp_server/server.py.
-    # We are in Gantry (FastAPI). MCP is running in a different container or process?
-    # Based on CONTEXT.md, Gantry and MCP are separate.
-    # Actually, main.py imports 'mcp_server' modules? No.
-    # Gantry and MCP Server seem to be distinct in docker-compose usually.
-    # Let's check docker-compose.yml to be sure.
-    # Assuming they are separate, we can't easily list tools from Gantry unless MCP exposes an API.
+    """List available MCP tools from the server."""
+    try:
+        mcp = get_mcp_client()
+        try:
+            # list_tools returns list of dicts: {"type": "function", "function": {...}}
+            tools_payload = await mcp.list_tools()
+        except Exception:
+            # If MCP is down, return empty or cached
+            return {"tools": [], "error": "MCP Server unavailable"}
 
-    # Wait, the mcp_server/server.py exposes an SSE app.
-    # Gantry is the UI.
-    # We might need to mock this for the "Workspace" UI feature for now
-    # OR assume we are managing the config that the MCP server READS.
+        # Transform for UI
+        ui_tools = []
+        for t in tools_payload:
+            fn = t.get("function", {})
+            name = fn.get("name")
+            if name:
+                ui_tools.append({
+                    "name": name,
+                    "description": fn.get("description", "No description"),
+                    "enabled": name not in DISABLED_TOOLS
+                })
 
-    # Let's return a mock list for the MVP UI structure.
-    tools = [
-        {
-            "name": "web_search",
-            "enabled": True,
-            "description": "Search the web via DDG",
-        },
-        {
-            "name": "read_file",
-            "enabled": True,
-            "description": "Read file from workspace",
-        },
-        {
-            "name": "run_command",
-            "enabled": False,
-            "description": "Execute shell commands",
-        },
-    ]
-    return {"tools": tools}
+        return {"tools": ui_tools}
+    except Exception as e:
+        return JSONResponse(content={"error": str(e)}, status_code=500)
 
 
 class ToggleToolRequest(BaseModel):
@@ -161,8 +155,12 @@ class ToggleToolRequest(BaseModel):
 
 @router.post("/tools/toggle")
 async def toggle_tool(request: ToggleToolRequest):
-    """Toggle a tool (Mock persistence)."""
-    # specific implementation depends on how MCP loads config.
+    """Toggle a tool."""
+    if request.enabled:
+        DISABLED_TOOLS.discard(request.name)
+    else:
+        DISABLED_TOOLS.add(request.name)
+
     return {"status": "success", "tool": request.name, "enabled": request.enabled}
 
 

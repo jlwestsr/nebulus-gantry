@@ -141,11 +141,30 @@ Nebulus.Workspace = {
                                 <span class="item-meta">${tool.description}</span>
                             </div>
                             <label class="toggle-switch">
-                                <input type="checkbox" ${tool.enabled ? 'checked' : ''} disabled>
+                                <input type="checkbox" data-name="${tool.name}" ${tool.enabled ? 'checked' : ''}>
                                 <span class="slider round"></span>
                             </label>
                         `;
                         list.appendChild(item);
+                    });
+
+                    // Add Event Listeners
+                    list.querySelectorAll('input[type="checkbox"]').forEach(input => {
+                        input.addEventListener('change', async (e) => {
+                            const name = e.target.dataset.name;
+                            const enabled = e.target.checked;
+                            try {
+                                const res = await fetch('/api/workspace/tools/toggle', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ name, enabled })
+                                });
+                                if (!res.ok) throw new Error("Toggle failed");
+                            } catch (err) {
+                                alert("Failed to toggle tool: " + err.message);
+                                e.target.checked = !enabled; // Revert on error
+                            }
+                        });
                     });
                 }
             } catch (e) {

@@ -4,15 +4,26 @@ services:
     build: .
     container_name: gantry-standalone
     ports:
-      - "8000:8000"
+      - "8080:8000"
     volumes:
       - .:/app
       - /var/run/docker.sock:/var/run/docker.sock # Temporarily kept for sandbox.py  # yamllint disable-line rule:line-length
     environment:
       - OLLAMA_HOST=${OLLAMA_HOST:-http://host.docker.internal:11435}
       - CHROMA_HOST=${CHROMA_HOST:-http://host.docker.internal:8000}
+      - MCP_HOST=http://host.docker.internal:8002
       - CHAINLIT_AUTH_SECRET=development_secret_key
       - CHAINLIT_CUSTOM_AUTH=true
       - DB_PATH=${DB_PATH:-sqlite:///./data/gantry.db}
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 2G
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"

@@ -22,7 +22,10 @@ class GantryMcpClient:
         in this context, we might connect-query-close or keep a session manager.
         """
         try:
-            async with sse_client(self.sse_url) as (read, write):
+            # We must trick FastMCP into thinking we are localhost to avoid "Invalid Host header"
+            # when connecting via host.docker.internal
+            headers = {"Host": "localhost:8002"}
+            async with sse_client(self.sse_url, headers=headers) as (read, write):
                 async with ClientSession(read, write) as session:
                     await session.initialize()
                     result = await session.list_tools()
@@ -42,13 +45,16 @@ class GantryMcpClient:
 
                     return self._tools
         except Exception as e:
+            import traceback
+            traceback.print_exc()
             print(f"Error listing MCP tools: {e}")
             return []
 
     async def call_tool(self, name: str, arguments: Dict[str, Any]) -> str:
         """Call a specific tool on the MCP server."""
         try:
-            async with sse_client(self.sse_url) as (read, write):
+            headers = {"Host": "localhost:8002"}
+            async with sse_client(self.sse_url, headers=headers) as (read, write):
                 async with ClientSession(read, write) as session:
                     await session.initialize()
                     result: CallToolResult = await session.call_tool(name, arguments)

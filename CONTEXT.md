@@ -6,6 +6,23 @@ Nebulus Gantry is a local AI workspace and interface that serves as a bridge bet
 
 **Key Differentiator:** Gantry implements a **Hybrid Long-Term Memory (LTM)** system, allowing it to retain semantic context (Vectors) and factual associations (Knowledge Graph) across sessions.
 
+## 2026 Architectural Standards (The "4 Pillars")
+
+We enforce a strict modernization rubric to ensure scalability and maintainability.
+
+1. **Backend (Python OOP)**:
+    * **Models**: Pydantic DTOs & SQLAlchemy Entities. No raw dicts.
+    * **Logic**: Service Layer pattern (e.g., `ChatService`). Controllers (Routers) must be thin.
+2. **Frontend (ES6 OOP)**:
+    * **State**: Centralized `Store` class. No global variables.
+    * **Components**: ES6 Classes extending a base `Component`. No monolithic scripts.
+3. **CSS (BEM)**:
+    * **Naming**: Block Element Modifier (e.g., `.card__header--active`).
+    * **Structure**: Modules (base, layout, components). No monolithic CSS.
+4. **HTML (Semantic)**:
+    * **Tags**: `<header>`, `<main>`, `<article>` over `<div>`.
+    * **A11y**: Mandatory `aria-label` and `role` attributes.
+
 ## 🚨 Critical Operational Rules 🚨
 
 **STOP & READ**: Before performing any work, you **MUST** review the detailed standards in:
@@ -64,19 +81,19 @@ To ensure users receive updated CSS/JS assets, we use a query parameter versioni
 The project follows a strict separation of concerns:
 
 nebulus-gantry/
-├── reference_nebulus/         # [READ-ONLY] Nebulus Reference
-├── reference_open-webui/      # [READ-ONLY] Open WebUI Reference
-├── ansible/                   # Environment provisioning
-├── bin/                       # Executable scripts (run_app, run_tests)
-├── scripts/                   # Setup scripts (bootstrap.sh)
 ├── src/
 │   └── nebulus_gantry/        # Main Package
-│       ├── main.py            # App Entrypoint
-│       ├── chat.py            # Chainlit Entrypoint
-│       ├── routers/           # API Endpoints
-│       ├── services/          # Business Logic
-│       ├── ui/                # UI Components
-│       └── public/            # Static Assets (CSS/JS)
+│       ├── backend/           # [New] Python Backend
+│       │   ├── models/        # Entities & DTOs
+│       │   ├── services/      # Business Logic
+│       │   ├── routes/        # API Endpoints
+│       │   └── main.py        # Entrypoint
+│       ├── frontend/          # [New] JS/CSS Source
+│       │   ├── src/
+│       │   │   ├── js/        # ES6 Classes
+│       │   │   └── css/       # BEM Modules
+│       │   └── public/        # Compiled Assets
+│       └── public/            # [Legacy] Static Assets (To be migrated)
 ├── data/                      # Local persistence
 └── tests/                     # Pytest suite
 
@@ -99,6 +116,7 @@ All operations **MUST** be performed via the **Gantry CLI**. Custom scripts (`bi
 ```bash
 # Start the full stack (Docker)
 ./bin/gantry start
+# Access at http://localhost:8080
 
 # Stop the stack
 ./bin/gantry stop

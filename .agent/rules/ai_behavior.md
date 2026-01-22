@@ -53,13 +53,18 @@ When opening this project, the IDE looks first for rules in the local workspace 
   - Use `APIRouter` for modularity.
   - Use Dependency Injection (`Depends()`) for database sessions and services.
   - Never hardcode paths; use `pathlib` relative to project root.
+- **Service Layer Pattern**: Business logic MUST reside in `services/`. API Routes (Controllers) only handle request/response.
+- **Data Models**: Use Pydantic DTOs for data exchange. Do not pass raw SQLAlchemy models to the frontend.
 
 ## 5. Coding Style (Frontend - Vanilla JS)
 
 - **No Frameworks**: Do NOT introduce React, Vue, or build steps (Webpack/Vite) unless explicitly directed.
+- **ES6 Architecture**: Use ES6 Classes for Components. Use ES6 Modules (`import/export`).
+- **State Management**: Do not use global variables. Use a centralized `Store` pattern.
 - **Namespacing**: Do not pollute `window`. Wrap logic in global objects (e.g., `Nebulus.Chat`, `Nebulus.Config`).
 - **Async/Await**: Use `fetch` with `async/await` for API calls.
 - **DOM Manipulation**: Use `document.querySelector` and `element.classList`. Avoid inline `style="..."`.
+- **CSS Architecture**: Use BEM naming convention (`.block__element--modifier`). Split CSS into base, layout, and component files.
 - **Asset Versioning**: When modifying `style.css` or `script.js` (or other assets), you **MUST** increment the corresponding version constant in `src/nebulus_gantry/version.py` (e.g., `UI_CSS_VERSION`) to force a client-side cache refresh.
 
 ## 6. Testing & Quality Assurance

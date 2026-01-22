@@ -6,9 +6,22 @@ from ..version import UI_CSS_VERSION, UI_JS_VERSION, NOTES_VERSION
 def get_notes_page():
     return f"""
     <!DOCTYPE html>
-    <html class="dark">
+    <html lang="en">
     <head>
         <title>Nebulus - Notes</title>
+        <script>
+            (function() {{
+                try {{
+                    const localTheme = localStorage.getItem('vite-ui-theme');
+                    const supportDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                    if (localTheme === 'dark' || (!localTheme && supportDarkMode)) {{
+                        document.documentElement.classList.add('dark');
+                    }} else {{
+                        document.documentElement.classList.remove('dark');
+                    }}
+                }} catch (e) {{}}
+            }})();
+        </script>
         <link rel="icon" href="/favicon.ico">
         <link rel="stylesheet" href="/public/style.css?v={UI_CSS_VERSION}">
         <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&display=swap"
@@ -59,9 +72,22 @@ def get_notes_page():
 def get_workspace_page():
     return f"""
     <!DOCTYPE html>
-    <html class="dark">
+    <html lang="en">
     <head>
         <title>Nebulus - Workspace</title>
+        <script>
+            (function() {{
+                try {{
+                    const localTheme = localStorage.getItem('vite-ui-theme');
+                    const supportDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                    if (localTheme === 'dark' || (!localTheme && supportDarkMode)) {{
+                        document.documentElement.classList.add('dark');
+                    }} else {{
+                        document.documentElement.classList.remove('dark');
+                    }}
+                }} catch (e) {{}}
+            }})();
+        </script>
         <link rel="icon" href="/favicon.ico">
         <link rel="stylesheet" href="/public/style.css?v={UI_CSS_VERSION}">
         <link rel="stylesheet"
@@ -132,7 +158,7 @@ def get_workspace_page():
         </div>
 
         <script src="/public/script.js?v={UI_JS_VERSION}"></script>
-        <script src="/public/workspace.js"></script>
+        <script src="/public/workspace.js?v={UI_JS_VERSION}"></script>
     </body>
     </html>
     """

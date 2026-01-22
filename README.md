@@ -30,6 +30,8 @@ Gantry can be run independently, but requires access to a Nebulus (Ollama/Chroma
 ```bash
 # Start Gantry
 ./bin/gantry start
+
+# Access at http://localhost:8080
 ```
 
 ### Configuration

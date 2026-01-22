@@ -252,7 +252,7 @@ const Nebulus = {
             if (document.getElementById('nebulus-sidebar')) return;
 
             const recentChatsHTML = history.map(chat => `
-                <div class="nav-item sub-item" onclick="window.location.href='/?chat_id=${chat.id}'">
+                <div class="nav-item sub-item" onclick="Nebulus.Chat.loadHistory('${chat.id}')">
                     <span class="nav-label">${chat.title}</span>
                     <div class="chat-options-btn" onclick="Nebulus.Sidebar.showContextMenu(event, '${chat.id}')">⋮</div>
                 </div>
@@ -676,19 +676,28 @@ const Nebulus = {
         },
 
         loadHistory: function (chatId) {
-            // 1. Update URL (Safe to do even if already there)
-            const newUrl = `/?chat_id=${chatId}`;
-            history.pushState({ chat_id: chatId }, "", newUrl);
+            // Check if we are on the main chat page
+            if (window.location.pathname === '/' || window.location.pathname === '') {
+                // SPA Navigation
+                const newUrl = `/?chat_id=${chatId}`;
+                history.pushState({ chat_id: chatId }, "", newUrl);
 
-            // 2. Hide Dashboard
-            Nebulus.Dashboard.hide();
+                // Hide Dashboard
+                Nebulus.Dashboard.hide();
 
-            // 3. Send Command
-            if (window.setInput) { // Chainlit internal or our wrapper
-                // Use our wrapper logic or direct call
-                Nebulus.Chat.setInput(`/load_history ${chatId}`);
+                // Send Command
+                if (window.setInput) { // Chainlit internal or our wrapper
+                    Nebulus.Chat.setInput(`/load_history ${chatId}`);
+                } else if (Nebulus.Chat.setInput) {
+                    Nebulus.Chat.setInput(`/load_history ${chatId}`);
+                } else {
+                    console.error("setInput not found");
+                    // Fallback if setInput fails/missing
+                    window.location.href = newUrl;
+                }
             } else {
-                console.error("setInput not found");
+                // Cross-page navigation (Redirect)
+                window.location.href = `/?chat_id=${chatId}`;
             }
         },
 
@@ -785,7 +794,7 @@ const Nebulus = {
                 return;
             }
             container.innerHTML = data.map(item => `
-                <div class="search-result-item" onclick="window.location.href='/?chat_id=${item.chat_id}'">
+                <div class="search-result-item" onclick="Nebulus.Chat.loadHistory('${item.chat_id}'); document.getElementById('search-modal-overlay').classList.remove('open');">
                     <div class="result-title">${item.title}</div>
                     <div class="result-snippet">${Nebulus.Utils.escapeHtml(item.snippet)}</div>
                     <div class="result-meta">${new Date(item.created_at).toLocaleDateString()}</div>
@@ -954,14 +963,11 @@ const Nebulus = {
             toggleBtn.className = 'theme-toggle-btn';
 
             const storedTheme = localStorage.getItem('vite-ui-theme');
-            const isDark = storedTheme === 'dark';
+            // If stored is explicit, ensure it matches class (in case blocking script missed it somehow, or for consistency)
+            // But usually blocking script handles it.
+            const isDark = document.documentElement.classList.contains('dark');
 
-            if (isDark && !document.documentElement.classList.contains('dark')) {
-                document.documentElement.classList.add('dark');
-            } else if (!isDark && document.documentElement.classList.contains('dark')) {
-                document.documentElement.classList.remove('dark');
-            }
-
+            // Sync toggle button state
             toggleBtn.innerHTML = isDark ? Nebulus.Icons.sun : Nebulus.Icons.moon;
             toggleBtn.title = "Toggle Theme";
 

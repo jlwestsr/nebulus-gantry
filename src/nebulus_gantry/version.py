@@ -1,5 +1,12 @@
+import os
+import time
+
 # Asset Versions
-UI_CSS_VERSION = "44"
-UI_JS_VERSION = "42"
-WORKSPACE_VERSION = "34"
-NOTES_VERSION = "36"
+# Use timestamp in development to prevent caching issues
+is_dev = os.getenv("NEBULUS_ENV", "development") == "development"
+timestamp = str(int(time.time()))
+
+UI_CSS_VERSION = timestamp if is_dev else "44"
+UI_JS_VERSION = timestamp if is_dev else "43"
+WORKSPACE_VERSION = timestamp if is_dev else "34"
+NOTES_VERSION = timestamp if is_dev else "36"

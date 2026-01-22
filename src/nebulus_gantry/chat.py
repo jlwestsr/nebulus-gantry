@@ -13,7 +13,7 @@ import re
 from pypdf import PdfReader
 from nebulus_gantry.services.entity_extractor import extract_entities
 from nebulus_gantry.auth import verify_token, get_user
-from nebulus_gantry.services.mcp_client import get_mcp_client
+# from nebulus_gantry.services.mcp_client import get_mcp_client  # Removed (F401)
 from nebulus_gantry.tools.ltm import get_ltm_tool
 import json
 
@@ -715,7 +715,7 @@ async def _stream_llm_response(context_messages, tools, settings):
         raise e
 
 
-async def _execute_tools(tool_calls_buffer, mcp, ltm, context_messages):
+async def _execute_tools(tool_calls_buffer, knowledge_service, ltm, context_messages):
     """Executes tools found in the buffer and updates context."""
     reconstructed_calls = []
     for idx in sorted(tool_calls_buffer.keys()):
@@ -745,8 +745,17 @@ async def _execute_tools(tool_calls_buffer, mcp, ltm, context_messages):
 
             if fn_name == "search_chat_history":
                 result_str = ltm.search_chat_history(args.get("query", ""))
+            elif fn_name == "search_web":
+                result_str = await knowledge_service.search_web(
+                    args.get("query", ""),
+                    args.get("max_results", 5)
+                )
+            elif fn_name == "read_url":
+                result_str = await knowledge_service.read_url(args.get("url", ""))
+            elif fn_name == "read_document":
+                result_str = await knowledge_service.read_document(args.get("path", ""))
             else:
-                result_str = await mcp.call_tool(fn_name, args)
+                result_str = f"Error: Unknown tool '{fn_name}'"
 
             step.output = result_str
 
@@ -758,21 +767,39 @@ async def _execute_tools(tool_calls_buffer, mcp, ltm, context_messages):
     return reconstructed_calls
 
 
-async def _handle_tool_calls(tool_calls_buffer, mcp, ltm, context_messages, msg, full_response):
-    reconstructed_calls = await _execute_tools(tool_calls_buffer, mcp, ltm, context_messages)
+async def _handle_tool_calls(tool_calls_buffer, knowledge_service, ltm, context_messages, msg, full_response):
+    # 1. Append the ASSISTANT'S message (Requesting the tools) to context FIRST
+    # Construct the tool_calls list for the history
+    history_tool_calls = []
+    for idx in sorted(tool_calls_buffer.keys()):
+        t = tool_calls_buffer[idx]
+        history_tool_calls.append({
+            "id": t["id"] or f"call_{uuid.uuid4()}",
+            "type": "function",
+            "function": {
+                "name": t["name"],
+                "arguments": t["arguments"]
+            }
+        })
 
     context_messages.append({
         "role": "assistant",
         "content": full_response or None,
-        "tool_calls": reconstructed_calls
+        "tool_calls": history_tool_calls
     })
 
+    # 2. Execute tools and append their outputs (Role: tool)
+    # We pass the buffer directly as before, but _execute_tools just handles execution & appending tool outputs
+    await _execute_tools(tool_calls_buffer, knowledge_service, ltm, context_messages)
+
+    # 3. Handle UI Message
     if full_response:
         msg.content = process_thinking_tags(full_response)
         await msg.update()
     else:
-        msg.content = "🛠️ Consulting tools..."
-        await msg.update()
+        # If no text was generated (pure tool call), remove the empty message bubble
+        # The tool steps (cl.Step) will still be visible in the thread
+        await msg.remove()
 
 
 async def _handle_final_response(msg, full_response, full_usage, completion_settings, chat_id, user_id):
@@ -797,6 +824,7 @@ async def _handle_final_response(msg, full_response, full_usage, completion_sett
     code_blocks = re.findall(r"```(python|python3)\n(.*?)```", full_response, re.DOTALL)
     if code_blocks:
         lang, code = code_blocks[-1]
+
         run_action = cl.Action(
             name="run_code",
             value="run_code",
@@ -837,30 +865,91 @@ async def generate_ai_response(chat_id, context_messages, settings, user_id):
     completion_settings["model"] = FRIENDLY_TO_RAW.get(friendly_name, friendly_name)
 
     # --- Tool Preparation ---
-    mcp = get_mcp_client()
+    # We now use KnowledgeService for research tools instead of raw MCP
+    from nebulus_gantry.services.knowledge_service import get_knowledge_service
+    knowledge_service = get_knowledge_service()
+
+    # mcp = get_mcp_client()
     ltm = get_ltm_tool()
 
-    # 1. Fetch Tools
-    tools = await mcp.list_tools()
-
-    # 2. Add LTM Tool
-    tools.append({
-        "type": "function",
-        "function": {
-            "name": "search_chat_history",
-            "description": "Search the long-term chat history for semantic matches. Use this when the user asks about past conversations or specific topics discussed previously.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "query": {
-                        "type": "string",
-                        "description": "The semantic search query."
-                    }
-                },
-                "required": ["query"]
+    # Explicit Tool Definitions (Research Agent + LTM)
+    tools = [
+        # --- LTM ---
+        {
+            "type": "function",
+            "function": {
+                "name": "search_chat_history",
+                "description": "Search the long-term chat history for semantic matches. Use this when the user asks about past conversations or specific topics discussed previously.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "The semantic search query."
+                        }
+                    },
+                    "required": ["query"]
+                }
+            }
+        },
+        # --- Research Agent (KnowledgeService) ---
+        {
+            "type": "function",
+            "function": {
+                "name": "search_web",
+                "description": "Search the internet for information using DuckDuckGo. Use this to find documentation, news, or general knowledge.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "The search query."
+                        },
+                        "max_results": {
+                            "type": "integer",
+                            "description": "Number of results to return (default 5).",
+                            "default": 5
+                        }
+                    },
+                    "required": ["query"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "read_url",
+                "description": "Read the content of a specific URL. Use this to read documentation pages, articles, or other web content found via search.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "url": {
+                            "type": "string",
+                            "description": "The URL to read."
+                        }
+                    },
+                    "required": ["url"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "read_document",
+                "description": "Read the text content of a local document (PDF or DOCX). Use this when the user references a specific file path.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "path": {
+                            "type": "string",
+                            "description": "The absolute path to the document."
+                        }
+                    },
+                    "required": ["path"]
+                }
             }
         }
-    })
+    ]
 
     MAX_TURNS = 5
     current_turn = 0
@@ -908,7 +997,8 @@ async def generate_ai_response(chat_id, context_messages, settings, user_id):
             # --- End of Stream for this Turn ---
 
             if tool_calls_buffer:
-                await _handle_tool_calls(tool_calls_buffer, mcp, ltm, context_messages, msg, full_response)
+                # Pass knowledge_service to handler
+                await _handle_tool_calls(tool_calls_buffer, knowledge_service, ltm, context_messages, msg, full_response)
                 continue
 
             else:

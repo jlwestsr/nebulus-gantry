@@ -7,6 +7,8 @@ from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.middleware import Middleware
+from starlette.middleware.base import BaseHTTPMiddleware
+from fastapi import Request, Response
 from chainlit.utils import mount_chainlit
 from sqlalchemy.orm import Session
 from sqlalchemy import func
@@ -26,6 +28,63 @@ load_dotenv()
 SECRET_KEY = os.environ.get("CHAINLIT_AUTH_SECRET", "supersecret-dev-key-change-me-in-prod")
 
 
+class ThemeFlickerMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        # Force identity encoding (no gzip) for all requests to ensure we can
+        # intercept and modify the HTML body safely without dealing with decompression.
+        # This is a bit of a hack, but safe for a local app.
+        if "headers" in request.scope:
+            new_headers = []
+            for k, v in request.scope["headers"]:
+                if k.decode("latin-1").lower() == "accept-encoding":
+                    continue
+                new_headers.append((k, v))
+            request.scope["headers"] = new_headers
+
+        response = await call_next(request)
+
+        # Only intercept root HTML requests (Chainlit index)
+        if request.url.path == "/" and response.headers.get("content-type", "").startswith("text/html"):
+            body = b""
+            async for chunk in response.body_iterator:
+                body += chunk
+
+            # Blocking script to inject
+            script = b"""
+            <script>
+                (function() {
+                    try {
+                        const localTheme = localStorage.getItem('vite-ui-theme');
+                        const supportDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                        if (localTheme === 'dark' || (!localTheme && supportDarkMode)) {
+                            document.documentElement.classList.add('dark');
+                        } else {
+                            document.documentElement.classList.remove('dark');
+                        }
+                    } catch (e) {}
+                })();
+            </script>
+            """
+
+            # Inject before closing head
+            if b"</head>" in body:
+                body = body.replace(b"</head>", script + b"</head>", 1)
+
+            # Remove content-length so it defaults to the new length
+            headers = dict(response.headers)
+            if "content-length" in headers:
+                del headers["content-length"]
+
+            return Response(
+                content=body,
+                status_code=response.status_code,
+                headers=headers,
+                media_type=response.media_type
+            )
+
+        return response
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Initialize Database on startup
@@ -35,6 +94,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(middleware=[
     Middleware(SessionMiddleware, secret_key=SECRET_KEY, https_only=False, session_cookie="gantry_session"),
+    Middleware(ThemeFlickerMiddleware),
     Middleware(AuthMiddleware)
 ], lifespan=lifespan)
 
