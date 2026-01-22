@@ -67,6 +67,11 @@ case $COMMAND in
     pre-commit run --all-files
     ;;
 
+  promote)
+    echo "Promoting versions via Ansible..."
+    ansible-playbook "$BIN_DIR/../src/nebulus_gantry/ops/promote_version.yml"
+    ;;
+
   *)
     echo "Unknown command: '$COMMAND'"
     echo "Run 'bin/gantry help' for available commands."

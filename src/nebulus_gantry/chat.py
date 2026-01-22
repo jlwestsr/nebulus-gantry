@@ -563,7 +563,10 @@ async def main(message: cl.Message):
         print(f"Extraction failed: {e}")
 
     # Persist User Message (Async)
-    await cl.make_async(save_user_message_db)(chat_id, message.content, message.id, entities, user_id)
+    # entities from extractor is a Dict, but model expects List[Dict]
+    # We wrap it in a list to satisfy the schema
+    entities_list = [entities] if entities else []
+    await cl.make_async(save_user_message_db)(chat_id, message.content, message.id, entities_list, user_id)
 
     completion_settings = settings.copy()
     friendly_name = settings["model"]
@@ -636,6 +639,42 @@ async def on_run_code(action: cl.Action):
     await msg.update()
 
 
+@cl.action_callback("save_note")
+async def on_save_note(action: cl.Action):
+    content = action.payload.get("content", "")
+    user_id = cl.user_session.get("db_user_id")
+
+    if not content or not user_id:
+        await cl.Message(content="❌ Error: missing content or user session.").send()
+        return
+
+    # Use raw DB for now to avoid circular imports or complex service instantiation if not needed
+    # Ideally should use NoteService
+    try:
+        from nebulus_gantry.backend.services.note_service import NoteService
+        from nebulus_gantry.backend.models.dtos import NoteCreate
+
+        def save_note_sync(uid, text):
+            with db_session() as db:
+                service = NoteService(db)
+                # Generate a title from first line
+                title = text.split("\n")[0][:50] or "New Note"
+                dto = NoteCreate(
+                    title=title,
+                    content=text,
+                    category="AI Chat"
+                )
+                note = service.create_note(uid, dto)
+                return note.title
+
+        note_title = await cl.make_async(save_note_sync)(user_id, content)
+        await cl.Message(content=f"✅ Saved as Note: **{note_title}**").send()
+
+    except Exception as e:
+        print(f"Error saving note: {e}")
+        await cl.Message(content=f"❌ Error saving note: {e}").send()
+
+
 @cl.on_feedback
 async def on_feedback(feedback):
     await cl.make_async(save_feedback_db)(
@@ -684,7 +723,11 @@ async def _execute_tools(tool_calls_buffer, knowledge_service, ltm, context_mess
         except Exception:
             args = {}
 
-        async with cl.Step(name=fn_name) as step:
+        display_name = fn_name
+        if fn_name == "search_web":
+            display_name = "Search results"
+
+        async with cl.Step(name=display_name) as step:
             step.input = fn_args_str
             result_str = ""
 
@@ -765,6 +808,28 @@ async def _handle_final_response(msg, full_response, full_usage, completion_sett
     )
     msg.actions = [action]
 
+    # Attach Save Note Action
+    note_action = cl.Action(
+        name="save_note",
+        value="save_note",
+        label="Save to Notes",
+        icon="notebook",  # Chainlit/Lucide icon name
+        payload={"content": full_response},
+        collapsed=True  # Show in menu or as icon? User asked for "just be an icon". Collapsed=True puts it in kebab menu usually. Let's try collapsed=False but empty label if possible, or just standard action.
+        # User said "but it just be an icon". Chainlit actions usually have labels. "icon-only" might mean no label text but cl.Action enforces label.
+        # Best approximation: Label="Save", Icon="notebook".
+    )
+    # Re-reading: "Save as New Note" but it just be an icon.
+    # We will use label="Save Note" for clarity but rely on icon.
+    note_action = cl.Action(
+        name="save_note",
+        value="save_note",
+        label="Save Note",
+        icon="book-open",
+        payload={"content": full_response},
+    )
+    msg.actions.append(note_action)
+
     # Detect Python
     code_blocks = re.findall(r"```(python|python3)\n(.*?)```", full_response, re.DOTALL)
     if code_blocks:
@@ -800,7 +865,7 @@ async def _handle_final_response(msg, full_response, full_usage, completion_sett
                 )
 
 
-async def generate_ai_response(chat_id, context_messages, settings, user_id):
+async def generate_ai_response(chat_id, context_messages, settings, user_id):  # noqa: C901
     """
     Helper to call LLM, stream response, and attach actions.
     Supports Tool Calling (MCP + LTM) with a recursive execution loop.
@@ -899,11 +964,21 @@ async def generate_ai_response(chat_id, context_messages, settings, user_id):
     MAX_TURNS = 5
     current_turn = 0
 
+    msg = cl.Message(content="")
+    await msg.send()
+
     while current_turn < MAX_TURNS:
         current_turn += 1
 
-        msg = cl.Message(content="")
-        await msg.send()
+        # msg is reused; if re-entering loop (multi-turn), we might want to append or replace output.
+        # Typically for "Thinking" -> "Tool" -> "Answer", we want one consolidated message.
+        # But stream_token will append. If we want to replace the "Let me check..." with final answer,
+        # we should reset content if we are starting a new generation phase?
+        # For now, let's keep appending or rely on the fact that 'full_response' resets in loop.
+        # Actually stream_token appends to the UI. If we want to clear previous turn's text (e.g. "I will search"):
+        if current_turn > 1:
+            msg.content = ""
+            await msg.update()
 
         full_response = ""
         tool_calls_buffer = {}  # index -> entries

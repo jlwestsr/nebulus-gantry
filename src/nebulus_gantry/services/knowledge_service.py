@@ -1,4 +1,5 @@
 import logging
+import json
 from typing import Optional
 from nebulus_gantry.services.mcp_client import get_mcp_client, GantryMcpClient
 
@@ -27,6 +28,26 @@ class KnowledgeService:
 
             # Execute
             result = await self.mcp.call_tool("search_web", {"query": query, "max_results": max_results})
+
+            # Format result if it looks like JSON
+            try:
+                data = json.loads(result)
+                if isinstance(data, list):
+                    # Format as Markdown
+                    md_output = [f"### 🔍 Search Results for '**{query}**'\n"]
+                    for idx, item in enumerate(data, 1):
+                        title = item.get("title", "No Title")
+                        href = item.get("href", item.get("link", "#"))
+                        body = item.get("body", item.get("snippet", ""))
+
+                        md_output.append(f"{idx}. **[{title}]({href})**")
+                        if body:
+                            md_output.append(f"   > {body}\n")
+
+                    return "\n".join(md_output)
+            except (json.JSONDecodeError, TypeError):
+                pass  # Fallback to raw result
+
             return result
         except Exception as e:
             logger.error(f"Web search failed: {e}")

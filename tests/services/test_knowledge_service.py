@@ -101,3 +101,24 @@ async def test_read_document_unsupported():
     result = await service.read_document("/path/to/image.png")
 
     assert "Unsupported file type" in result
+
+
+@pytest.mark.asyncio
+async def test_search_web_formatting():
+    """Verify that JSON results are formatted as Markdown."""
+    mock_mcp = AsyncMock()
+    mock_mcp.list_tools.return_value = [create_tool("search_web")]
+
+    # Sample JSON return from MCP
+    # Use strict JSON string
+    json_result = '[{"title": "Nebulus Docs", "href": "https://nebulus.ai", "body": "Official documentation."}, {"title": "Gantry Guide", "href": "https://gantry.ai", "body": "User guide for Gantry."}]'
+
+    mock_mcp.call_tool.return_value = json_result
+
+    service = KnowledgeService(mcp_client=mock_mcp)
+    result = await service.search_web("nebulus")
+
+    assert "### 🔍 Search Results" in result
+    assert "1. **[Nebulus Docs](https://nebulus.ai)**" in result
+    assert "> Official documentation." in result
+    assert "2. **[Gantry Guide](https://gantry.ai)**" in result
