@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Body
 from typing import List
 from ..dependencies import get_chat_service
 from ..services.chat_service import ChatService
@@ -50,3 +50,25 @@ async def delete_all_chats(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     return {"status": "success"}
+
+
+@router.put("/chats/{chat_id}/rename")
+async def rename_chat(
+    chat_id: str,
+    title: str = Body(..., embed=True),
+    user=Depends(get_current_user),
+    chat_service: ChatService = Depends(get_chat_service)
+):
+    success = chat_service.rename_chat(chat_id, user.id, title)
+    if not success:
+        raise HTTPException(status_code=404, detail="Chat not found")
+    return {"status": "success", "title": title}
+
+
+@router.get("/search")
+async def search_messages(
+    q: str,
+    user=Depends(get_current_user),
+    chat_service: ChatService = Depends(get_chat_service)
+):
+    return chat_service.search_messages(user.id, q)

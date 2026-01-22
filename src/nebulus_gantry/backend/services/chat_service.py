@@ -110,3 +110,51 @@ class ChatService:
             Message.chat_id == target_message.chat_id,
             Message.created_at > target_message.created_at
         ).delete()
+
+    def rename_chat(self, chat_id: str, user_id: int, new_title: str) -> bool:
+        chat = self.db.query(Chat).filter(Chat.id == chat_id, Chat.user_id == user_id).first()
+        if not chat:
+            return False
+        chat.title = new_title
+        self.db.commit()
+        return True
+
+    def search_messages(self, user_id: int, query: str) -> List[dict]:
+        if not query or len(query.strip()) < 2:
+            return []
+
+        results = (
+            self.db.query(Message)
+            .join(Chat)
+            .filter(Chat.user_id == user_id)
+            .filter(Message.content.ilike(f"%{query}%"))
+            .order_by(desc(Message.created_at))
+            .limit(50)
+            .all()
+        )
+
+        response = []
+        for msg in results:
+            content = msg.content
+            # Simple snippet generation
+            try:
+                mid_idx = content.lower().index(query.lower())
+                start = max(0, mid_idx - 60)
+                end = min(len(content), mid_idx + 60)
+                snippet = content[start:end]
+                if start > 0:
+                    snippet = "..." + snippet
+                if end < len(content):
+                    snippet = snippet + "..."
+            except ValueError:
+                snippet = content[:150]
+
+            response.append(
+                {
+                    "chat_id": msg.chat_id,
+                    "title": msg.chat.title or "Untitled Chat",
+                    "snippet": snippet,
+                    "created_at": msg.created_at.isoformat(),
+                }
+            )
+        return response
