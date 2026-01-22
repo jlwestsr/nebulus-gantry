@@ -15,7 +15,12 @@ from sqlalchemy import func
 from openai import AsyncOpenAI
 
 from .database import init_db, migrate_db, UsageLog, get_db
-from .routers import auth_routes, chat_routes, notes_routes, workspace_routes, ltm_routes, debug_routes
+# New import
+from .backend.routes import chat_router
+# Legacy imports
+from .routers import auth_routes, notes_routes, workspace_routes, ltm_routes, debug_routes
+# from .routers import chat_routes # Legacy
+
 from .middleware import AuthMiddleware
 from .ops.ollama import create_model, generate_modelfile
 from .ui.pages import get_notes_page, get_workspace_page
@@ -225,10 +230,9 @@ async def workspace_page():
 
 
 # Include routers
-# ...
-# Include routers
 app.include_router(auth_routes.router)
-app.include_router(chat_routes.router)
+# app.include_router(chat_routes.router) # Legacy
+app.include_router(chat_router.router)   # New Backend Router
 app.include_router(notes_routes.router)
 app.include_router(workspace_routes.router)
 app.include_router(ltm_routes.router)

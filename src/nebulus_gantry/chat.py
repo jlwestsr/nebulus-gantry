@@ -5,8 +5,10 @@ import uuid
 from typing import Optional
 
 from openai import AsyncOpenAI
-from nebulus_gantry.database import Chat, Message, db_session, User, Feedback
-from sqlalchemy import desc
+from nebulus_gantry.backend.database import db_session
+from nebulus_gantry.backend.services.chat_service import ChatService
+from nebulus_gantry.backend.models.dtos import MessageCreate
+from nebulus_gantry.backend.models.entities import Chat, Message
 from nebulus_gantry.exec.sandbox import run_code_in_sandbox
 from nebulus_gantry.metrics.usage import log_usage
 import re
@@ -40,19 +42,22 @@ MODEL_MAPPING = {
 FRIENDLY_TO_RAW = {v: k for k, v in MODEL_MAPPING.items()}
 
 
-# --- DB Helpers (Synchronous) ---
+# --- Service Wrappers (Legacy Adapters) ---
+
 def initialize_chat_db(chat_id, user_id):
     with db_session() as db:
-        # Check if chat exists first to avoid IntegrityError logging
-        existing_chat = db.query(Chat).filter(Chat.id == chat_id).first()
-        if not existing_chat:
-            new_chat = Chat(id=chat_id, user_id=user_id, title="New Chat")
-            db.add(new_chat)
+        service = ChatService(db)
+        service.get_or_create_chat(chat_id, user_id)
     return user_id
 
 
 def update_model_setting_db(user_id, new_model):
+    # This logic belongs in UserService but current User model update is simple
+    # We can keep raw ORM for this specific tiny update or move to UserService
+    # Let's keep raw for now as UserService update method is generic
     with db_session() as db:
+        # We need to import User from new entities
+        from nebulus_gantry.backend.models.entities import User
         user = db.query(User).filter(User.id == user_id).first()
         if user:
             user.current_model = new_model
@@ -62,6 +67,7 @@ def sync_model_from_db_helper(user_id):
     if not user_id:
         return None
     with db_session() as db:
+        from nebulus_gantry.backend.models.entities import User
         user = db.query(User).filter(User.id == user_id).first()
         if user and user.current_model:
             return user.current_model
@@ -70,132 +76,71 @@ def sync_model_from_db_helper(user_id):
 
 def get_chat_history_db(chat_id, limit=20):
     with db_session() as db:
-        db.expire_on_commit = False
-        messages = (
-            db.query(Message)
-            .filter(Message.chat_id == chat_id)
-            .order_by(desc(Message.created_at))
-            .limit(limit)
-            .all()
-        )
-        return sorted(messages, key=lambda m: m.created_at)
+        service = ChatService(db)
+        return service.get_chat_history(chat_id, limit)
 
 
 def save_user_message_db(chat_id, content, message_id, entities=None, user_id=None):
     with db_session() as db:
-        # Check for existing message (Upsert for Edit)
-        existing_msg = db.query(Message).filter(Message.cl_id == message_id).first()
-        if existing_msg:
-            # If content changed, it's an EDIT
-            if existing_msg.content != content:
-                existing_msg.content = content
-                if entities:
-                    existing_msg.entities = entities
-                # Truncate history AFTER this message
-                target = existing_msg
-                db.query(Message).filter(Message.chat_id == chat_id).filter(
-                    Message.created_at > target.created_at
-                ).delete()
-            return
-
-        # Check if Chat exists, if not create it (Lazy Init)
-        chat = db.query(Chat).filter(Chat.id == chat_id).first()
-        if not chat:
-            if user_id:
-                # Create the chat now since we have a message
-                new_chat = Chat(id=chat_id, user_id=user_id, title="New Chat")
-                db.add(new_chat)
-                db.flush()  # Ensure it exists for FK
-            else:
-                # Fallback or error logging if needed, but for now we proceed
-                # This might raise IntegrityError if FK constraint is strict
-                print(f"Warning: Attempting to save message for non-existent chat {chat_id} without user_id")
-
-        user_msg = Message(
+        service = ChatService(db)
+        dto = MessageCreate(
             chat_id=chat_id,
-            author="user",
             content=content,
+            author="user",
             cl_id=message_id,
             entities=entities
         )
-        db.add(user_msg)
-
-        # Update title if it's the first message
-        chat = db.query(Chat).filter(Chat.id == chat_id).first()
-        if chat and chat.title == "New Chat":
-            title_candidate = content[:30] + ".." if len(content) > 30 else content
-            chat.title = title_candidate
-            db.add(chat)
+        service.save_message(dto, user_id=user_id)
 
 
 def save_ai_message_db(chat_id, content, message_id):
     with db_session() as db:
-        if db.query(Message).filter(Message.cl_id == message_id).first():
-            return
-
-        ai_msg = Message(
+        service = ChatService(db)
+        dto = MessageCreate(
             chat_id=chat_id,
-            author="assistant",
             content=content,
-            cl_id=message_id,
+            author="assistant",
+            cl_id=message_id
         )
-        db.add(ai_msg)
+        # Author is handled by DTO field, but create method arguments might differ
+        # Re-checking ChatService.save_message signature
+        # It takes MessageCreate.
+        service.save_message(dto)
 
 
 def save_feedback_db(message_id, score, comment):
     with db_session() as db:
-        db_msg = db.query(Message).filter(Message.cl_id == message_id).first()
-        if not db_msg:
-            return
-
-        existing = db.query(Feedback).filter(Feedback.message_id == db_msg.id).first()
-        if existing:
-            existing.score = score
-            existing.comment = comment
-        else:
-            new_fb = Feedback(
-                message_id=db_msg.id,
-                score=score,
-                comment=comment,
-            )
-            db.add(new_fb)
+        service = ChatService(db)
+        service.save_feedback(message_id, score, comment)
 
 
 def truncate_chat_after_db(chat_id, message_id, include_target=True):
-    """
-    Deletes messages in a chat after a specific point.
-    include_target=True: Deletes target + future (Regenerate).
-    include_target=False: Deletes future only (Edit).
-    """
+    # ChatService helper for this?
+    # Implemented _truncate_history_after in service but it's internal
+    # Let's implement this logic using raw DB here for now OR expose it in Service
     with db_session() as db:
-        # Get target message
+        from nebulus_gantry.backend.models.entities import Message
+
         target = db.query(Message).filter(Message.cl_id == message_id).first()
         if not target:
             return
 
-        # Delete messages after the target
         query = db.query(Message).filter(Message.chat_id == chat_id)
-
         if include_target:
             query = query.filter(Message.created_at >= target.created_at)
         else:
             query = query.filter(Message.created_at > target.created_at)
-
         query.delete()
-
-    return
 
 
 def delete_all_chats_for_user_db(user_id, db=None):
-    """
-    Deletes all chats for a specific user.
-    Cascading delete should handle messages if configured, but we can be explicit.
-    """
     if db:
-        return _delete_chats_logic(user_id, db)
-
-    with db_session() as session:
-        return _delete_chats_logic(user_id, session)
+        service = ChatService(db)
+        service.delete_all_chats(user_id)
+    else:
+        with db_session() as session:
+            service = ChatService(session)
+            service.delete_all_chats(user_id)
 
 
 def _delete_chats_logic(user_id, db):

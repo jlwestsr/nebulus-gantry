@@ -1,0 +1,197 @@
+/* Dashboard / Empty State */
+#nebulus-dashboard {
+    position: fixed;
+    top: 0;
+    left: var(--sidebar-width);
+    width: calc(100% - var(--sidebar-width));
+    height: 100vh;
+    display: none;
+
+    /* Hidden by default */
+    align-items: center;
+    justify-content: center;
+    background-color: var(--bg-primary);
+    z-index: 50;
+    transition: left 0.3s ease, width 0.3s ease, background-color 0.3s ease;
+}
+
+body.sidebar-collapsed #nebulus-dashboard {
+    left: var(--sidebar-collapsed-width);
+    width: calc(100% - var(--sidebar-collapsed-width));
+}
+
+.dashboard-content {
+    text-align: center;
+    max-width: 800px;
+    width: 100%;
+}
+
+.dashboard-greeting {
+    font-size: 3.2rem;
+    color: var(--text-primary);
+    font-weight: 500;
+    line-height: 1.2;
+    margin-bottom: 40px;
+    text-align: left;
+    width: 100%;
+    max-width: 800px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.gradient-text {
+    background: var(--gemini-gradient);
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    filter: brightness(1.2);
+}
+
+/* Input Pill Container */
+.input-pill-container {
+    background: var(--bg-secondary);
+    border-radius: 28px;
+    padding: 10px 20px 10px 15px;
+    display: flex;
+    flex-direction: column;
+    max-width: 800px;
+    width: 100%;
+    margin: 0 auto 40px;
+    min-height: 120px;
+    position: relative;
+    transition: background 0.2s;
+}
+
+.input-pill-container:focus-within {
+    background: #2a2b2d;
+
+    /* TODO: check light/dark mode compatibility */
+}
+
+.input-pill-label {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-bottom: 10px;
+    margin-left: 5px;
+}
+
+.input-pill {
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+
+#dashboard-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    font-size: 0.95rem;
+    color: var(--text-primary);
+    padding: 10px;
+    outline: none;
+}
+
+.right-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.icon-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--text-primary);
+    transition: background 0.2s;
+}
+
+.icon-btn:hover {
+    background: rgb(255 255 255 / 10%);
+}
+
+/* Suggestions (Pills) */
+.suggestions-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: center;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.suggestion-pill {
+    background: var(--bg-secondary);
+    border-radius: 20px;
+    padding: 10px 20px;
+    font-size: 0.85rem;
+    color: var(--text-primary);
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: background 0.2s, border-color 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.suggestion-pill:hover {
+    background: var(--bg-hover);
+    border-color: #555;
+}
+
+.emoji {
+    font-size: 1.0rem;
+}
+
+/* Header Model Selector */
+#model-selector-container {
+    position: fixed;
+    top: 15px;
+    right: 80px;
+    z-index: 10002;
+}
+
+#model-selector {
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 0.9rem;
+    outline: none;
+    cursor: pointer;
+    transition: border-color 0.2s;
+}
+
+#model-selector:hover {
+    border-color: var(--text-secondary);
+}
+
+#model-selector option {
+    background-color: var(--bg-secondary);
+}
+
+/* Theme Toggle Button */
+#floating-theme-toggle {
+    position: fixed;
+    top: 15px;
+    right: 20px;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 10001;
+    transition: background-color 0.2s, transform 0.2s;
+}
+
+#floating-theme-toggle:hover {
+    background-color: var(--bg-hover);
+    transform: rotate(15deg);
+}

@@ -58,8 +58,12 @@ When opening this project, the IDE looks first for rules in the local workspace 
 
 ## 5. Coding Style (Frontend - Vanilla JS)
 
+- **Architecture (MVC)**:
+  - Treat JS classes in `src/js/components/` as **Views/Controllers**.
+  - Use `core/store.js` as the **Model** for client-side state.
+  - AJAX calls via `fetch` act as the bridge to Backend Controllers.
 - **No Frameworks**: Do NOT introduce React, Vue, or build steps (Webpack/Vite) unless explicitly directed.
-- **ES6 Architecture**: Use ES6 Classes for Components. Use ES6 Modules (`import/export`).
+- **ES6 Architecture**: Use ES6 Classes extending `Component`. Use ES6 Modules (`import/export`).
 - **State Management**: Do not use global variables. Use a centralized `Store` pattern.
 - **Namespacing**: Do not pollute `window`. Wrap logic in global objects (e.g., `Nebulus.Chat`, `Nebulus.Config`).
 - **Async/Await**: Use `fetch` with `async/await` for API calls.

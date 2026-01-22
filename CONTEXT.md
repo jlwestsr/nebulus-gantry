@@ -6,22 +6,41 @@ Nebulus Gantry is a local AI workspace and interface that serves as a bridge bet
 
 **Key Differentiator:** Gantry implements a **Hybrid Long-Term Memory (LTM)** system, allowing it to retain semantic context (Vectors) and factual associations (Knowledge Graph) across sessions.
 
+## Architecture Standards
+
+### Backend: Service Layer (MVC)
+
+We follow a strict **MVC** pattern:
+
+- **Models** (`backend/models/`): Pydantic DTOs and SQLAlchemy Entities.
+- **Controllers** (`backend/routes/`): FastAPI Routers handling HTTP requests.
+- **Service Layer** (`backend/services/`): Pure business logic encapsulation.
+- **Dependencies** (`backend/dependencies.py`): Injection wiring.
+
+### Frontend: Component Modules (ES6)
+
+We use vanilla JS with an **ES6 Class Component** structure:
+
+- **Core** (`core/`): `Store.js` (Pub/Sub State) and `Component.js` (Base Class).
+- **Components** (`components/`): Independent matching view-controllers (`Sidebar`, `Chat`, `Dashboard`).
+- **CSS** (`css/`): BEM-compliant modular styles (Base, Layout, Components).
+
 ## 2026 Architectural Standards (The "4 Pillars")
 
 We enforce a strict modernization rubric to ensure scalability and maintainability.
 
 1. **Backend (Python OOP)**:
-    * **Models**: Pydantic DTOs & SQLAlchemy Entities. No raw dicts.
-    * **Logic**: Service Layer pattern (e.g., `ChatService`). Controllers (Routers) must be thin.
+    - **Models**: Pydantic DTOs & SQLAlchemy Entities. No raw dicts.
+    - **Logic**: Service Layer pattern (e.g., `ChatService`). Controllers (Routers) must be thin.
 2. **Frontend (ES6 OOP)**:
-    * **State**: Centralized `Store` class. No global variables.
-    * **Components**: ES6 Classes extending a base `Component`. No monolithic scripts.
+    - **State**: Centralized `Store` class. No global variables.
+    - **Components**: ES6 Classes extending a base `Component`. No monolithic scripts.
 3. **CSS (BEM)**:
-    * **Naming**: Block Element Modifier (e.g., `.card__header--active`).
-    * **Structure**: Modules (base, layout, components). No monolithic CSS.
+    - **Naming**: Block Element Modifier (e.g., `.card__header--active`).
+    - **Structure**: Modules (base, layout, components). No monolithic CSS.
 4. **HTML (Semantic)**:
-    * **Tags**: `<header>`, `<main>`, `<article>` over `<div>`.
-    * **A11y**: Mandatory `aria-label` and `role` attributes.
+    - **Tags**: `<header>`, `<main>`, `<article>` over `<div>`.
+    - **A11y**: Mandatory `aria-label` and `role` attributes.
 
 ## 🚨 Critical Operational Rules 🚨
 
@@ -32,8 +51,8 @@ We enforce a strict modernization rubric to ensure scalability and maintainabili
 
 The following directories are symlinks to external projects provided for architectural reference only. **ABSOLUTELY NO CHANGES** are permitted in these directories:
 
-* `reference_nebulus/`: The core Nebulus logic.
-* `reference_open-webui/`: The Open WebUI project.
+- `reference_nebulus/`: The core Nebulus logic.
+- `reference_open-webui/`: The Open WebUI project.
 
 **The 4 Pillars of Gantry Development:**
 
@@ -46,24 +65,24 @@ The following directories are symlinks to external projects provided for archite
 
 ### Backend (The Brain)
 
-* **Framework**: Python 3.12+ (FastAPI / Starlette).
-* **API Standards**: **All REST API usage must be Python**.
-* **Database (State)**: SQLite (via SQLAlchemy) for application settings and notes.
-* **Memory Engine (LTM)**:
-  * **Semantic**: ChromaDB (External Service) for fuzzy vector retrieval.
-  * **Associative**: NetworkX (In-Memory Graph, persisted to `data/graph.json`) for entity relationships.
-  * **Consolidation**: Background `async` workers that summarize raw logs into "Golden Records."
-* **LLM Engine**: Ollama (Port 11435).
-  * **Note**: We run on port 11435 instead of the default 11434 to avoid conflicts with other local Ollama instances.
+- **Framework**: Python 3.12+ (FastAPI / Starlette).
+- **API Standards**: **All REST API usage must be Python**.
+- **Database (State)**: SQLite (via SQLAlchemy) for application settings and notes.
+- **Memory Engine (LTM)**:
+  - **Semantic**: ChromaDB (External Service) for fuzzy vector retrieval.
+  - **Associative**: NetworkX (In-Memory Graph, persisted to `data/graph.json`) for entity relationships.
+  - **Consolidation**: Background `async` workers that summarize raw logs into "Golden Records."
+- **LLM Engine**: Ollama (Port 11435).
+  - **Note**: We run on port 11435 instead of the default 11434 to avoid conflicts with other local Ollama instances.
 
 ### Frontend (The Face)
 
-* **Stack**: HTML5 (Living Standard), CSS3, Vanilla JavaScript (ES6+).
-* **Communication**: REST API (Fetch with `async/await`).
-* **Design Standards**:
-  * **JavaScript**: Use **AJAX** for interactions. Target elements using **ID tags**.
-  * **CSS**: Style elements using **class attributes** (avoid inline styles).
-  * **Theme**: CSS Variables for theming.
+- **Stack**: HTML5 (Living Standard), CSS3, Vanilla JavaScript (ES6+).
+- **Communication**: REST API (Fetch with `async/await`).
+- **Design Standards**:
+  - **JavaScript**: Use **AJAX** for interactions. Target elements using **ID tags**.
+  - **CSS**: Style elements using **class attributes** (avoid inline styles).
+  - **Theme**: CSS Variables for theming.
 
 ### Asset Versioning & Cache Busting
 
