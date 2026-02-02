@@ -47,3 +47,6 @@ reference_open-webui
 
 # Corrupted backups
 _corrupted_backup/
+
+# Git worktrees
+.worktrees/
