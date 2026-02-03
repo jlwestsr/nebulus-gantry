@@ -52,3 +52,6 @@ _corrupted_backup/
 
 # Git worktrees
 .worktrees/
+
+# Playwright
+.playwright-mcp/
