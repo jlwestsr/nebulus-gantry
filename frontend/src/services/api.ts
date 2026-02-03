@@ -74,11 +74,15 @@ export const chatApi = {
     const reader = response.body?.getReader();
     if (!reader) throw new Error('No response body');
 
-    const decoder = new TextDecoder();
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      yield decoder.decode(value);
+    const decoder = new TextDecoder('utf-8', { stream: true });
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        yield decoder.decode(value);
+      }
+    } finally {
+      reader.releaseLock();
     }
   },
 };
