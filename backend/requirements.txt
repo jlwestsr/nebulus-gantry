@@ -17,6 +17,9 @@ httpx>=0.26.0
 chromadb>=0.4.0
 networkx>=3.2
 
+# Docker
+docker>=7.0.0
+
 # Dev
 pytest>=8.0.0
 pytest-asyncio>=0.23.0

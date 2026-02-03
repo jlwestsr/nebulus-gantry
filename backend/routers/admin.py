@@ -24,8 +24,12 @@ from backend.schemas.admin import (
     UserListResponse,
 )
 from backend.services.auth_service import AuthService
+from backend.services.docker_service import DockerService
 
 logger = logging.getLogger(__name__)
+
+# Singleton DockerService instance (gracefully handles unavailable Docker)
+_docker_service = DockerService()
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
@@ -98,14 +102,34 @@ def delete_user(
 
 @router.get("/services", response_model=ServiceListResponse)
 def list_services(admin=Depends(require_admin)):
-    """List Nebulus service statuses. Placeholder - Task 25 will implement."""
-    return ServiceListResponse(services=[])
+    """List Nebulus service statuses via Docker API."""
+    services = _docker_service.list_services()
+    return ServiceListResponse(
+        services=[
+            ServiceStatus(
+                name=s["name"],
+                status=s["status"],
+                container_id=s.get("container_id"),
+            )
+            for s in services
+        ]
+    )
 
 
 @router.post("/services/{service_name}/restart", response_model=RestartServiceResponse)
 def restart_service(service_name: str, admin=Depends(require_admin)):
-    """Restart a service by name. Placeholder - Task 25 will implement."""
-    raise HTTPException(status_code=501, detail="Not implemented yet")
+    """Restart a service by name via Docker API."""
+    if not _docker_service.available:
+        raise HTTPException(status_code=503, detail="Docker is not available")
+    success = _docker_service.restart_service(service_name)
+    if not success:
+        raise HTTPException(
+            status_code=404, detail=f"Service '{service_name}' not found"
+        )
+    return RestartServiceResponse(
+        message=f"Service '{service_name}' restarted successfully",
+        service=service_name,
+    )
 
 
 # ── Model Management ─────────────────────────────────────────────────────────

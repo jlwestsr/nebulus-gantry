@@ -237,14 +237,15 @@ class TestAdminAccess:
         assert "services" in data
         assert isinstance(data["services"], list)
 
-    def test_restart_service_admin_placeholder(self, client, admin_user):
+    def test_restart_service_admin_responds(self, client, admin_user):
         _, token = admin_user
         response = client.post(
             "/api/admin/services/web/restart",
             cookies={"session_token": token},
         )
-        # Placeholder returns 501 Not Implemented
-        assert response.status_code == 501
+        # Depending on Docker availability and container existence:
+        # 200 = restarted, 404 = not found, 503 = Docker unavailable
+        assert response.status_code in (200, 404, 503)
 
     def test_list_models_admin(self, client, admin_user):
         _, token = admin_user
