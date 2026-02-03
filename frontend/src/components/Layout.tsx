@@ -1,4 +1,5 @@
 import { type ReactNode, useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { useUIStore } from '../stores/uiStore';
 import { SearchModal } from './SearchModal';
@@ -108,9 +109,20 @@ export function Layout({ children }: LayoutProps) {
 
             {user && (
               <>
-                <span className="hidden sm:inline text-sm text-gray-400">
+                {user.role === 'admin' && (
+                  <Link
+                    to="/admin"
+                    className="text-sm text-gray-400 hover:text-gray-200 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50 rounded px-2 py-1"
+                  >
+                    Admin
+                  </Link>
+                )}
+                <Link
+                  to="/settings"
+                  className="hidden sm:inline text-sm text-gray-400 hover:text-gray-200 transition-colors duration-200"
+                >
                   {user.display_name}
-                </span>
+                </Link>
                 <button
                   onClick={() => logout()}
                   className="text-sm text-gray-400 hover:text-gray-200 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50 rounded px-2 py-1"
