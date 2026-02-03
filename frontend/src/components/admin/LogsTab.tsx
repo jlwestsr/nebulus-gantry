@@ -12,15 +12,28 @@ const MAX_LOG_LINES = 1000;
 
 type ConnectionStatus = 'connecting' | 'connected' | 'disconnected';
 
+interface LogLine {
+  id: number;
+  text: string;
+}
+
+const STATUS_CONFIG: Record<ConnectionStatus, { color: string; label: string }> = {
+  connected: { color: 'bg-green-500', label: 'Connected' },
+  connecting: { color: 'bg-yellow-500 animate-pulse', label: 'Connecting...' },
+  disconnected: { color: 'bg-red-500', label: 'Disconnected' },
+};
+
 export function LogsTab() {
   const [selectedService, setSelectedService] = useState(SERVICES[0].value);
-  const [lines, setLines] = useState<string[]>([]);
+  const [lines, setLines] = useState<LogLine[]>([]);
   const [status, setStatus] = useState<ConnectionStatus>('disconnected');
   const [paused, setPaused] = useState(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const esRef = useRef<EventSource | null>(null);
   const userScrolledUpRef = useRef(false);
+  const nextIdRef = useRef(0);
+  const pausedRef = useRef(false);
 
   // Determine if the user has scrolled away from the bottom
   const handleScroll = useCallback(() => {
@@ -50,6 +63,7 @@ export function LogsTab() {
     setStatus('connecting');
     setLines([]);
     setPaused(false);
+    pausedRef.current = false;
     userScrolledUpRef.current = false;
 
     const es = adminApi.streamLogs(selectedService);
@@ -60,8 +74,9 @@ export function LogsTab() {
     };
 
     es.onmessage = (event: MessageEvent) => {
+      if (pausedRef.current) return;
       setLines((prev) => {
-        const updated = [...prev, event.data];
+        const updated = [...prev, { id: nextIdRef.current++, text: event.data }];
         if (updated.length > MAX_LOG_LINES) {
           return updated.slice(updated.length - MAX_LOG_LINES);
         }
@@ -97,6 +112,7 @@ export function LogsTab() {
   const handleTogglePause = useCallback(() => {
     setPaused((prev) => {
       const next = !prev;
+      pausedRef.current = next;
       // When resuming, snap to bottom
       if (!next) {
         userScrolledUpRef.current = false;
@@ -111,16 +127,7 @@ export function LogsTab() {
     });
   }, []);
 
-  const statusConfig: Record<
-    ConnectionStatus,
-    { color: string; label: string }
-  > = {
-    connected: { color: 'bg-green-500', label: 'Connected' },
-    connecting: { color: 'bg-yellow-500 animate-pulse', label: 'Connecting...' },
-    disconnected: { color: 'bg-red-500', label: 'Disconnected' },
-  };
-
-  const currentStatus = statusConfig[status];
+  const currentStatus = STATUS_CONFIG[status];
   const currentServiceLabel = SERVICES.find(
     (s) => s.value === selectedService
   )?.label;
@@ -211,9 +218,9 @@ export function LogsTab() {
             </div>
           ) : (
             <div className="space-y-px">
-              {lines.map((line, i) => (
-                <div key={i} className="text-gray-300 whitespace-pre-wrap break-all leading-5">
-                  {line}
+              {lines.map((line) => (
+                <div key={line.id} className="text-gray-300 whitespace-pre-wrap break-all leading-5">
+                  {line.text}
                 </div>
               ))}
             </div>
