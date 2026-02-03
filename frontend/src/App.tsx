@@ -7,6 +7,7 @@ import { ToastContainer } from './components/Toast';
 import { Login } from './pages/Login';
 import { Chat } from './pages/Chat';
 import { Admin } from './pages/Admin';
+import { Settings } from './pages/Settings';
 
 function App() {
   const checkAuth = useAuthStore((state) => state.checkAuth);
@@ -28,6 +29,7 @@ function App() {
                 <Routes>
                   <Route path="/" element={<Chat />} />
                   <Route path="/admin" element={<Admin />} />
+                  <Route path="/settings" element={<Settings />} />
                 </Routes>
               </Layout>
             </ProtectedRoute>
