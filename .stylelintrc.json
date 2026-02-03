@@ -7,6 +7,9 @@
                 "message": "Expected class selector to be kebab-case or MUI component"
             }
         ],
+        "at-rule-no-unknown": [true, {
+            "ignoreAtRules": ["plugin", "tailwind", "apply", "layer", "config", "theme"]
+        }],
         "no-descending-specificity": null,
         "keyframes-name-pattern": null
     }

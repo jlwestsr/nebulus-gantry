@@ -1,3 +1,5 @@
+import Markdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import type { Message } from '../types/api';
 
 interface MessageBubbleProps {
@@ -25,9 +27,46 @@ export function MessageBubble({ message }: MessageBubbleProps) {
         }`}
       >
         {/* Message content */}
-        <div className="whitespace-pre-wrap break-words text-sm leading-relaxed">
-          {message.content}
-        </div>
+        {isUser ? (
+          <div className="whitespace-pre-wrap break-words text-sm leading-relaxed">
+            {message.content}
+          </div>
+        ) : (
+          <div className="prose prose-sm prose-invert max-w-none break-words [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
+            <Markdown
+              remarkPlugins={[remarkGfm]}
+              components={{
+                pre({ children }) {
+                  return (
+                    <pre className="bg-gray-900 rounded-lg p-3 overflow-x-auto text-sm">
+                      {children}
+                    </pre>
+                  );
+                },
+                code({ children, className }) {
+                  const isBlock = className?.startsWith('language-');
+                  if (isBlock) {
+                    return <code className={`${className} text-sm`}>{children}</code>;
+                  }
+                  return (
+                    <code className="bg-gray-600 px-1.5 py-0.5 rounded text-sm">
+                      {children}
+                    </code>
+                  );
+                },
+                a({ href, children }) {
+                  return (
+                    <a href={href} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">
+                      {children}
+                    </a>
+                  );
+                },
+              }}
+            >
+              {message.content}
+            </Markdown>
+          </div>
+        )}
 
         {/* Timestamp - shows on hover */}
         <div
