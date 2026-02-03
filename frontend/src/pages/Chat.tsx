@@ -1,14 +1,16 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Sidebar } from '../components/Sidebar';
 import { MessageList } from '../components/MessageList';
+import { MessageInput } from '../components/MessageInput';
 import { useChatStore } from '../stores/chatStore';
 import { chatApi } from '../services/api';
 import type { Message } from '../types/api';
 
 export function Chat() {
-  const { currentConversationId } = useChatStore();
+  const { currentConversationId, updateConversationTitle } = useChatStore();
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Fetch messages when conversation changes
@@ -35,6 +37,98 @@ export function Chat() {
     fetchMessages();
   }, [currentConversationId]);
 
+  // Handle sending a message with streaming response
+  const handleSendMessage = useCallback(
+    async (content: string) => {
+      if (!currentConversationId || isSending) return;
+
+      setIsSending(true);
+      setError(null);
+
+      // Create a temporary ID for the user message (will be replaced after refresh)
+      const tempUserMessageId = Date.now();
+      const tempAssistantMessageId = tempUserMessageId + 1;
+
+      // Add user message immediately to the UI
+      const userMessage: Message = {
+        id: tempUserMessageId,
+        conversation_id: currentConversationId,
+        role: 'user',
+        content,
+        created_at: new Date().toISOString(),
+      };
+
+      // Add placeholder assistant message for streaming
+      const assistantMessage: Message = {
+        id: tempAssistantMessageId,
+        conversation_id: currentConversationId,
+        role: 'assistant',
+        content: '',
+        created_at: new Date().toISOString(),
+      };
+
+      setMessages((prev) => [...prev, userMessage, assistantMessage]);
+
+      try {
+        // Stream the response
+        let fullContent = '';
+        for await (const chunk of chatApi.sendMessage(
+          currentConversationId,
+          content
+        )) {
+          fullContent += chunk;
+          // Update the assistant message content as chunks arrive
+          setMessages((prev) =>
+            prev.map((msg) =>
+              msg.id === tempAssistantMessageId
+                ? { ...msg, content: fullContent }
+                : msg
+            )
+          );
+        }
+
+        // Update conversation title if this was the first message
+        // The backend should have auto-generated a title
+        if (messages.length === 0) {
+          // Fetch the updated conversation to get the new title
+          try {
+            const data = await chatApi.getConversation(currentConversationId);
+            if (data.conversation.title !== 'New Chat') {
+              updateConversationTitle(
+                currentConversationId,
+                data.conversation.title
+              );
+            }
+            // Also refresh messages to get proper IDs
+            setMessages(data.messages);
+          } catch {
+            // Silently fail on title update - not critical
+          }
+        } else {
+          // Refresh messages to get proper IDs from the database
+          try {
+            const data = await chatApi.getConversation(currentConversationId);
+            setMessages(data.messages);
+          } catch {
+            // Keep the streamed content if refresh fails
+          }
+        }
+      } catch (err) {
+        setError((err as Error).message);
+        // Remove the placeholder messages on error
+        setMessages((prev) =>
+          prev.filter(
+            (msg) =>
+              msg.id !== tempUserMessageId && msg.id !== tempAssistantMessageId
+          )
+        );
+      } finally {
+        setIsSending(false);
+      }
+    },
+    [currentConversationId, isSending, messages.length, updateConversationTitle]
+  );
+
   return (
     <div className="flex h-[calc(100vh-57px)]">
       {/* Sidebar with conversations */}
@@ -52,39 +146,17 @@ export function Chat() {
             )}
 
             {/* Messages */}
-            <MessageList messages={messages} isLoading={isLoading} />
+            <MessageList
+              messages={messages}
+              isLoading={isLoading || (isSending && messages.length > 0 && messages[messages.length - 1]?.content === '')}
+            />
 
-            {/* Input area placeholder - will be implemented in Task 19 */}
-            <div className="p-4 border-t border-gray-700">
-              <div className="max-w-3xl mx-auto">
-                <div className="flex items-center gap-3 bg-gray-700 rounded-xl px-4 py-3">
-                  <input
-                    type="text"
-                    placeholder="Message input coming in next task..."
-                    disabled
-                    className="flex-1 bg-transparent text-gray-400 placeholder-gray-500 outline-none text-sm cursor-not-allowed"
-                  />
-                  <button
-                    disabled
-                    className="p-2 text-gray-500 cursor-not-allowed"
-                  >
-                    <svg
-                      className="w-5 h-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
-                      />
-                    </svg>
-                  </button>
-                </div>
-              </div>
-            </div>
+            {/* Message Input */}
+            <MessageInput
+              onSend={handleSendMessage}
+              disabled={isSending}
+              placeholder="Message Nebulus..."
+            />
           </>
         ) : (
           /* Welcome screen when no conversation selected */
@@ -109,7 +181,8 @@ export function Chat() {
                 Welcome to Nebulus Gantry
               </h2>
               <p className="text-gray-400 max-w-md">
-                Start a new conversation or select an existing one from the sidebar
+                Start a new conversation or select an existing one from the
+                sidebar
               </p>
             </div>
           </div>
