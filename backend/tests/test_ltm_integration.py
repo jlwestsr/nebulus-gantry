@@ -158,7 +158,7 @@ class TestSendMessageLtmIntegration:
 
         app.dependency_overrides[get_db] = override_get_db
         yield TestClient(app)
-        app.dependency_overrides.clear()
+        app.dependency_overrides.pop(get_db, None)
 
     @pytest.fixture
     def authenticated_client(self, client):

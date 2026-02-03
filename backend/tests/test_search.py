@@ -2,12 +2,13 @@
 import os
 
 # Set test database URL before any backend imports.
-os.environ["DATABASE_URL"] = "sqlite:///./test_search.db"
+os.environ.setdefault("DATABASE_URL", "sqlite:///:memory:")
 
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
 
 from backend.database import Base
 from backend.dependencies import get_db
@@ -20,34 +21,36 @@ from backend.services.auth_service import AuthService
 
 # ── Test database setup ──────────────────────────────────────────────────────
 
-TEST_DB_URL = "sqlite:///./test_search.db"
-engine = create_engine(TEST_DB_URL, connect_args={"check_same_thread": False})
-TestSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-
-def override_get_db():
-    db = TestSessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-
-app.dependency_overrides[get_db] = override_get_db
-
 
 @pytest.fixture(autouse=True)
 def setup_db():
-    """Create tables before each test, drop after."""
+    """Create an isolated in-memory database for each test."""
+    engine = create_engine(
+        "sqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    TestSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
     Base.metadata.create_all(bind=engine)
-    yield
+
+    def override_get_db():
+        db = TestSessionLocal()
+        try:
+            yield db
+        finally:
+            db.close()
+
+    app.dependency_overrides[get_db] = override_get_db
+    yield TestSessionLocal
+    app.dependency_overrides.pop(get_db, None)
     Base.metadata.drop_all(bind=engine)
+    engine.dispose()
 
 
 @pytest.fixture
-def db():
+def db(setup_db):
     """Provide a test database session."""
-    session = TestSessionLocal()
+    session = setup_db()
     try:
         yield session
     finally:

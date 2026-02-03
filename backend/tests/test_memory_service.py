@@ -6,8 +6,37 @@ Tests cover:
 - Searching for similar messages
 - Graceful degradation when ChromaDB is unavailable
 """
+import sys
+import asyncio
 import pytest
-from unittest.mock import MagicMock, patch, AsyncMock
+from unittest.mock import MagicMock, patch
+
+
+def _run(coro):
+    """Run an async coroutine synchronously for testing."""
+    loop = asyncio.new_event_loop()
+    try:
+        return loop.run_until_complete(coro)
+    finally:
+        loop.close()
+
+
+# ── Ensure chromadb is available (mocked) for import ─────────────────────────
+# The memory_service module does `import chromadb` at module level.
+# If chromadb is not installed, we inject a mock module into sys.modules
+# so that the import succeeds and we can test with mocks.
+
+_chromadb_mock = MagicMock()
+_need_chromadb_mock = "chromadb" not in sys.modules
+if _need_chromadb_mock:
+    sys.modules["chromadb"] = _chromadb_mock
+
+# Now we can safely import the service (force re-import if previously cached
+# with a broken chromadb).
+import importlib
+import backend.services.memory_service as _msm
+importlib.reload(_msm)
+from backend.services.memory_service import MemoryService
 
 
 @pytest.fixture
@@ -40,8 +69,8 @@ class TestMemoryServiceInit:
 
     def test_init_creates_user_collection(self, mock_chroma_client, mock_chroma_collection):
         """Test that initialization creates a user-specific collection."""
-        with patch("chromadb.HttpClient", return_value=mock_chroma_client):
-            from backend.services.memory_service import MemoryService
+        with patch("backend.services.memory_service.chromadb") as mock_chromadb:
+            mock_chromadb.HttpClient.return_value = mock_chroma_client
 
             service = MemoryService(user_id=42)
 
@@ -52,8 +81,8 @@ class TestMemoryServiceInit:
 
     def test_init_handles_connection_failure(self):
         """Test graceful handling when ChromaDB is unavailable at init."""
-        with patch("chromadb.HttpClient", side_effect=Exception("Connection refused")):
-            from backend.services.memory_service import MemoryService
+        with patch("backend.services.memory_service.chromadb") as mock_chromadb:
+            mock_chromadb.HttpClient.side_effect = Exception("Connection refused")
 
             service = MemoryService(user_id=42)
 
@@ -64,18 +93,17 @@ class TestMemoryServiceInit:
 class TestEmbedMessage:
     """Tests for the embed_message method."""
 
-    @pytest.mark.asyncio
-    async def test_embed_message_stores_correctly(self, mock_chroma_client, mock_chroma_collection):
+    def test_embed_message_stores_correctly(self, mock_chroma_client, mock_chroma_collection):
         """Test that embed_message stores content in ChromaDB."""
-        with patch("chromadb.HttpClient", return_value=mock_chroma_client):
-            from backend.services.memory_service import MemoryService
+        with patch("backend.services.memory_service.chromadb") as mock_chromadb:
+            mock_chromadb.HttpClient.return_value = mock_chroma_client
 
             service = MemoryService(user_id=42)
-            await service.embed_message(
+            _run(service.embed_message(
                 message_id=123,
                 content="Hello, how can I help you?",
                 metadata={"conversation_id": 1, "role": "user"}
-            )
+            ))
 
             mock_chroma_collection.add.assert_called_once_with(
                 ids=["msg_123"],
@@ -83,14 +111,13 @@ class TestEmbedMessage:
                 metadatas=[{"conversation_id": 1, "role": "user"}]
             )
 
-    @pytest.mark.asyncio
-    async def test_embed_message_with_no_metadata(self, mock_chroma_client, mock_chroma_collection):
+    def test_embed_message_with_no_metadata(self, mock_chroma_client, mock_chroma_collection):
         """Test embed_message works without metadata."""
-        with patch("chromadb.HttpClient", return_value=mock_chroma_client):
-            from backend.services.memory_service import MemoryService
+        with patch("backend.services.memory_service.chromadb") as mock_chromadb:
+            mock_chromadb.HttpClient.return_value = mock_chroma_client
 
             service = MemoryService(user_id=42)
-            await service.embed_message(message_id=456, content="Test message")
+            _run(service.embed_message(message_id=456, content="Test message"))
 
             mock_chroma_collection.add.assert_called_once_with(
                 ids=["msg_456"],
@@ -98,29 +125,27 @@ class TestEmbedMessage:
                 metadatas=[{}]
             )
 
-    @pytest.mark.asyncio
-    async def test_embed_message_when_unavailable(self):
+    def test_embed_message_when_unavailable(self):
         """Test embed_message returns gracefully when ChromaDB unavailable."""
-        with patch("chromadb.HttpClient", side_effect=Exception("Connection refused")):
-            from backend.services.memory_service import MemoryService
+        with patch("backend.services.memory_service.chromadb") as mock_chromadb:
+            mock_chromadb.HttpClient.side_effect = Exception("Connection refused")
 
             service = MemoryService(user_id=42)
             # Should not raise an exception
-            result = await service.embed_message(message_id=123, content="Test")
+            result = _run(service.embed_message(message_id=123, content="Test"))
 
             assert result is None
 
-    @pytest.mark.asyncio
-    async def test_embed_message_handles_runtime_error(self, mock_chroma_client, mock_chroma_collection):
+    def test_embed_message_handles_runtime_error(self, mock_chroma_client, mock_chroma_collection):
         """Test embed_message handles errors during storage."""
         mock_chroma_collection.add.side_effect = Exception("Storage error")
 
-        with patch("chromadb.HttpClient", return_value=mock_chroma_client):
-            from backend.services.memory_service import MemoryService
+        with patch("backend.services.memory_service.chromadb") as mock_chromadb:
+            mock_chromadb.HttpClient.return_value = mock_chroma_client
 
             service = MemoryService(user_id=42)
             # Should not raise, just log and return None
-            result = await service.embed_message(message_id=123, content="Test")
+            result = _run(service.embed_message(message_id=123, content="Test"))
 
             assert result is None
 
@@ -128,14 +153,13 @@ class TestEmbedMessage:
 class TestSearchSimilar:
     """Tests for the search_similar method."""
 
-    @pytest.mark.asyncio
-    async def test_search_similar_returns_results(self, mock_chroma_client, mock_chroma_collection):
+    def test_search_similar_returns_results(self, mock_chroma_client, mock_chroma_collection):
         """Test that search_similar returns properly formatted results."""
-        with patch("chromadb.HttpClient", return_value=mock_chroma_client):
-            from backend.services.memory_service import MemoryService
+        with patch("backend.services.memory_service.chromadb") as mock_chromadb:
+            mock_chromadb.HttpClient.return_value = mock_chroma_client
 
             service = MemoryService(user_id=42)
-            results = await service.search_similar("Hello", limit=5)
+            results = _run(service.search_similar("Hello", limit=5))
 
             mock_chroma_collection.query.assert_called_once_with(
                 query_texts=["Hello"],
@@ -149,60 +173,55 @@ class TestSearchSimilar:
             assert results[1]["content"] == "How are you"
             assert results[1]["score"] == 0.3
 
-    @pytest.mark.asyncio
-    async def test_search_similar_respects_limit(self, mock_chroma_client, mock_chroma_collection):
+    def test_search_similar_respects_limit(self, mock_chroma_client, mock_chroma_collection):
         """Test that search_similar passes limit to ChromaDB."""
-        with patch("chromadb.HttpClient", return_value=mock_chroma_client):
-            from backend.services.memory_service import MemoryService
+        with patch("backend.services.memory_service.chromadb") as mock_chromadb:
+            mock_chromadb.HttpClient.return_value = mock_chroma_client
 
             service = MemoryService(user_id=42)
-            await service.search_similar("test query", limit=10)
+            _run(service.search_similar("test query", limit=10))
 
             mock_chroma_collection.query.assert_called_once_with(
                 query_texts=["test query"],
                 n_results=10
             )
 
-    @pytest.mark.asyncio
-    async def test_search_similar_default_limit(self, mock_chroma_client, mock_chroma_collection):
+    def test_search_similar_default_limit(self, mock_chroma_client, mock_chroma_collection):
         """Test that search_similar uses default limit of 5."""
-        with patch("chromadb.HttpClient", return_value=mock_chroma_client):
-            from backend.services.memory_service import MemoryService
+        with patch("backend.services.memory_service.chromadb") as mock_chromadb:
+            mock_chromadb.HttpClient.return_value = mock_chroma_client
 
             service = MemoryService(user_id=42)
-            await service.search_similar("test query")
+            _run(service.search_similar("test query"))
 
             mock_chroma_collection.query.assert_called_once_with(
                 query_texts=["test query"],
                 n_results=5
             )
 
-    @pytest.mark.asyncio
-    async def test_search_similar_when_unavailable(self):
+    def test_search_similar_when_unavailable(self):
         """Test search_similar returns empty list when ChromaDB unavailable."""
-        with patch("chromadb.HttpClient", side_effect=Exception("Connection refused")):
-            from backend.services.memory_service import MemoryService
+        with patch("backend.services.memory_service.chromadb") as mock_chromadb:
+            mock_chromadb.HttpClient.side_effect = Exception("Connection refused")
 
             service = MemoryService(user_id=42)
-            results = await service.search_similar("test query")
+            results = _run(service.search_similar("test query"))
 
             assert results == []
 
-    @pytest.mark.asyncio
-    async def test_search_similar_handles_runtime_error(self, mock_chroma_client, mock_chroma_collection):
+    def test_search_similar_handles_runtime_error(self, mock_chroma_client, mock_chroma_collection):
         """Test search_similar handles errors during query."""
         mock_chroma_collection.query.side_effect = Exception("Query error")
 
-        with patch("chromadb.HttpClient", return_value=mock_chroma_client):
-            from backend.services.memory_service import MemoryService
+        with patch("backend.services.memory_service.chromadb") as mock_chromadb:
+            mock_chromadb.HttpClient.return_value = mock_chroma_client
 
             service = MemoryService(user_id=42)
-            results = await service.search_similar("test query")
+            results = _run(service.search_similar("test query"))
 
             assert results == []
 
-    @pytest.mark.asyncio
-    async def test_search_similar_handles_empty_results(self, mock_chroma_client, mock_chroma_collection):
+    def test_search_similar_handles_empty_results(self, mock_chroma_client, mock_chroma_collection):
         """Test search_similar handles empty query results."""
         mock_chroma_collection.query.return_value = {
             "ids": [[]],
@@ -211,11 +230,11 @@ class TestSearchSimilar:
             "metadatas": [[]]
         }
 
-        with patch("chromadb.HttpClient", return_value=mock_chroma_client):
-            from backend.services.memory_service import MemoryService
+        with patch("backend.services.memory_service.chromadb") as mock_chromadb:
+            mock_chromadb.HttpClient.return_value = mock_chroma_client
 
             service = MemoryService(user_id=42)
-            results = await service.search_similar("nonexistent query")
+            results = _run(service.search_similar("nonexistent query"))
 
             assert results == []
 
@@ -225,16 +244,16 @@ class TestMemoryServiceAvailability:
 
     def test_available_when_connected(self, mock_chroma_client, mock_chroma_collection):
         """Test that available is True when ChromaDB is connected."""
-        with patch("chromadb.HttpClient", return_value=mock_chroma_client):
-            from backend.services.memory_service import MemoryService
+        with patch("backend.services.memory_service.chromadb") as mock_chromadb:
+            mock_chromadb.HttpClient.return_value = mock_chroma_client
 
             service = MemoryService(user_id=42)
             assert service.available is True
 
     def test_not_available_when_disconnected(self):
         """Test that available is False when ChromaDB is unavailable."""
-        with patch("chromadb.HttpClient", side_effect=Exception("Connection refused")):
-            from backend.services.memory_service import MemoryService
+        with patch("backend.services.memory_service.chromadb") as mock_chromadb:
+            mock_chromadb.HttpClient.side_effect = Exception("Connection refused")
 
             service = MemoryService(user_id=42)
             assert service.available is False
