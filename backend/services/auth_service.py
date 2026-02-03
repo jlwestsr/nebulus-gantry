@@ -1,13 +1,19 @@
 import secrets
+import bcrypt
 from datetime import datetime, timedelta
-from passlib.context import CryptContext
 from sqlalchemy.orm import Session as DBSession
 
 from backend.models.user import User
 from backend.models.session import Session
 from backend.config import Settings
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+def hash_password(password: str) -> str:
+    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+
+
+def verify_password(password: str, password_hash: str) -> bool:
+    return bcrypt.checkpw(password.encode("utf-8"), password_hash.encode("utf-8"))
 
 
 class AuthService:
@@ -16,7 +22,7 @@ class AuthService:
         self.settings = Settings()
 
     def create_user(self, email: str, password: str, display_name: str, role: str = "user") -> User:
-        password_hash = pwd_context.hash(password)
+        password_hash = hash_password(password)
         user = User(
             email=email,
             password_hash=password_hash,
@@ -32,7 +38,7 @@ class AuthService:
         user = self.db.query(User).filter(User.email == email).first()
         if not user:
             return None
-        if not pwd_context.verify(password, user.password_hash):
+        if not verify_password(password, user.password_hash):
             return None
         return user
 

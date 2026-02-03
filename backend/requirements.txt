@@ -9,8 +9,7 @@ sqlalchemy>=2.0.0
 aiosqlite>=0.19.0
 
 # Auth
-passlib[bcrypt]>=1.7.4
-python-jose[cryptography]>=3.3.0
+bcrypt>=4.0.0
 
 # LLM & Memory
 httpx>=0.26.0
