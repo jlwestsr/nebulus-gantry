@@ -25,11 +25,13 @@ from backend.schemas.admin import (
 )
 from backend.services.auth_service import AuthService
 from backend.services.docker_service import DockerService
+from backend.services.model_service import ModelService
 
 logger = logging.getLogger(__name__)
 
-# Singleton DockerService instance (gracefully handles unavailable Docker)
+# Singleton service instances (gracefully handle unavailable backends)
 _docker_service = DockerService()
+_model_service = ModelService()
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
@@ -136,15 +138,36 @@ def restart_service(service_name: str, admin=Depends(require_admin)):
 
 
 @router.get("/models", response_model=ModelListResponse)
-def list_models(admin=Depends(require_admin)):
-    """List available LLM models. Placeholder - Task 26 will implement."""
-    return ModelListResponse(models=[])
+async def list_models(admin=Depends(require_admin)):
+    """List available LLM models from TabbyAPI.
+
+    Returns an empty list if TabbyAPI is unreachable (graceful degradation).
+    """
+    models = await _model_service.list_models()
+    return ModelListResponse(
+        models=[
+            ModelInfo(id=m["id"], name=m["name"], active=m["active"])
+            for m in models
+        ]
+    )
 
 
 @router.post("/models/switch", response_model=SwitchModelResponse)
-def switch_model(request: SwitchModelRequest, admin=Depends(require_admin)):
-    """Switch the active LLM model. Placeholder - Task 26 will implement."""
-    raise HTTPException(status_code=501, detail="Not implemented yet")
+async def switch_model(request: SwitchModelRequest, admin=Depends(require_admin)):
+    """Switch the active LLM model in TabbyAPI.
+
+    Returns 503 if the model switch fails (e.g., TabbyAPI unreachable).
+    """
+    success = await _model_service.switch_model(request.model_id)
+    if not success:
+        raise HTTPException(
+            status_code=503,
+            detail="Failed to switch model. Is TabbyAPI available?",
+        )
+    return SwitchModelResponse(
+        message=f"Model switched to {request.model_id}",
+        model_id=request.model_id,
+    )
 
 
 # ── Log Streaming ─────────────────────────────────────────────────────────────

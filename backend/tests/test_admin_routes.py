@@ -258,15 +258,16 @@ class TestAdminAccess:
         assert "models" in data
         assert isinstance(data["models"], list)
 
-    def test_switch_model_admin_placeholder(self, client, admin_user):
+    def test_switch_model_admin_tabby_unavailable(self, client, admin_user):
+        """POST /admin/models/switch returns 503 when TabbyAPI is unreachable."""
         _, token = admin_user
         response = client.post(
             "/api/admin/models/switch",
             json={"model_id": "gpt-4"},
             cookies={"session_token": token},
         )
-        # Placeholder returns 501 Not Implemented
-        assert response.status_code == 501
+        # TabbyAPI not running in test environment -> 503
+        assert response.status_code == 503
 
     def test_stream_logs_admin(self, client, admin_user):
         _, token = admin_user
