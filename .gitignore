@@ -37,6 +37,7 @@ build/
 *.sqlite3
 .files/
 data/
+!data/.gitkeep
 
 # Claude Code
 .claude/
