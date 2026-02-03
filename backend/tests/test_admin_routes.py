@@ -1,22 +1,23 @@
 """Tests for admin routes and role-based access control."""
 import os
+from unittest.mock import patch
 
 # Set test database URL before any backend imports to avoid the module-level
 # create_all in dependencies.py trying to open the default sqlite file.
 os.environ.setdefault("DATABASE_URL", "sqlite:///:memory:")
 
-import pytest
-from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
+import pytest  # noqa: E402
+from fastapi.testclient import TestClient  # noqa: E402
+from sqlalchemy import create_engine  # noqa: E402
+from sqlalchemy.orm import sessionmaker  # noqa: E402
+from sqlalchemy.pool import StaticPool  # noqa: E402
 
-from backend.database import Base
-from backend.dependencies import get_db
-from backend.main import app
-from backend.models.user import User
-from backend.models.session import Session
-from backend.services.auth_service import AuthService
+from backend.database import Base  # noqa: E402
+from backend.dependencies import get_db  # noqa: E402
+from backend.main import app  # noqa: E402
+from backend.models.user import User  # noqa: E402, F401
+from backend.models.session import Session  # noqa: E402, F401
+from backend.services.auth_service import AuthService  # noqa: E402
 
 
 # ── Test database setup ──────────────────────────────────────────────────────
@@ -274,12 +275,54 @@ class TestAdminAccess:
 
     def test_stream_logs_admin(self, client, admin_user):
         _, token = admin_user
-        response = client.get(
-            "/api/admin/logs/web",
-            cookies={"session_token": token},
-        )
-        assert response.status_code == 200
-        assert "text/event-stream" in response.headers["content-type"]
+        with patch("backend.routers.admin._docker_service") as mock_ds:
+            mock_ds.available = True
+
+            def fake_stream(name, tail=100):
+                yield "test log line"
+
+            mock_ds.stream_logs = fake_stream
+
+            response = client.get(
+                "/api/admin/logs/web",
+                cookies={"session_token": token},
+            )
+            assert response.status_code == 200
+            assert "text/event-stream" in response.headers["content-type"]
+
+    def test_stream_logs_returns_sse_data(self, client, admin_user):
+        """GET /admin/logs/{name} streams SSE-formatted log lines."""
+        _, token = admin_user
+        with patch("backend.routers.admin._docker_service") as mock_ds:
+            mock_ds.available = True
+
+            def fake_stream(name, tail=100):
+                yield "2026-02-03 INFO Starting server"
+                yield "2026-02-03 INFO Ready"
+
+            mock_ds.stream_logs = fake_stream
+
+            response = client.get(
+                "/api/admin/logs/gantry-api",
+                cookies={"session_token": token},
+            )
+            assert response.status_code == 200
+            assert "text/event-stream" in response.headers["content-type"]
+            body = response.text
+            assert "data: " in body
+            assert "Starting server" in body
+
+    def test_stream_logs_docker_unavailable(self, client, admin_user):
+        """GET /admin/logs/{name} returns 503 when Docker is unavailable."""
+        _, token = admin_user
+        with patch("backend.routers.admin._docker_service") as mock_ds:
+            mock_ds.available = False
+
+            response = client.get(
+                "/api/admin/logs/gantry-api",
+                cookies={"session_token": token},
+            )
+            assert response.status_code == 503
 
 
 # ── Invalid session tests ────────────────────────────────────────────────────

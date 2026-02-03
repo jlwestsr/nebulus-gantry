@@ -1,5 +1,5 @@
 import logging
-from typing import AsyncGenerator
+from typing import Generator
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
@@ -174,10 +174,20 @@ async def switch_model(request: SwitchModelRequest, admin=Depends(require_admin)
 
 
 @router.get("/logs/{service_name}")
-async def stream_logs(service_name: str, admin=Depends(require_admin)):
-    """Stream service logs via SSE. Placeholder - Task 25 will implement."""
+async def stream_logs(
+    service_name: str,
+    admin=Depends(require_admin),
+):
+    """Stream service logs via SSE.
 
-    async def placeholder_stream() -> AsyncGenerator[str, None]:
-        yield f"data: Log streaming for {service_name} not yet implemented\n\n"
+    Returns real-time log output from the named Docker container.
+    Returns 503 if Docker is not available.
+    """
+    if not _docker_service.available:
+        raise HTTPException(status_code=503, detail="Docker is not available")
 
-    return StreamingResponse(placeholder_stream(), media_type="text/event-stream")
+    def generate() -> Generator[str, None, None]:
+        for line in _docker_service.stream_logs(service_name):
+            yield f"data: {line}\n\n"
+
+    return StreamingResponse(generate(), media_type="text/event-stream")
