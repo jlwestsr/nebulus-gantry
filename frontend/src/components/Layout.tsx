@@ -119,9 +119,15 @@ export function Layout({ children }: LayoutProps) {
                 )}
                 <Link
                   to="/settings"
-                  className="hidden sm:inline text-sm text-gray-400 hover:text-gray-200 transition-colors duration-200"
+                  className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-200 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50 rounded px-2 py-1"
+                  title={user.display_name}
                 >
-                  {user.display_name}
+                  <span className="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center text-xs font-medium text-white">
+                    {user.display_name.charAt(0).toUpperCase()}
+                  </span>
+                  <span className="hidden sm:inline">
+                    {user.display_name}
+                  </span>
                 </Link>
                 <button
                   onClick={() => logout()}
