@@ -1,16 +1,30 @@
+version: "3.8"
+
 services:
-  app:
-    build: .
-    container_name: gantry-standalone
+  backend:
+    build: ./backend
     ports:
       - "8000:8000"
-    volumes:
-      - .:/app
-      - /var/run/docker.sock:/var/run/docker.sock # Temporarily kept for sandbox.py
     environment:
-      - OLLAMA_HOST=${OLLAMA_HOST:-http://host.docker.internal:11434}
-      - CHROMA_HOST=${CHROMA_HOST:-http://host.docker.internal:8000}
-      - CHAINLIT_AUTH_SECRET=${CHAINLIT_AUTH_SECRET:-dev-secret}
-      - DB_PATH=${DB_PATH:-sqlite:///./data/gantry.db}
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+      - DATABASE_URL=sqlite:///./data/gantry.db
+      - CHROMA_HOST=http://host.docker.internal:8001
+      - TABBY_HOST=http://host.docker.internal:5000
+      - SECRET_KEY=dev-secret-change-in-production
+    volumes:
+      - ./data:/app/data
+      - ./backend:/app
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - VITE_API_URL=http://localhost:8000
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    command: npm run dev -- --host 0.0.0.0 --port 3000
+
+volumes:
+  data:

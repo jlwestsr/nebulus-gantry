@@ -1,0 +1,15 @@
+---
+- name: Ensure Python 3 is present
+  ansible.builtin.command: python3 --version
+  register: setup_py_version
+  changed_when: false
+
+- name: Create Virtual Environment
+  ansible.builtin.command: python3 -m venv "{{ playbook_dir }}/../venv"
+  args:
+    creates: "{{ playbook_dir }}/../venv"
+
+- name: Install Requirements
+  ansible.builtin.pip:
+    requirements: "{{ playbook_dir }}/../requirements.txt"
+    virtualenv: "{{ playbook_dir }}/../venv"

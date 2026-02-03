@@ -1,0 +1,80 @@
+#!/bin/bash
+
+# Nebulus CLI Entrypoint
+
+COMMAND=$1
+BIN_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+case $COMMAND in
+  help)
+    echo "Gantry CLI"
+    echo "=========="
+    echo "Usage: bin/gantry [command]"
+    echo ""
+    echo "Available Commands:"
+    echo "  start       Start Gantry stack (docker compose up --build)"
+    echo "  stop        Stop Gantry stack (docker compose down)"
+    echo "  test        Run local unit tests"
+    echo "  rebuild     Rebuild and restart containers (detached)"
+    echo "  restart     Restart containers"
+    echo "  logs        View container logs"
+    echo "  status      Check container status"
+    echo "  validate    Run pre-commit hooks on all files"
+    echo "  help        Show this help message"
+    exit 0
+    ;;
+
+  status)
+    echo "--- Gantry Container Status ---"
+    docker compose ps
+    echo "-----------------------------"
+    exit 0
+    ;;
+
+  start)
+    echo "Starting Gantry via Docker..."
+    docker compose up --build
+    ;;
+
+  stop)
+    echo "Stopping Gantry..."
+    docker compose down
+    ;;
+
+  test)
+    echo "Running tests requires local venv or docker exec. Attempting local venv..."
+    PROJECT_ROOT="$BIN_DIR/.."
+    export PYTHONPATH="$PROJECT_ROOT/src:$PYTHONPATH"
+    "$PROJECT_ROOT/venv/bin/pytest" "$PROJECT_ROOT/tests/"
+    ;;
+
+  rebuild)
+    echo "Rebuilding and restarting Neo-Nebulus Gantry..."
+    docker compose up -d --build
+    ;;
+
+  logs)
+    docker compose logs -f
+    ;;
+
+  restart)
+    echo "Restarting containers..."
+    docker compose restart
+    ;;
+
+  validate)
+    echo "Running pre-commit validation on all files..."
+    pre-commit run --all-files
+    ;;
+
+  promote)
+    echo "Promoting versions via Ansible..."
+    ansible-playbook "$BIN_DIR/../src/nebulus_gantry/ops/promote_version.yml"
+    ;;
+
+  *)
+    echo "Unknown command: '$COMMAND'"
+    echo "Run 'bin/gantry help' for available commands."
+    exit 1
+    ;;
+esac

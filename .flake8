@@ -1,0 +1,24 @@
+[flake8]
+# 88 matches the Black line length standard
+max-line-length = 88
+extend-ignore = E203
+exclude =
+    .git,
+    __pycache__,
+    docs/source/conf.py,
+    old,
+    build,
+    dist,
+    .venv,
+    venv,
+    env,
+    models,
+    data,
+    node_modules,
+    dist
+# E501: Line too long (AI handles this poorly and it consumes massive tokens to fix)
+# W503: Line break before binary operator (conflicts with modern formatters like Black)
+# E203: Whitespace before ':' (conflicts with Black)
+ignore = E501, W503, E203
+# Set a reasonable max complexity to prevent the AI from refactoring perfectly working complex code
+max-complexity = 13
