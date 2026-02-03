@@ -37,7 +37,6 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   checkAuth: async () => {
-    set({ isLoading: true });
     try {
       const user = await authApi.me();
       set({ user, isLoading: false });

@@ -124,7 +124,8 @@ export function Sidebar() {
   // Fetch conversations on mount
   useEffect(() => {
     fetchConversations();
-  }, [fetchConversations]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Group conversations by date
   const groupedConversations = useMemo(
