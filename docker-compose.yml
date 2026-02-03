@@ -5,13 +5,16 @@ services:
       - "8000:8000"
     environment:
       - DATABASE_URL=sqlite:///./data/gantry.db
-      - CHROMA_HOST=http://host.docker.internal:8001
-      - TABBY_HOST=http://host.docker.internal:5000
+      - CHROMA_HOST=http://chromadb:8000
+      - TABBY_HOST=http://tabby:5000
       - SECRET_KEY=dev-secret-change-in-production
       - PYTHONPATH=/app
     volumes:
       - ./data:/app/data
       - ./backend:/app/backend
+    networks:
+      - default
+      - nebulus
     command: uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload
 
   frontend:
@@ -24,3 +27,8 @@ services:
       - ./frontend:/app
       - /app/node_modules
     command: npm run dev -- --host 0.0.0.0 --port 3000
+
+networks:
+  nebulus:
+    external: true
+    name: nebulus_ai-network
