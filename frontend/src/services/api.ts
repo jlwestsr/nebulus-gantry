@@ -134,4 +134,11 @@ export const adminApi = {
       method: 'POST',
       body: JSON.stringify({ model_id: modelId }),
     }),
+
+  // Logs
+  streamLogs: (serviceName: string): EventSource => {
+    return new EventSource(`${API_URL}/api/admin/logs/${serviceName}`, {
+      withCredentials: true,
+    });
+  },
 };
