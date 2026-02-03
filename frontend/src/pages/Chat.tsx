@@ -148,7 +148,7 @@ export function Chat() {
             {/* Messages */}
             <MessageList
               messages={messages}
-              isLoading={isLoading || (isSending && messages.length > 0 && messages[messages.length - 1]?.content === '')}
+              isLoading={isLoading || (isSending && messages[messages.length - 1]?.content === '')}
             />
 
             {/* Message Input */}
