@@ -28,3 +28,17 @@ class ConversationDetailResponse(BaseModel):
 
 class SendMessageRequest(BaseModel):
     content: str
+
+
+class SearchResult(BaseModel):
+    conversation_id: int
+    conversation_title: str
+    message_snippet: str
+    role: str
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class SearchResponse(BaseModel):
+    results: list[SearchResult]

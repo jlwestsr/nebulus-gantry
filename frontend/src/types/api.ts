@@ -56,3 +56,16 @@ export interface Model {
   name: string;
   active: boolean;
 }
+
+// Search types
+export interface SearchResult {
+  conversation_id: number;
+  conversation_title: string;
+  message_snippet: string;
+  role: 'user' | 'assistant';
+  created_at: string;
+}
+
+export interface SearchResponse {
+  results: SearchResult[];
+}

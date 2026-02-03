@@ -13,6 +13,8 @@ from backend.schemas.chat import (
     ConversationDetailResponse,
     MessageResponse,
     SendMessageRequest,
+    SearchResult,
+    SearchResponse,
 )
 
 logger = logging.getLogger(__name__)
@@ -63,6 +65,69 @@ def _create_graph_service(user_id: int):
     """Factory for GraphService. Lazy import to handle missing networkx gracefully."""
     from backend.services.graph_service import GraphService
     return GraphService(user_id)
+
+
+@router.get("/search", response_model=SearchResponse)
+def search_conversations(
+    q: str,
+    user=Depends(get_current_user),
+    chat: ChatService = Depends(get_chat_service),
+):
+    """Search messages across the user's conversations."""
+    if not q or not q.strip():
+        return SearchResponse(results=[])
+
+    from backend.models.message import Message
+    from backend.models.conversation import Conversation
+
+    # Search messages belonging to user's conversations
+    results = (
+        chat.db.query(Message)
+        .join(Conversation, Message.conversation_id == Conversation.id)
+        .filter(
+            Conversation.user_id == user.id,
+            Message.content.ilike(f"%{q.strip()}%"),
+        )
+        .order_by(Message.created_at.desc())
+        .limit(20)
+        .all()
+    )
+
+    # Build response with snippets
+    search_results = []
+    seen_conversations = set()
+    for msg in results:
+        conversation = msg.conversation
+
+        # Create a snippet around the matched text
+        content = msg.content
+        lower_content = content.lower()
+        lower_q = q.strip().lower()
+        idx = lower_content.find(lower_q)
+        if idx != -1:
+            start = max(0, idx - 60)
+            end = min(len(content), idx + len(q.strip()) + 60)
+            snippet = content[start:end]
+            if start > 0:
+                snippet = "..." + snippet
+            if end < len(content):
+                snippet = snippet + "..."
+        else:
+            snippet = content[:150]
+            if len(content) > 150:
+                snippet += "..."
+
+        search_results.append(
+            SearchResult(
+                conversation_id=conversation.id,
+                conversation_title=conversation.title,
+                message_snippet=snippet,
+                role=msg.role,
+                created_at=msg.created_at.isoformat(),
+            )
+        )
+
+    return SearchResponse(results=search_results)
 
 
 @router.post("/conversations", response_model=ConversationResponse)

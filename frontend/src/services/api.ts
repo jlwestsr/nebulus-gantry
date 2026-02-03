@@ -7,6 +7,7 @@ import type {
   CreateUserRequest,
   Service,
   Model,
+  SearchResponse,
 } from '../types/api';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
@@ -65,6 +66,9 @@ export const chatApi = {
       method: 'DELETE',
     }),
 
+  search: (query: string) =>
+    fetchApi<SearchResponse>(`/api/chat/search?q=${encodeURIComponent(query)}`),
+
   sendMessage: async function* (conversationId: number, content: string) {
     const response = await fetch(
       `${API_URL}/api/chat/conversations/${conversationId}/messages`,
@@ -83,12 +87,12 @@ export const chatApi = {
     const reader = response.body?.getReader();
     if (!reader) throw new Error('No response body');
 
-    const decoder = new TextDecoder('utf-8', { stream: true });
+    const decoder = new TextDecoder('utf-8');
     try {
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-        yield decoder.decode(value);
+        yield decoder.decode(value, { stream: true });
       }
     } finally {
       reader.releaseLock();

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ServicesTab } from '../components/admin/ServicesTab';
 import { ModelsTab } from '../components/admin/ModelsTab';
@@ -10,7 +10,7 @@ type TabId = 'services' | 'models' | 'logs' | 'users';
 interface Tab {
   id: TabId;
   label: string;
-  icon: JSX.Element;
+  icon: ReactNode;
 }
 
 const TABS: Tab[] = [
