@@ -1,159 +1,72 @@
-# Project Context: Nebulus Gantry
+# Project Context: Nebulus Gantry v2
 
 ## Overview
 
-Nebulus Gantry is a local AI workspace and interface that serves as a bridge between the user and the underlying Nebulus AI ecosystem. It provides a chat interface, notes management, and model/tool configuration capabilities.
+Nebulus Gantry is the AI chat interface for the Nebulus Prime ecosystem. It provides a dark-themed, Claude.AI-like conversational UI with streaming LLM responses, long-term memory, multi-user authentication, and an admin control plane for managing services, models, and users.
 
-**Key Differentiator:** Gantry implements a **Hybrid Long-Term Memory (LTM)** system, allowing it to retain semantic context (Vectors) and factual associations (Knowledge Graph) across sessions.
-
-## Architecture Standards
-
-### Backend: Service Layer (MVC)
-
-We follow a strict **MVC** pattern:
-
-- **Models** (`backend/models/`): Pydantic DTOs and SQLAlchemy Entities.
-- **Controllers** (`backend/routes/`): FastAPI Routers handling HTTP requests.
-- **Service Layer** (`backend/services/`): Pure business logic encapsulation.
-- **Dependencies** (`backend/dependencies.py`): Injection wiring.
-
-### Frontend: Component Modules (ES6)
-
-We use vanilla JS with an **ES6 Class Component** structure:
-
-- **Core** (`core/`): `Store.js` (Pub/Sub State) and `Component.js` (Base Class).
-- **Components** (`components/`): Independent matching view-controllers (`Sidebar`, `Chat`, `Dashboard`).
-- **CSS** (`css/`): BEM-compliant modular styles (Base, Layout, Components).
-
-## 2026 Architectural Standards (The "4 Pillars")
-
-We enforce a strict modernization rubric to ensure scalability and maintainability.
-
-1. **Backend (Python OOP)**:
-    - **Models**: Pydantic DTOs & SQLAlchemy Entities. No raw dicts.
-    - **Logic**: Service Layer pattern (e.g., `ChatService`). Controllers (Routers) must be thin.
-2. **Frontend (ES6 OOP)**:
-    - **State**: Centralized `Store` class. No global variables.
-    - **Components**: ES6 Classes extending a base `Component`. No monolithic scripts.
-3. **CSS (BEM)**:
-    - **Naming**: Block Element Modifier (e.g., `.card__header--active`).
-    - **Structure**: Modules (base, layout, components). No monolithic CSS.
-4. **HTML (Semantic)**:
-    - **Tags**: `<header>`, `<main>`, `<article>` over `<div>`.
-    - **A11y**: Mandatory `aria-label` and `role` attributes.
-
-## 🚨 Critical Operational Rules 🚨
-
-**STOP & READ**: Before performing any work, you **MUST** review the detailed standards in:
-👉 **[.agent/rules/ai_behavior.md](.agent/rules/ai_behavior.md)**
-
-### Reference Material (READ-ONLY)
-
-The following directories are symlinks to external projects provided for architectural reference only. **ABSOLUTELY NO CHANGES** are permitted in these directories:
-
-- `reference_nebulus/`: The core Nebulus logic.
-- `reference_open-webui/`: The Open WebUI project.
-
-**The 4 Pillars of Gantry Development:**
-
-1. **The VENV Mandate**: System-level Python usage is strictly FORBIDDEN. You must verify `./venv/` is active before running `pip` or `python`.
-2. **Frontend Purity**: **Vanilla JavaScript (ES6+)** only. No React/Vue/Build steps. State is managed via global objects (e.g., `Nebulus.Chat`).
-3. **Strict Linting**: Code must pass `flake8` (Python) and `eslint` (JS) before it is considered "done".
-4. **No "Shadow Logic"**: Do not implement unrequested business logic.
+Version 2 is a complete rewrite. The previous Chainlit/vanilla-JS codebase has been replaced with a modern React + FastAPI stack.
 
 ## Architecture
 
-### Backend (The Brain)
+- **Frontend**: React 19, TypeScript, Vite 7, Tailwind CSS v4, Zustand for state management
+- **Backend**: FastAPI (Python 3.12), SQLAlchemy 2, SQLite
+- **LLM**: TabbyAPI (OpenAI-compatible endpoint at `:5000`)
+- **Long-Term Memory**: ChromaDB (`:8001`) for vector search, NetworkX for entity knowledge graph
+- **Auth**: Session cookies (httponly, bcrypt-hashed passwords), admin/user roles
+- **Deployment**: Docker Compose (backend `:8000`, frontend `:3000`)
 
-- **Framework**: Python 3.12+ (FastAPI / Starlette).
-- **API Standards**: **All REST API usage must be Python**.
-- **Database (State)**: SQLite (via SQLAlchemy) for application settings and notes.
-- **Memory Engine (LTM)**:
-  - **Semantic**: ChromaDB (External Service) for fuzzy vector retrieval.
-  - **Associative**: NetworkX (In-Memory Graph, persisted to `data/graph.json`) for entity relationships.
-  - **Consolidation**: Background `async` workers that summarize raw logs into "Golden Records."
-- **LLM Engine**: Ollama (Port 11435).
-  - **Note**: We run on port 11435 instead of the default 11434 to avoid conflicts with other local Ollama instances.
+## Key Patterns
 
-### Frontend (The Face)
+- **API design**: All backend routes are under `/api/` with three routers: `auth`, `chat`, `admin`.
+- **Auth flow**: Session token in httponly cookie. `get_current_user` dependency validates on every request.
+- **Admin access**: `require_admin` dependency checks `user.role == "admin"`.
+- **Streaming**: Chat responses use SSE (`StreamingResponse` with `text/event-stream`). The frontend reads the stream incrementally via `ReadableStream`.
+- **LTM injection**: On each message, the backend queries ChromaDB for similar past messages and NetworkX for related entity facts, then prepends them to the system prompt.
+- **State stores**: Zustand stores (`authStore`, `chatStore`, `toastStore`, `uiStore`) manage all client state. No prop drilling.
+- **Component structure**: Reusable primitives (`Button`, `Input`), composite components (`MessageBubble`, `Sidebar`), and page-level components (`Chat`, `Admin`, `Settings`, `Login`).
+- **Error handling**: Backend returns structured HTTP errors; frontend catches them and surfaces via toast notifications.
+- **Graceful degradation**: ChromaDB, NetworkX, Docker, and TabbyAPI failures are caught and logged -- the app continues operating without those features.
 
-- **Stack**: HTML5 (Living Standard), CSS3, Vanilla JavaScript (ES6+).
-- **Communication**: REST API (Fetch with `async/await`).
-- **Design Standards**:
-  - **JavaScript**: Use **AJAX** for interactions. Target elements using **ID tags**.
-  - **CSS**: Style elements using **class attributes** (avoid inline styles).
-  - **Theme**: CSS Variables for theming.
-
-### Asset Versioning & Cache Busting
-
-To ensure users receive updated CSS/JS assets, we use a query parameter versioning strategy (e.g., `style.css?v=44`).
-
-**CRITICAL: When modifying `public/style.css` or `public/script.js`, you MUST update the version number in TWO places:**
-
-1. **Codebase (Custom Pages)**: Increment `UI_CSS_VERSION` or `UI_JS_VERSION` in `src/nebulus_gantry/version.py`.
-2. **Chainlit Config (Main App)**: Update `custom_css` or `custom_js` paths in `.chainlit/config.toml` (e.g., `custom_css = "/public/style.css?v=44"`).
-
-**After updating `.chainlit/config.toml`, you MUST rebuild/restart the Docker container for changes to take effect.**
-
-## Directory Structure
-
-The project follows a strict separation of concerns:
-
-nebulus-gantry/
-├── src/
-│   └── nebulus_gantry/        # Main Package
-│       ├── backend/           # [New] Python Backend
-│       │   ├── models/        # Entities & DTOs
-│       │   ├── services/      # Business Logic
-│       │   ├── routes/        # API Endpoints
-│       │   └── main.py        # Entrypoint
-│       ├── frontend/          # [New] JS/CSS Source
-│       │   ├── src/
-│       │   │   ├── js/        # ES6 Classes
-│       │   │   └── css/       # BEM Modules
-│       │   └── public/        # Compiled Assets
-│       └── public/            # [Legacy] Static Assets (To be migrated)
-├── data/                      # Local persistence
-└── tests/                     # Pytest suite
-
-## Development Setup
-
-### 1. Environment Initialization
+## Development
 
 ```bash
-# Ensure you are in the project root
-cd ~/projects/west_ai_labs/nebulus-gantry
+# Backend (local)
+cd backend && python3 -m venv venv && source venv/bin/activate
+pip install -r requirements.txt
+uvicorn main:app --reload --port 8000
 
-# Bootstrap the environment (Ansible + Venv)
-./scripts/bootstrap.sh
+# Frontend (local)
+cd frontend && npm install && npm run dev
+
+# Docker
+docker-compose up --build
+
+# Tests
+cd backend && python -m pytest tests/ -v
 ```
 
-### 2. Running Application & Tests (The ONE Way)
+## Environment Variables
 
-All operations **MUST** be performed via the **Gantry CLI**. Custom scripts (`bin/run_app`, `bin/run_tests`) have been **deprecated/removed**.
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `DATABASE_URL` | `sqlite:///./data/gantry.db` | Database connection |
+| `SECRET_KEY` | `dev-secret-change-in-production` | Session signing |
+| `CHROMA_HOST` | `http://localhost:8001` | ChromaDB endpoint |
+| `TABBY_HOST` | `http://localhost:5000` | TabbyAPI endpoint |
+| `SESSION_EXPIRE_HOURS` | `24` | Cookie lifetime |
+| `VITE_API_URL` | `http://localhost:8000` | Backend URL (frontend build) |
 
-```bash
-# Start the full stack (Docker)
-./bin/gantry start
-# Access at http://localhost:8080
+## File Map
 
-# Stop the stack
-./bin/gantry stop
-
-# Run unit tests (Local)
-./bin/gantry test
-
-# Check container status
-./bin/gantry status
-
-# Rebuild containers (e.g. after requirements.txt change)
-./bin/gantry rebuild
-
-# Run full pre-commit validation
-./bin/gantry validate
-
-# View logs
-./bin/gantry logs
-```
-
-**Rule**: NEW CLI/Script definitions MUST be implemented as subcommands in `bin/gantry`. Do not create standalone scripts in `bin/`.
+- `backend/main.py` -- FastAPI app entry point, CORS, router registration
+- `backend/config.py` -- `Settings` dataclass loaded from env vars
+- `backend/database.py` -- SQLAlchemy engine and session factory
+- `backend/models/` -- ORM models: `User`, `Conversation`, `Message`, `Session`
+- `backend/schemas/` -- Pydantic request/response schemas
+- `backend/services/` -- Business logic: `AuthService`, `ChatService`, `LLMService`, `MemoryService`, `GraphService`, `DockerService`, `ModelService`
+- `backend/routers/` -- API routes: `auth.py`, `chat.py`, `admin.py`
+- `frontend/src/stores/` -- Zustand stores for auth, chat, toast, UI
+- `frontend/src/services/api.ts` -- HTTP client wrapping `fetch`
+- `frontend/src/pages/` -- Route-level page components
+- `frontend/src/components/` -- Reusable UI components
+- `frontend/src/types/api.ts` -- Shared TypeScript interfaces

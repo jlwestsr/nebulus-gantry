@@ -38,5 +38,17 @@ build/
 *.sqlite3
 .files/
 data/
+!data/.gitkeep
+
+# Claude Code
+.claude/
+
+# Reference symlinks (external projects)
 reference_nebulus
 reference_open-webui
+
+# Corrupted backups
+_corrupted_backup/
+
+# Git worktrees
+.worktrees/
