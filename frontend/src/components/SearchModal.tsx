@@ -113,7 +113,7 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh]"
+      className="fixed inset-0 z-50 flex items-start justify-center px-4 pt-[10vh] sm:pt-[15vh]"
       onClick={onClose}
     >
       {/* Backdrop */}
@@ -160,7 +160,7 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
         <div className="max-h-[50vh] overflow-y-auto">
           {query.trim() && !isSearching && results.length === 0 && (
             <div className="px-4 py-8 text-center text-gray-500 text-sm">
-              No results found for "{query}"
+              No results found for &ldquo;{query}&rdquo;
             </div>
           )}
 
@@ -173,7 +173,7 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
           {results.map((result, index) => (
             <button
               key={`${result.conversation_id}-${index}`}
-              className={`w-full text-left px-4 py-3 transition-colors ${
+              className={`w-full text-left px-4 py-3 transition-colors duration-200 ${
                 index === selectedIndex
                   ? 'bg-gray-800'
                   : 'hover:bg-gray-800/50'

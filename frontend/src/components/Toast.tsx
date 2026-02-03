@@ -44,7 +44,7 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: () => void }
     <div
       className={`
         flex items-start gap-3 px-4 py-3 rounded-lg border shadow-lg backdrop-blur-sm
-        transition-all duration-300 ease-out min-w-[320px] max-w-[420px]
+        transition-all duration-300 ease-out w-[calc(100vw-2rem)] sm:min-w-[320px] sm:w-auto sm:max-w-[420px]
         ${colorMap[toast.type]}
         ${visible ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0'}
       `}
@@ -54,7 +54,7 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: () => void }
       <p className="flex-1 text-sm leading-snug">{toast.message}</p>
       <button
         onClick={onDismiss}
-        className="shrink-0 mt-0.5 p-0.5 rounded hover:bg-white/20 transition-colors"
+        className="shrink-0 mt-0.5 p-0.5 rounded hover:bg-white/20 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-white/30"
         aria-label="Dismiss notification"
       >
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -72,7 +72,7 @@ export function ToastContainer() {
   if (toasts.length === 0) return null;
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2">
+    <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 sm:items-end items-center">
       {toasts.map((toast) => (
         <ToastItem
           key={toast.id}

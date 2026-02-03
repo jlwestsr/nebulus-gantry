@@ -23,16 +23,16 @@ export function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-xl shadow-lg">
+    <div className="min-h-screen flex items-center justify-center bg-gray-900 px-4">
+      <div className="w-full max-w-md p-6 sm:p-8 space-y-6 bg-gray-800 rounded-xl shadow-lg border border-gray-700">
         <div className="text-center">
-          <h1 className="text-3xl font-bold text-gray-900">Nebulus Gantry</h1>
-          <p className="mt-2 text-gray-600">Sign in to continue</p>
+          <h1 className="text-3xl font-bold text-gray-100">Nebulus Gantry</h1>
+          <p className="mt-2 text-gray-400">Sign in to continue</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && (
-            <div className="p-3 text-sm text-red-500 bg-red-50 rounded-lg">
+            <div className="p-3 text-sm text-red-300 bg-red-900/30 border border-red-800/50 rounded-lg">
               {error}
             </div>
           )}

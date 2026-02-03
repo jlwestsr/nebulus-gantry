@@ -54,9 +54,9 @@ export function MessageInput({
   const canSubmit = content.trim().length > 0 && !disabled;
 
   return (
-    <div className="p-4 border-t border-gray-700">
+    <div className="p-3 sm:p-4 border-t border-gray-700">
       <div className="max-w-3xl mx-auto">
-        <div className="flex items-end gap-3 bg-gray-700 rounded-xl px-4 py-3">
+        <div className="flex items-end gap-2 sm:gap-3 bg-gray-700 rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 focus-within:ring-2 focus-within:ring-blue-500/50 transition-shadow duration-200">
           <textarea
             ref={textareaRef}
             value={content}
@@ -71,9 +71,9 @@ export function MessageInput({
           <button
             onClick={handleSubmit}
             disabled={!canSubmit}
-            className={`p-2 rounded-lg transition-colors ${
+            className={`p-2 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50 ${
               canSubmit
-                ? 'text-white bg-blue-600 hover:bg-blue-500'
+                ? 'text-white bg-blue-600 hover:bg-blue-500 active:scale-95'
                 : 'text-gray-500 cursor-not-allowed'
             }`}
             aria-label="Send message"

@@ -135,12 +135,12 @@ export function Chat() {
       <Sidebar />
 
       {/* Chat area */}
-      <div className="flex-1 flex flex-col bg-gray-800">
+      <div className="flex-1 flex flex-col bg-gray-800 min-w-0">
         {currentConversationId ? (
           <>
             {/* Error display */}
             {error && (
-              <div className="px-4 py-2 bg-red-900/50 text-red-200 text-sm text-center">
+              <div className="px-4 py-2 bg-red-900/50 text-red-200 text-sm text-center border-b border-red-800/30">
                 {error}
               </div>
             )}
@@ -160,7 +160,7 @@ export function Chat() {
           </>
         ) : (
           /* Welcome screen when no conversation selected */
-          <div className="flex-1 flex items-center justify-center">
+          <div className="flex-1 flex items-center justify-center px-4">
             <div className="text-center">
               <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-gray-700 flex items-center justify-center">
                 <svg
@@ -177,10 +177,10 @@ export function Chat() {
                   />
                 </svg>
               </div>
-              <h2 className="text-2xl font-semibold text-gray-200 mb-2">
+              <h2 className="text-xl sm:text-2xl font-semibold text-gray-200 mb-2">
                 Welcome to Nebulus Gantry
               </h2>
-              <p className="text-gray-400 max-w-md">
+              <p className="text-gray-400 text-sm sm:text-base max-w-md">
                 Start a new conversation or select an existing one from the
                 sidebar
               </p>

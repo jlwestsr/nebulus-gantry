@@ -50,11 +50,11 @@ export function Settings() {
     <div className="min-h-[calc(100vh-57px)] bg-gray-900">
       {/* Page header */}
       <div className="border-b border-gray-700 bg-gray-800/50">
-        <div className="max-w-3xl mx-auto px-6 py-4">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 py-4">
           <div className="flex items-center gap-3">
             <button
               onClick={() => navigate('/')}
-              className="p-1.5 text-gray-400 hover:text-gray-200 rounded-lg hover:bg-gray-700 transition-colors"
+              className="p-1.5 text-gray-400 hover:text-gray-200 rounded-lg hover:bg-gray-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
               title="Back to Chat"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -67,8 +67,8 @@ export function Settings() {
               </svg>
             </button>
             <div>
-              <h1 className="text-xl font-semibold text-gray-100">Settings</h1>
-              <p className="text-sm text-gray-400 mt-0.5">
+              <h1 className="text-lg sm:text-xl font-semibold text-gray-100">Settings</h1>
+              <p className="hidden sm:block text-sm text-gray-400 mt-0.5">
                 Manage your preferences
               </p>
             </div>
@@ -77,10 +77,10 @@ export function Settings() {
       </div>
 
       {/* Settings sections */}
-      <div className="max-w-3xl mx-auto px-6 py-6 space-y-6">
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
         {/* Profile Section */}
         <section className="bg-gray-800/50 border border-gray-700 rounded-lg">
-          <div className="px-6 py-4 border-b border-gray-700">
+          <div className="px-4 sm:px-6 py-4 border-b border-gray-700">
             <h2 className="text-base font-medium text-gray-100 flex items-center gap-2">
               <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
@@ -93,7 +93,7 @@ export function Settings() {
               Profile
             </h2>
           </div>
-          <div className="px-6 py-4 space-y-4">
+          <div className="px-4 sm:px-6 py-4 space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-400 mb-1">
                 Display Name
@@ -132,7 +132,7 @@ export function Settings() {
 
         {/* Appearance Section */}
         <section className="bg-gray-800/50 border border-gray-700 rounded-lg">
-          <div className="px-6 py-4 border-b border-gray-700">
+          <div className="px-4 sm:px-6 py-4 border-b border-gray-700">
             <h2 className="text-base font-medium text-gray-100 flex items-center gap-2">
               <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
@@ -145,8 +145,8 @@ export function Settings() {
               Appearance
             </h2>
           </div>
-          <div className="px-6 py-4">
-            <div className="flex items-center justify-between">
+          <div className="px-4 sm:px-6 py-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <p className="text-sm font-medium text-gray-200">Theme</p>
                 <p className="text-xs text-gray-500 mt-0.5">
@@ -156,7 +156,7 @@ export function Settings() {
               <div className="flex items-center gap-1 bg-gray-700/50 border border-gray-600 rounded-lg p-0.5">
                 <button
                   onClick={() => handleThemeChange('dark')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-colors ${
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-colors duration-200 ${
                     theme === 'dark'
                       ? 'bg-gray-600 text-gray-100 shadow-sm'
                       : 'text-gray-400 hover:text-gray-200'
@@ -174,7 +174,7 @@ export function Settings() {
                 </button>
                 <button
                   onClick={() => handleThemeChange('light')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-colors ${
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-colors duration-200 ${
                     theme === 'light'
                       ? 'bg-gray-600 text-gray-100 shadow-sm'
                       : 'text-gray-400 hover:text-gray-200'
@@ -202,7 +202,7 @@ export function Settings() {
 
         {/* Model Section */}
         <section className="bg-gray-800/50 border border-gray-700 rounded-lg">
-          <div className="px-6 py-4 border-b border-gray-700">
+          <div className="px-4 sm:px-6 py-4 border-b border-gray-700">
             <h2 className="text-base font-medium text-gray-100 flex items-center gap-2">
               <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
@@ -215,8 +215,8 @@ export function Settings() {
               Model
             </h2>
           </div>
-          <div className="px-6 py-4">
-            <div className="flex items-center justify-between">
+          <div className="px-4 sm:px-6 py-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <p className="text-sm font-medium text-gray-200">Active Model</p>
                 <p className="text-xs text-gray-500 mt-0.5">
@@ -243,7 +243,7 @@ export function Settings() {
 
         {/* About Section */}
         <section className="bg-gray-800/50 border border-gray-700 rounded-lg">
-          <div className="px-6 py-4 border-b border-gray-700">
+          <div className="px-4 sm:px-6 py-4 border-b border-gray-700">
             <h2 className="text-base font-medium text-gray-100 flex items-center gap-2">
               <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
@@ -256,7 +256,7 @@ export function Settings() {
               About
             </h2>
           </div>
-          <div className="px-6 py-4">
+          <div className="px-4 sm:px-6 py-4">
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-400">Application</span>

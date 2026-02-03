@@ -93,12 +93,12 @@ export function Admin() {
     <div className="min-h-[calc(100vh-57px)] bg-gray-900">
       {/* Page header */}
       <div className="border-b border-gray-700 bg-gray-800/50">
-        <div className="max-w-6xl mx-auto px-6 py-4">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <button
                 onClick={() => navigate('/')}
-                className="p-1.5 text-gray-400 hover:text-gray-200 rounded-lg hover:bg-gray-700 transition-colors"
+                className="p-1.5 text-gray-400 hover:text-gray-200 rounded-lg hover:bg-gray-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                 title="Back to Chat"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -111,10 +111,10 @@ export function Admin() {
                 </svg>
               </button>
               <div>
-                <h1 className="text-xl font-semibold text-gray-100">
+                <h1 className="text-lg sm:text-xl font-semibold text-gray-100">
                   Admin Panel
                 </h1>
-                <p className="text-sm text-gray-400 mt-0.5">
+                <p className="hidden sm:block text-sm text-gray-400 mt-0.5">
                   Manage services, models, and users
                 </p>
               </div>
@@ -125,15 +125,15 @@ export function Admin() {
 
       {/* Tab navigation */}
       <div className="border-b border-gray-700 bg-gray-800/30">
-        <div className="max-w-6xl mx-auto px-6">
-          <nav className="flex gap-1" role="tablist">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6">
+          <nav className="flex gap-0 sm:gap-1 overflow-x-auto scrollbar-none" role="tablist">
             {TABS.map((tab) => (
               <button
                 key={tab.id}
                 role="tab"
                 aria-selected={activeTab === tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-3 text-sm font-medium border-b-2 transition-colors duration-200 whitespace-nowrap ${
                   activeTab === tab.id
                     ? 'border-blue-500 text-blue-400'
                     : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-600'
@@ -148,7 +148,9 @@ export function Admin() {
       </div>
 
       {/* Tab content */}
-      <div className="max-w-6xl mx-auto px-6 py-6">{renderTabContent()}</div>
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
+        {renderTabContent()}
+      </div>
     </div>
   );
 }

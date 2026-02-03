@@ -1,5 +1,6 @@
 import { useEffect, useMemo } from 'react';
 import { useChatStore } from '../stores/chatStore';
+import { useUIStore } from '../stores/uiStore';
 import type { Conversation } from '../types/api';
 
 // Group conversations by date category
@@ -53,7 +54,7 @@ function ConversationItem({
 }: ConversationItemProps) {
   return (
     <div
-      className={`group flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-colors ${
+      className={`group flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-colors duration-200 ${
         isActive
           ? 'bg-gray-700 text-white'
           : 'text-gray-300 hover:bg-gray-800 hover:text-white'
@@ -62,7 +63,7 @@ function ConversationItem({
     >
       {/* Chat icon */}
       <svg
-        className="w-4 h-4 flex-shrink-0"
+        className="w-4 h-4 flex-shrink-0 text-gray-500"
         fill="none"
         stroke="currentColor"
         viewBox="0 0 24 24"
@@ -82,7 +83,7 @@ function ConversationItem({
 
       {/* Delete button - shows on hover */}
       <button
-        className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-gray-600 transition-opacity"
+        className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-gray-600 transition-all duration-200 focus:outline-none focus:opacity-100 focus:ring-2 focus:ring-blue-500/50"
         onClick={(e) => {
           e.stopPropagation();
           onDelete();
@@ -118,6 +119,8 @@ export function Sidebar() {
     deleteConversation,
   } = useChatStore();
 
+  const { isSidebarOpen, closeSidebar } = useUIStore();
+
   // Fetch conversations on mount
   useEffect(() => {
     fetchConversations();
@@ -132,9 +135,15 @@ export function Sidebar() {
   const handleNewChat = async () => {
     try {
       await createConversation();
+      closeSidebar();
     } catch {
       // Error is already set in store
     }
+  };
+
+  const handleSelect = (id: number) => {
+    selectConversation(id);
+    closeSidebar();
   };
 
   const handleDelete = async (id: number) => {
@@ -149,13 +158,20 @@ export function Sidebar() {
   };
 
   return (
-    <div className="w-64 h-full bg-gray-900 flex flex-col">
+    <aside
+      className={`
+        w-64 h-full bg-gray-900 flex flex-col border-r border-gray-700/50
+        fixed md:relative z-50 md:z-auto
+        transition-transform duration-300 ease-in-out
+        ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+      `}
+    >
       {/* New Chat Button */}
       <div className="p-3">
         <button
           onClick={handleNewChat}
           disabled={isLoading}
-          className="w-full flex items-center justify-center gap-2 py-2.5 px-4 border border-gray-600 text-gray-200 rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full flex items-center justify-center gap-2 py-2.5 px-4 border border-gray-600 text-gray-200 rounded-lg hover:bg-gray-800 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-blue-500/50"
         >
           <svg
             className="w-4 h-4"
@@ -175,7 +191,7 @@ export function Sidebar() {
       </div>
 
       {/* Conversation List */}
-      <div className="flex-1 overflow-y-auto px-2 pb-4">
+      <div className="flex-1 overflow-y-auto px-2 pb-4 scrollbar-thin">
         {isLoading && conversations.length === 0 ? (
           <div className="flex items-center justify-center py-8">
             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-400"></div>
@@ -190,13 +206,13 @@ export function Sidebar() {
               <h3 className="px-3 py-2 text-xs font-medium text-gray-500 uppercase tracking-wider">
                 {group}
               </h3>
-              <div className="space-y-1">
+              <div className="space-y-0.5">
                 {convs.map((conv) => (
                   <ConversationItem
                     key={conv.id}
                     conversation={conv}
                     isActive={currentConversationId === conv.id}
-                    onSelect={() => selectConversation(conv.id)}
+                    onSelect={() => handleSelect(conv.id)}
                     onDelete={() => handleDelete(conv.id)}
                   />
                 ))}
@@ -205,6 +221,6 @@ export function Sidebar() {
           ))
         )}
       </div>
-    </div>
+    </aside>
   );
 }

@@ -18,7 +18,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
       className={`flex ${isUser ? 'justify-end' : 'justify-start'} group`}
     >
       <div
-        className={`max-w-[80%] rounded-2xl px-4 py-3 ${
+        className={`max-w-[85%] sm:max-w-[80%] rounded-2xl px-4 py-3 transition-shadow duration-200 ${
           isUser
             ? 'bg-blue-600 text-white'
             : 'bg-gray-700 text-gray-100'
@@ -31,7 +31,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
 
         {/* Timestamp - shows on hover */}
         <div
-          className={`mt-1 text-xs opacity-0 group-hover:opacity-100 transition-opacity ${
+          className={`mt-1 text-xs opacity-0 group-hover:opacity-100 transition-opacity duration-200 ${
             isUser ? 'text-blue-200' : 'text-gray-400'
           }`}
         >

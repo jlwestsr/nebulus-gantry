@@ -18,7 +18,7 @@ export function MessageList({ messages, isLoading }: MessageListProps) {
   // Empty state
   if (messages.length === 0 && !isLoading) {
     return (
-      <div className="flex-1 flex items-center justify-center">
+      <div className="flex-1 flex items-center justify-center px-4">
         <div className="text-center text-gray-400">
           <svg
             className="w-12 h-12 mx-auto mb-4 text-gray-600"
@@ -40,7 +40,7 @@ export function MessageList({ messages, isLoading }: MessageListProps) {
   }
 
   return (
-    <div className="flex-1 overflow-y-auto px-4 py-6">
+    <div className="flex-1 overflow-y-auto px-3 sm:px-4 py-6">
       <div className="max-w-3xl mx-auto space-y-4">
         {messages.map((message) => (
           <MessageBubble key={message.id} message={message} />
