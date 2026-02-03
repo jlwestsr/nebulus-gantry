@@ -226,29 +226,6 @@ class TestAdminAccess:
         assert "users" in data
         assert isinstance(data["users"], list)
 
-    def test_create_user_admin_placeholder(self, client, admin_user):
-        _, token = admin_user
-        response = client.post(
-            "/api/admin/users",
-            json={
-                "email": "new@test.com",
-                "password": "pass123",
-                "display_name": "New User",
-            },
-            cookies={"session_token": token},
-        )
-        # Placeholder returns 501 Not Implemented
-        assert response.status_code == 501
-
-    def test_delete_user_admin_placeholder(self, client, admin_user):
-        _, token = admin_user
-        response = client.delete(
-            "/api/admin/users/999",
-            cookies={"session_token": token},
-        )
-        # Placeholder returns 501 Not Implemented
-        assert response.status_code == 501
-
     def test_list_services_admin(self, client, admin_user):
         _, token = admin_user
         response = client.get(
@@ -319,3 +296,174 @@ class TestInvalidSession:
             cookies={"session_token": ""},
         )
         assert response.status_code == 401
+
+
+# ── User Management CRUD tests ───────────────────────────────────────────────
+
+
+class TestUserManagementCRUD:
+    """Test the user management API (Task 24)."""
+
+    def test_list_users_returns_existing(self, client, admin_user, regular_user):
+        """GET /admin/users should return all users in the database."""
+        _, token = admin_user
+        response = client.get(
+            "/api/admin/users",
+            cookies={"session_token": token},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        users = data["users"]
+        assert len(users) == 2
+        emails = {u["email"] for u in users}
+        assert "admin@test.com" in emails
+        assert "user@test.com" in emails
+        # Ensure password hashes are NOT exposed
+        for u in users:
+            assert "password_hash" not in u
+            assert "password" not in u
+
+    def test_list_users_contains_expected_fields(self, client, admin_user):
+        """Each user object should have id, email, display_name, role."""
+        _, token = admin_user
+        response = client.get(
+            "/api/admin/users",
+            cookies={"session_token": token},
+        )
+        assert response.status_code == 200
+        users = response.json()["users"]
+        assert len(users) >= 1
+        user = users[0]
+        assert "id" in user
+        assert "email" in user
+        assert "display_name" in user
+        assert "role" in user
+
+    def test_create_user_success(self, client, admin_user):
+        """POST /admin/users should create a new user and return 201."""
+        _, token = admin_user
+        response = client.post(
+            "/api/admin/users",
+            json={
+                "email": "new@test.com",
+                "password": "newpass123",
+                "display_name": "New User",
+                "role": "user",
+            },
+            cookies={"session_token": token},
+        )
+        assert response.status_code == 201
+        data = response.json()
+        assert data["email"] == "new@test.com"
+        assert data["display_name"] == "New User"
+        assert data["role"] == "user"
+        assert "id" in data
+        assert "password_hash" not in data
+        assert "password" not in data
+
+    def test_create_user_default_role(self, client, admin_user):
+        """Creating a user without specifying role should default to 'user'."""
+        _, token = admin_user
+        response = client.post(
+            "/api/admin/users",
+            json={
+                "email": "default@test.com",
+                "password": "pass123",
+                "display_name": "Default Role User",
+            },
+            cookies={"session_token": token},
+        )
+        assert response.status_code == 201
+        assert response.json()["role"] == "user"
+
+    def test_create_user_admin_role(self, client, admin_user):
+        """Creating a user with admin role should succeed."""
+        _, token = admin_user
+        response = client.post(
+            "/api/admin/users",
+            json={
+                "email": "admin2@test.com",
+                "password": "adminpass",
+                "display_name": "Another Admin",
+                "role": "admin",
+            },
+            cookies={"session_token": token},
+        )
+        assert response.status_code == 201
+        assert response.json()["role"] == "admin"
+
+    def test_create_user_duplicate_email_409(self, client, admin_user):
+        """POST /admin/users with an existing email should return 409."""
+        _, token = admin_user
+        # admin@test.com already exists from admin_user fixture
+        response = client.post(
+            "/api/admin/users",
+            json={
+                "email": "admin@test.com",
+                "password": "anotherpass",
+                "display_name": "Duplicate",
+            },
+            cookies={"session_token": token},
+        )
+        assert response.status_code == 409
+        assert "already exists" in response.json()["detail"].lower()
+
+    def test_create_user_shows_in_list(self, client, admin_user):
+        """A newly created user should appear in GET /admin/users."""
+        _, token = admin_user
+        # Create user
+        client.post(
+            "/api/admin/users",
+            json={
+                "email": "listed@test.com",
+                "password": "pass123",
+                "display_name": "Listed User",
+            },
+            cookies={"session_token": token},
+        )
+        # Verify appears in list
+        response = client.get(
+            "/api/admin/users",
+            cookies={"session_token": token},
+        )
+        emails = {u["email"] for u in response.json()["users"]}
+        assert "listed@test.com" in emails
+
+    def test_delete_user_success(self, client, admin_user, regular_user):
+        """DELETE /admin/users/:id should remove the user."""
+        user_obj, _ = regular_user
+        _, admin_token = admin_user
+        response = client.delete(
+            f"/api/admin/users/{user_obj.id}",
+            cookies={"session_token": admin_token},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert "deleted" in data["message"].lower()
+        # Verify user no longer in list
+        list_resp = client.get(
+            "/api/admin/users",
+            cookies={"session_token": admin_token},
+        )
+        emails = {u["email"] for u in list_resp.json()["users"]}
+        assert "user@test.com" not in emails
+
+    def test_delete_user_not_found_404(self, client, admin_user):
+        """DELETE /admin/users/:id with non-existent id returns 404."""
+        _, token = admin_user
+        response = client.delete(
+            "/api/admin/users/99999",
+            cookies={"session_token": token},
+        )
+        assert response.status_code == 404
+        assert "not found" in response.json()["detail"].lower()
+
+    def test_delete_self_rejected(self, client, admin_user):
+        """Admin cannot delete themselves."""
+        user_obj, token = admin_user
+        response = client.delete(
+            f"/api/admin/users/{user_obj.id}",
+            cookies={"session_token": token},
+        )
+        assert response.status_code == 400
+        assert "yourself" in response.json()["detail"].lower()
