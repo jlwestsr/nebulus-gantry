@@ -1,0 +1,321 @@
+"""Tests for admin routes and role-based access control."""
+import os
+
+# Set test database URL before any backend imports to avoid the module-level
+# create_all in dependencies.py trying to open the default sqlite file.
+os.environ["DATABASE_URL"] = "sqlite:///./test_admin.db"
+
+import pytest
+from fastapi.testclient import TestClient
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+
+from backend.database import Base
+from backend.dependencies import get_db
+from backend.main import app
+from backend.models.user import User
+from backend.models.session import Session
+from backend.services.auth_service import AuthService
+
+
+# ── Test database setup ──────────────────────────────────────────────────────
+
+TEST_DB_URL = "sqlite:///./test_admin.db"
+engine = create_engine(TEST_DB_URL, connect_args={"check_same_thread": False})
+TestSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+
+def override_get_db():
+    db = TestSessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+app.dependency_overrides[get_db] = override_get_db
+
+
+@pytest.fixture(autouse=True)
+def setup_db():
+    """Create tables before each test, drop after."""
+    Base.metadata.create_all(bind=engine)
+    yield
+    Base.metadata.drop_all(bind=engine)
+
+
+@pytest.fixture
+def db():
+    """Provide a test database session."""
+    session = TestSessionLocal()
+    try:
+        yield session
+    finally:
+        session.close()
+
+
+@pytest.fixture
+def client():
+    """Provide a FastAPI test client."""
+    return TestClient(app)
+
+
+@pytest.fixture
+def admin_user(db):
+    """Create an admin user and return (user, session_token)."""
+    auth = AuthService(db)
+    user = auth.create_user(
+        email="admin@test.com",
+        password="adminpass123",
+        display_name="Admin User",
+        role="admin",
+    )
+    token = auth.create_session(user.id)
+    return user, token
+
+
+@pytest.fixture
+def regular_user(db):
+    """Create a regular user and return (user, session_token)."""
+    auth = AuthService(db)
+    user = auth.create_user(
+        email="user@test.com",
+        password="userpass123",
+        display_name="Regular User",
+        role="user",
+    )
+    token = auth.create_session(user.id)
+    return user, token
+
+
+# ── Authentication tests ─────────────────────────────────────────────────────
+
+
+class TestAdminAuthentication:
+    """Test that unauthenticated requests are rejected with 401."""
+
+    def test_list_users_unauthenticated(self, client):
+        response = client.get("/api/admin/users")
+        assert response.status_code == 401
+
+    def test_create_user_unauthenticated(self, client):
+        response = client.post("/api/admin/users", json={
+            "email": "new@test.com",
+            "password": "pass123",
+            "display_name": "New User",
+        })
+        assert response.status_code == 401
+
+    def test_delete_user_unauthenticated(self, client):
+        response = client.delete("/api/admin/users/1")
+        assert response.status_code == 401
+
+    def test_list_services_unauthenticated(self, client):
+        response = client.get("/api/admin/services")
+        assert response.status_code == 401
+
+    def test_restart_service_unauthenticated(self, client):
+        response = client.post("/api/admin/services/web/restart")
+        assert response.status_code == 401
+
+    def test_list_models_unauthenticated(self, client):
+        response = client.get("/api/admin/models")
+        assert response.status_code == 401
+
+    def test_switch_model_unauthenticated(self, client):
+        response = client.post("/api/admin/models/switch", json={"model_id": "gpt-4"})
+        assert response.status_code == 401
+
+    def test_stream_logs_unauthenticated(self, client):
+        response = client.get("/api/admin/logs/web")
+        assert response.status_code == 401
+
+
+# ── Authorization tests (non-admin rejected with 403) ────────────────────────
+
+
+class TestAdminAuthorization:
+    """Test that non-admin users are rejected with 403."""
+
+    def test_list_users_non_admin(self, client, regular_user):
+        _, token = regular_user
+        response = client.get(
+            "/api/admin/users",
+            cookies={"session_token": token},
+        )
+        assert response.status_code == 403
+        assert response.json()["detail"] == "Admin access required"
+
+    def test_create_user_non_admin(self, client, regular_user):
+        _, token = regular_user
+        response = client.post(
+            "/api/admin/users",
+            json={
+                "email": "new@test.com",
+                "password": "pass123",
+                "display_name": "New User",
+            },
+            cookies={"session_token": token},
+        )
+        assert response.status_code == 403
+
+    def test_delete_user_non_admin(self, client, regular_user):
+        _, token = regular_user
+        response = client.delete(
+            "/api/admin/users/1",
+            cookies={"session_token": token},
+        )
+        assert response.status_code == 403
+
+    def test_list_services_non_admin(self, client, regular_user):
+        _, token = regular_user
+        response = client.get(
+            "/api/admin/services",
+            cookies={"session_token": token},
+        )
+        assert response.status_code == 403
+
+    def test_restart_service_non_admin(self, client, regular_user):
+        _, token = regular_user
+        response = client.post(
+            "/api/admin/services/web/restart",
+            cookies={"session_token": token},
+        )
+        assert response.status_code == 403
+
+    def test_list_models_non_admin(self, client, regular_user):
+        _, token = regular_user
+        response = client.get(
+            "/api/admin/models",
+            cookies={"session_token": token},
+        )
+        assert response.status_code == 403
+
+    def test_switch_model_non_admin(self, client, regular_user):
+        _, token = regular_user
+        response = client.post(
+            "/api/admin/models/switch",
+            json={"model_id": "gpt-4"},
+            cookies={"session_token": token},
+        )
+        assert response.status_code == 403
+
+    def test_stream_logs_non_admin(self, client, regular_user):
+        _, token = regular_user
+        response = client.get(
+            "/api/admin/logs/web",
+            cookies={"session_token": token},
+        )
+        assert response.status_code == 403
+
+
+# ── Admin access tests (admin users allowed) ─────────────────────────────────
+
+
+class TestAdminAccess:
+    """Test that admin users can access admin endpoints."""
+
+    def test_list_users_admin(self, client, admin_user):
+        _, token = admin_user
+        response = client.get(
+            "/api/admin/users",
+            cookies={"session_token": token},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert "users" in data
+        assert isinstance(data["users"], list)
+
+    def test_create_user_admin_placeholder(self, client, admin_user):
+        _, token = admin_user
+        response = client.post(
+            "/api/admin/users",
+            json={
+                "email": "new@test.com",
+                "password": "pass123",
+                "display_name": "New User",
+            },
+            cookies={"session_token": token},
+        )
+        # Placeholder returns 501 Not Implemented
+        assert response.status_code == 501
+
+    def test_delete_user_admin_placeholder(self, client, admin_user):
+        _, token = admin_user
+        response = client.delete(
+            "/api/admin/users/999",
+            cookies={"session_token": token},
+        )
+        # Placeholder returns 501 Not Implemented
+        assert response.status_code == 501
+
+    def test_list_services_admin(self, client, admin_user):
+        _, token = admin_user
+        response = client.get(
+            "/api/admin/services",
+            cookies={"session_token": token},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert "services" in data
+        assert isinstance(data["services"], list)
+
+    def test_restart_service_admin_placeholder(self, client, admin_user):
+        _, token = admin_user
+        response = client.post(
+            "/api/admin/services/web/restart",
+            cookies={"session_token": token},
+        )
+        # Placeholder returns 501 Not Implemented
+        assert response.status_code == 501
+
+    def test_list_models_admin(self, client, admin_user):
+        _, token = admin_user
+        response = client.get(
+            "/api/admin/models",
+            cookies={"session_token": token},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert "models" in data
+        assert isinstance(data["models"], list)
+
+    def test_switch_model_admin_placeholder(self, client, admin_user):
+        _, token = admin_user
+        response = client.post(
+            "/api/admin/models/switch",
+            json={"model_id": "gpt-4"},
+            cookies={"session_token": token},
+        )
+        # Placeholder returns 501 Not Implemented
+        assert response.status_code == 501
+
+    def test_stream_logs_admin(self, client, admin_user):
+        _, token = admin_user
+        response = client.get(
+            "/api/admin/logs/web",
+            cookies={"session_token": token},
+        )
+        assert response.status_code == 200
+        assert "text/event-stream" in response.headers["content-type"]
+
+
+# ── Invalid session tests ────────────────────────────────────────────────────
+
+
+class TestInvalidSession:
+    """Test that invalid/expired session tokens are rejected."""
+
+    def test_invalid_token(self, client):
+        response = client.get(
+            "/api/admin/users",
+            cookies={"session_token": "invalid-token-value"},
+        )
+        assert response.status_code == 401
+
+    def test_empty_token(self, client):
+        response = client.get(
+            "/api/admin/users",
+            cookies={"session_token": ""},
+        )
+        assert response.status_code == 401
