@@ -38,15 +38,29 @@ class ChatService:
         self.db.commit()
         return True
 
+    def update_title(self, conversation_id: int, title: str) -> None:
+        conversation = self.db.query(Conversation).filter(
+            Conversation.id == conversation_id
+        ).first()
+        if conversation:
+            conversation.title = title
+            self.db.commit()
+
     def add_message(self, conversation_id: int, role: str, content: str) -> Message:
         message = Message(conversation_id=conversation_id, role=role, content=content)
         self.db.add(message)
 
-        # Update conversation's updated_at
+        # Update conversation's updated_at and auto-title on first user message
         conversation = self.db.query(Conversation).filter(Conversation.id == conversation_id).first()
         if conversation:
             from datetime import datetime
             conversation.updated_at = datetime.utcnow()
+
+            if role == "user" and conversation.title == "New Conversation":
+                title = content.strip()[:60]
+                if len(content.strip()) > 60:
+                    title = title.rsplit(" ", 1)[0] + "..."
+                conversation.title = title
 
         self.db.commit()
         self.db.refresh(message)

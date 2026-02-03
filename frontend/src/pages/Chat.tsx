@@ -93,7 +93,7 @@ export function Chat() {
           // Fetch the updated conversation to get the new title
           try {
             const data = await chatApi.getConversation(currentConversationId);
-            if (data.conversation.title !== 'New Chat') {
+            if (data.conversation.title !== 'New Conversation') {
               updateConversationTitle(
                 currentConversationId,
                 data.conversation.title
