@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from backend.routers import auth
+from backend.routers import auth, chat
 
 app = FastAPI(title="Nebulus Gantry", version="2.0.0")
 
@@ -16,6 +16,7 @@ app.add_middleware(
 
 # Routers
 app.include_router(auth.router)
+app.include_router(chat.router)
 
 
 @app.get("/health")
