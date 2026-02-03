@@ -96,3 +96,18 @@ def test_delete_conversation(authenticated_client):
 def test_conversations_unauthenticated(client):
     response = client.get("/api/chat/conversations")
     assert response.status_code == 401
+
+
+def test_send_message_to_conversation(authenticated_client):
+    # Create a conversation first
+    create_response = authenticated_client.post("/api/chat/conversations")
+    conv_id = create_response.json()["id"]
+
+    # Send a message (this will fail to connect to LLM but should return streaming response)
+    response = authenticated_client.post(
+        f"/api/chat/conversations/{conv_id}/messages",
+        json={"content": "Hello"}
+    )
+    assert response.status_code == 200
+    # The response should be a streaming response
+    assert "text/event-stream" in response.headers.get("content-type", "")
