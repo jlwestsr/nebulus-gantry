@@ -1,11 +1,12 @@
 """Docker service management for Nebulus Gantry.
 
-Provides container listing and restart capabilities for admin operations.
+Provides container listing, restart, and log streaming capabilities for admin operations.
 Gracefully degrades when Docker is not available (e.g., in CI or dev environments).
 """
 
 import docker
 import logging
+from typing import Generator
 
 logger = logging.getLogger(__name__)
 
@@ -64,3 +65,30 @@ class DockerService:
         except Exception as e:
             logger.warning(f"Failed to restart {service_name}: {e}")
             return False
+
+    def stream_logs(
+        self, service_name: str, tail: int = 100
+    ) -> Generator[str, None, None]:
+        """Stream log lines from a Docker container by name.
+
+        Args:
+            service_name: Container name to stream logs from.
+            tail: Number of historical lines to include before following.
+
+        Yields:
+            Decoded log lines as strings.
+        """
+        if not self.available:
+            return
+        try:
+            containers = self.client.containers.list(
+                all=True, filters={"name": service_name}
+            )
+            if not containers:
+                return
+            for chunk in containers[0].logs(
+                stream=True, follow=True, tail=tail, timestamps=True
+            ):
+                yield chunk.decode("utf-8", errors="replace").rstrip("\n")
+        except Exception as e:
+            logger.warning(f"Failed to stream logs for {service_name}: {e}")

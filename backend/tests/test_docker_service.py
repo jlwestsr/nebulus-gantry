@@ -1,8 +1,6 @@
 """Tests for DockerService with mocked Docker client."""
 
-from unittest.mock import MagicMock, patch, PropertyMock
-
-import pytest
+from unittest.mock import MagicMock, patch
 
 from backend.services.docker_service import DockerService
 
@@ -178,3 +176,81 @@ class TestRestartService:
         result = svc.restart_service("nebulus-web")
 
         assert result is False
+
+
+# ── stream_logs ─────────────────────────────────────────────────────────────
+
+
+class TestStreamLogs:
+    """Test log streaming from Docker containers."""
+
+    @patch("backend.services.docker_service.docker.from_env")
+    def test_stream_logs_returns_lines(self, mock_from_env):
+        """stream_logs yields log lines from a matching container."""
+        mock_client = MagicMock()
+        mock_from_env.return_value = mock_client
+        mock_container = _make_container("nebulus-gantry-api")
+        mock_container.logs.return_value = [
+            b"2026-02-03 INFO Starting server\n",
+            b"2026-02-03 INFO Listening on :8000\n",
+        ]
+        mock_client.containers.list.return_value = [mock_container]
+
+        service = DockerService()
+        lines = list(service.stream_logs("nebulus-gantry-api"))
+
+        assert len(lines) == 2
+        assert "Starting server" in lines[0]
+        mock_container.logs.assert_called_once_with(
+            stream=True, follow=True, tail=100, timestamps=True
+        )
+
+    @patch("backend.services.docker_service.docker.from_env")
+    def test_stream_logs_not_found_returns_empty(self, mock_from_env):
+        """stream_logs yields nothing when the container doesn't exist."""
+        mock_client = MagicMock()
+        mock_from_env.return_value = mock_client
+        mock_client.containers.list.return_value = []
+
+        service = DockerService()
+        lines = list(service.stream_logs("nonexistent"))
+
+        assert lines == []
+
+    def test_stream_logs_docker_unavailable(self):
+        """stream_logs yields nothing when Docker is unavailable."""
+        with patch("backend.services.docker_service.docker") as mock:
+            mock.from_env.side_effect = Exception("Docker not available")
+            service = DockerService()
+            lines = list(service.stream_logs("any"))
+            assert lines == []
+
+    @patch("backend.services.docker_service.docker.from_env")
+    def test_stream_logs_custom_tail(self, mock_from_env):
+        """stream_logs respects a custom tail parameter."""
+        mock_client = MagicMock()
+        mock_from_env.return_value = mock_client
+        mock_container = _make_container("nebulus-gantry-api")
+        mock_container.logs.return_value = [b"line\n"]
+        mock_client.containers.list.return_value = [mock_container]
+
+        service = DockerService()
+        list(service.stream_logs("nebulus-gantry-api", tail=50))
+
+        mock_container.logs.assert_called_once_with(
+            stream=True, follow=True, tail=50, timestamps=True
+        )
+
+    @patch("backend.services.docker_service.docker.from_env")
+    def test_stream_logs_handles_exception(self, mock_from_env):
+        """stream_logs yields nothing when logs() raises an exception."""
+        mock_client = MagicMock()
+        mock_from_env.return_value = mock_client
+        mock_container = _make_container("nebulus-gantry-api")
+        mock_container.logs.side_effect = Exception("Connection lost")
+        mock_client.containers.list.return_value = [mock_container]
+
+        service = DockerService()
+        lines = list(service.stream_logs("nebulus-gantry-api"))
+
+        assert lines == []
