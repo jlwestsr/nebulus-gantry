@@ -5,6 +5,7 @@ import { Layout } from './components/Layout';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { Login } from './pages/Login';
 import { Chat } from './pages/Chat';
+import { Admin } from './pages/Admin';
 
 function App() {
   const checkAuth = useAuthStore((state) => state.checkAuth);
@@ -24,6 +25,7 @@ function App() {
               <Layout>
                 <Routes>
                   <Route path="/" element={<Chat />} />
+                  <Route path="/admin" element={<Admin />} />
                 </Routes>
               </Layout>
             </ProtectedRoute>

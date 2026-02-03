@@ -28,3 +28,31 @@ export interface Message {
 export interface ApiError {
   detail: string;
 }
+
+// Admin types
+export interface AdminUser {
+  id: number;
+  email: string;
+  display_name: string;
+  role: 'user' | 'admin';
+  created_at?: string;
+}
+
+export interface CreateUserRequest {
+  email: string;
+  password: string;
+  display_name: string;
+  role: 'user' | 'admin';
+}
+
+export interface Service {
+  name: string;
+  status: 'running' | 'stopped' | 'error';
+  container_id?: string;
+}
+
+export interface Model {
+  id: string;
+  name: string;
+  active: boolean;
+}

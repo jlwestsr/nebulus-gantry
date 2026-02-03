@@ -1,4 +1,13 @@
-import type { User, LoginRequest, Conversation, Message } from '../types/api';
+import type {
+  User,
+  LoginRequest,
+  Conversation,
+  Message,
+  AdminUser,
+  CreateUserRequest,
+  Service,
+  Model,
+} from '../types/api';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -85,4 +94,40 @@ export const chatApi = {
       reader.releaseLock();
     }
   },
+};
+
+export const adminApi = {
+  // Users
+  listUsers: () =>
+    fetchApi<{ users: AdminUser[] }>('/api/admin/users'),
+
+  createUser: (data: CreateUserRequest) =>
+    fetchApi<{ user: AdminUser; message: string }>('/api/admin/users', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  deleteUser: (id: number) =>
+    fetchApi<{ message: string }>(`/api/admin/users/${id}`, {
+      method: 'DELETE',
+    }),
+
+  // Services
+  listServices: () =>
+    fetchApi<{ services: Service[] }>('/api/admin/services'),
+
+  restartService: (name: string) =>
+    fetchApi<{ message: string }>(`/api/admin/services/${name}/restart`, {
+      method: 'POST',
+    }),
+
+  // Models
+  listModels: () =>
+    fetchApi<{ models: Model[] }>('/api/admin/models'),
+
+  switchModel: (modelId: string) =>
+    fetchApi<{ message: string }>('/api/admin/models/switch', {
+      method: 'POST',
+      body: JSON.stringify({ model_id: modelId }),
+    }),
 };
