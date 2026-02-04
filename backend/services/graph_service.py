@@ -91,7 +91,7 @@ class GraphService:
             logger.info(f"Creating new graph for user {self.user_id}")
             return nx.DiGraph()
 
-    def extract_entities(self, content: str) -> list[dict]:
+    def extract_entities(self, content: str) -> list[dict]:  # noqa: C901
         """
         Extract entities from message content.
 

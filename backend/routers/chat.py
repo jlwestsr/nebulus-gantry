@@ -11,7 +11,6 @@ from backend.services.llm_service import LLMService
 from backend.schemas.chat import (
     ConversationResponse,
     ConversationDetailResponse,
-    MessageResponse,
     SendMessageRequest,
     SearchResult,
     SearchResponse,
@@ -95,7 +94,6 @@ def search_conversations(
 
     # Build response with snippets
     search_results = []
-    seen_conversations = set()
     for msg in results:
         conversation = msg.conversation
 
@@ -171,7 +169,7 @@ def delete_conversation(
 
 
 @router.post("/conversations/{conversation_id}/messages")
-async def send_message(
+async def send_message(  # noqa: C901
     conversation_id: int,
     request: SendMessageRequest,
     user=Depends(get_current_user),

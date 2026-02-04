@@ -4,7 +4,7 @@ import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
-import pytest
+import pytest  # noqa: F401
 
 from backend.services.model_service import ModelService
 

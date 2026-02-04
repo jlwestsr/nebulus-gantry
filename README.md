@@ -18,7 +18,7 @@ A branded AI chat interface for the **Nebulus Prime** ecosystem. Gantry provides
 
 ## Architecture
 
-```
+```text
  Browser (React SPA)
      |
      | HTTP / SSE
@@ -34,7 +34,7 @@ A branded AI chat interface for the **Nebulus Prime** ecosystem. Gantry provides
 
 ## Project Structure
 
-```
+```text
 nebulus-gantry/
 ├── backend/
 │   ├── main.py                  # FastAPI app + CORS + routers
@@ -122,9 +122,9 @@ nebulus-gantry/
 docker-compose up --build
 ```
 
-- Frontend: http://localhost:3000
-- Backend: http://localhost:8000
-- API docs: http://localhost:8000/docs
+- Frontend: <http://localhost:3000>
+- Backend: <http://localhost:8000>
+- API docs: <http://localhost:8000/docs>
 
 ### Local Development
 
@@ -146,7 +146,7 @@ npm install
 npm run dev
 ```
 
-The frontend dev server starts on http://localhost:5173 by default.
+The frontend dev server starts on <http://localhost:5173> by default.
 
 ### First Run
 

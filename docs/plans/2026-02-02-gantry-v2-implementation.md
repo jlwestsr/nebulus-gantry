@@ -15,6 +15,7 @@
 ### Task 1: Clean Slate
 
 **Files:**
+
 - Delete: All existing Python files in root
 - Delete: `public/`, `ui/`, `routers/`, `ops/`, `exec/`, `metrics/`, `agent/`, `.agent/`
 - Keep: `docs/`, `tests/`, `.gitignore`, `README.md`, `CONTEXT.md`
@@ -49,6 +50,7 @@ git commit -m "chore: clean slate for Gantry v2 rebuild"
 ### Task 2: Create Backend Structure
 
 **Files:**
+
 - Create: `backend/` directory structure
 - Create: `backend/requirements.txt`
 - Create: `backend/.flake8`
@@ -114,6 +116,7 @@ git commit -m "chore: scaffold backend directory structure"
 ### Task 3: Create Frontend Structure
 
 **Files:**
+
 - Create: `frontend/` via Vite scaffold
 
 **Step 1: Scaffold React + TypeScript project**
@@ -173,7 +176,7 @@ Replace `frontend/src/index.css`:
 npm run dev
 ```
 
-Expected: Vite dev server starts on http://localhost:5173
+Expected: Vite dev server starts on <http://localhost:5173>
 
 **Step 7: Stop dev server and commit**
 
@@ -188,6 +191,7 @@ git commit -m "chore: scaffold frontend with React + TypeScript + Tailwind"
 ### Task 4: Create Docker Configuration
 
 **Files:**
+
 - Create: `docker-compose.yml`
 - Create: `backend/Dockerfile`
 - Create: `frontend/Dockerfile`
@@ -288,6 +292,7 @@ git commit -m "chore: add Docker configuration"
 ### Task 5: Database Models
 
 **Files:**
+
 - Create: `backend/database.py`
 - Create: `backend/models/user.py`
 - Create: `backend/models/conversation.py`
@@ -454,7 +459,7 @@ class Message(Base):
     conversation = relationship("Conversation", back_populates="messages")
 ```
 
-**Step 7: Update models __init__.py**
+**Step 7: Update models **init**.py**
 
 Update `backend/models/__init__.py`:
 
@@ -486,6 +491,7 @@ git commit -m "feat: add database models (User, Conversation, Message)"
 ### Task 6: Configuration
 
 **Files:**
+
 - Create: `backend/config.py`
 - Test: `tests/test_config.py`
 
@@ -561,6 +567,7 @@ git commit -m "feat: add configuration management"
 ### Task 7: Auth Service
 
 **Files:**
+
 - Create: `backend/services/auth_service.py`
 - Test: `tests/test_auth_service.py`
 
@@ -659,7 +666,7 @@ class Session(Base):
     user = relationship("User", backref="sessions")
 ```
 
-**Step 4: Update models __init__.py**
+**Step 4: Update models **init**.py**
 
 Update `backend/models/__init__.py`:
 
@@ -761,6 +768,7 @@ git commit -m "feat: add auth service with session management"
 ### Task 8: FastAPI App Entry Point
 
 **Files:**
+
 - Create: `backend/main.py`
 - Create: `backend/dependencies.py`
 - Test: `tests/test_main.py`
@@ -865,6 +873,7 @@ git commit -m "feat: add FastAPI app entry point"
 ### Task 9: Auth Routes
 
 **Files:**
+
 - Create: `backend/routers/auth.py`
 - Create: `backend/schemas/auth.py`
 - Modify: `backend/main.py`
@@ -1110,6 +1119,7 @@ git commit -m "feat: add auth routes (login, logout, me)"
 ### Task 10: Frontend Project Structure
 
 **Files:**
+
 - Create: `frontend/src/` directory structure
 - Delete: Vite boilerplate files
 
@@ -1145,6 +1155,7 @@ git commit -m "chore: set up frontend directory structure"
 ### Task 11: API Client
 
 **Files:**
+
 - Create: `frontend/src/services/api.ts`
 - Create: `frontend/src/types/api.ts`
 
@@ -1288,6 +1299,7 @@ git commit -m "feat: add API client with auth and chat services"
 ### Task 12: Auth Store
 
 **Files:**
+
 - Create: `frontend/src/stores/authStore.ts`
 
 **Step 1: Create auth store**
@@ -1357,6 +1369,7 @@ git commit -m "feat: add auth store with Zustand"
 ### Task 13: Login Page
 
 **Files:**
+
 - Create: `frontend/src/pages/Login.tsx`
 - Create: `frontend/src/components/Input.tsx`
 - Create: `frontend/src/components/Button.tsx`
@@ -1518,6 +1531,7 @@ git commit -m "feat: add Login page with Input and Button components"
 ### Task 14: App Layout and Routing
 
 **Files:**
+
 - Create: `frontend/src/components/Layout.tsx`
 - Create: `frontend/src/components/ProtectedRoute.tsx`
 - Modify: `frontend/src/App.tsx`
@@ -1698,6 +1712,7 @@ git commit -m "feat: add app layout, routing, and protected routes"
 ### Task 15: Chat Routes (Backend)
 
 **Files:**
+
 - Create: `backend/routers/chat.py`
 - Create: `backend/schemas/chat.py`
 - Create: `backend/services/chat_service.py`
@@ -1711,6 +1726,7 @@ git commit -m "feat: add app layout, routing, and protected routes"
 ## Remaining Tasks (Summary)
 
 ### Phase 4: Chat Implementation
+
 - Task 15: Chat Routes (Backend)
 - Task 16: Chat Service with streaming
 - Task 17: Conversation Sidebar (Frontend)
@@ -1718,11 +1734,13 @@ git commit -m "feat: add app layout, routing, and protected routes"
 - Task 19: Message Input and Streaming
 
 ### Phase 5: Long-Term Memory
+
 - Task 20: Memory Service (ChromaDB integration)
 - Task 21: Graph Service (NetworkX integration)
 - Task 22: LTM Context Injection
 
 ### Phase 6: Admin Panel
+
 - Task 23: Admin Routes (Backend)
 - Task 24: User Management API
 - Task 25: Service Control API (Docker)
@@ -1730,6 +1748,7 @@ git commit -m "feat: add app layout, routing, and protected routes"
 - Task 27: Admin Panel UI (Frontend)
 
 ### Phase 7: Polish
+
 - Task 28: Error handling and toasts
 - Task 29: Search functionality
 - Task 30: Settings page
@@ -1741,6 +1760,7 @@ git commit -m "feat: add app layout, routing, and protected routes"
 ## Verification Checklist
 
 After each phase:
+
 - [ ] All tests pass
 - [ ] Frontend builds without errors
 - [ ] Docker compose up works
