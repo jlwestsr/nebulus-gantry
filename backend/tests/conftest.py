@@ -7,4 +7,4 @@ import os
 # instead of creating a file-based SQLite database.
 os.environ.setdefault("DATABASE_URL", "sqlite:///:memory:")
 
-import pytest
+import pytest  # noqa: F401, E402

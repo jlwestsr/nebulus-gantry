@@ -33,10 +33,10 @@ if _need_chromadb_mock:
 
 # Now we can safely import the service (force re-import if previously cached
 # with a broken chromadb).
-import importlib
-import backend.services.memory_service as _msm
+import importlib  # noqa: E402
+import backend.services.memory_service as _msm  # noqa: E402
 importlib.reload(_msm)
-from backend.services.memory_service import MemoryService
+from backend.services.memory_service import MemoryService  # noqa: E402
 
 
 @pytest.fixture

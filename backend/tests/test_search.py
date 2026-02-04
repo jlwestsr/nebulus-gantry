@@ -4,19 +4,19 @@ import os
 # Set test database URL before any backend imports.
 os.environ.setdefault("DATABASE_URL", "sqlite:///:memory:")
 
-import pytest
-from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
+import pytest  # noqa: E402
+from fastapi.testclient import TestClient  # noqa: E402
+from sqlalchemy import create_engine  # noqa: E402
+from sqlalchemy.orm import sessionmaker  # noqa: E402
+from sqlalchemy.pool import StaticPool  # noqa: E402
 
-from backend.database import Base
-from backend.dependencies import get_db
-from backend.main import app
-from backend.models.user import User
-from backend.models.conversation import Conversation
-from backend.models.message import Message
-from backend.services.auth_service import AuthService
+from backend.database import Base  # noqa: E402
+from backend.dependencies import get_db  # noqa: E402
+from backend.main import app  # noqa: E402
+from backend.models.user import User  # noqa: E402, F401
+from backend.models.conversation import Conversation  # noqa: E402
+from backend.models.message import Message  # noqa: E402
+from backend.services.auth_service import AuthService  # noqa: E402
 
 
 # ── Test database setup ──────────────────────────────────────────────────────

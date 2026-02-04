@@ -11,7 +11,7 @@ import json
 import os
 import tempfile
 import pytest
-from unittest.mock import patch
+from unittest.mock import patch  # noqa: F401
 
 import backend.services.graph_service as graph_service_module
 from backend.services.graph_service import GraphService
@@ -71,7 +71,7 @@ class TestGraphServiceInit:
             original_data_dir = graph_service_module.DATA_DIR
             graph_service_module.DATA_DIR = data_dir
             try:
-                service = GraphService(user_id=42)
+                GraphService(user_id=42)
                 assert os.path.exists(data_dir)
             finally:
                 graph_service_module.DATA_DIR = original_data_dir
