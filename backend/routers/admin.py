@@ -1,8 +1,9 @@
 import logging
+from datetime import datetime
 from typing import Generator
 
-from fastapi import APIRouter, Depends, HTTPException
-from fastapi.responses import StreamingResponse
+from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import StreamingResponse, Response
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session as DBSession
 
@@ -231,3 +232,36 @@ async def stream_logs(
             yield f"data: [No container found matching '{service_name}']\n\n"
 
     return StreamingResponse(generate(), media_type="text/event-stream")
+
+
+# ── Data Export ─────────────────────────────────────────────────────────────
+
+
+@router.post("/export/bulk")
+def bulk_export(
+    user_id: int | None = Query(default=None),
+    date_from: datetime | None = Query(default=None),
+    date_to: datetime | None = Query(default=None),
+    admin=Depends(require_admin),
+    db: DBSession = Depends(get_db),
+):
+    """Export multiple conversations as a ZIP file of JSON exports.
+
+    Args:
+        user_id: Filter by specific user (None = all users).
+        date_from: Filter conversations created after this date.
+        date_to: Filter conversations created before this date.
+
+    Returns:
+        ZIP file containing JSON exports.
+    """
+    from backend.services.export_service import ExportService
+
+    export_service = ExportService(db)
+    zip_buffer = export_service.bulk_export(user_id, date_from, date_to)
+
+    return Response(
+        content=zip_buffer.getvalue(),
+        media_type="application/zip",
+        headers={"Content-Disposition": "attachment; filename=conversations-export.zip"},
+    )

@@ -1,10 +1,12 @@
 from datetime import datetime
+from enum import Enum
 from pydantic import BaseModel
 
 
 class ConversationResponse(BaseModel):
     id: int
     title: str
+    pinned: bool = False
     created_at: datetime
     updated_at: datetime
 
@@ -43,3 +45,16 @@ class SearchResult(BaseModel):
 
 class SearchResponse(BaseModel):
     results: list[SearchResult]
+
+
+class ExportFormat(str, Enum):
+    json = "json"
+    pdf = "pdf"
+
+
+class ConversationExport(BaseModel):
+    conversation: ConversationResponse
+    messages: list[MessageResponse]
+    exported_at: datetime
+
+    model_config = {"from_attributes": True}

@@ -79,6 +79,14 @@ export const chatApi = {
   search: (query: string) =>
     fetchApi<SearchResponse>(`/api/chat/search?q=${encodeURIComponent(query)}`),
 
+  pinConversation: (id: number) =>
+    fetchApi<Conversation>(`/api/chat/conversations/${id}/pin`, { method: 'PATCH' }),
+
+  exportConversation: (id: number, format: 'json' | 'pdf') => {
+    // Trigger download via browser navigation
+    window.location.href = `${API_URL}/api/chat/conversations/${id}/export?format=${format}`;
+  },
+
   sendMessage: async function* (conversationId: number, content: string, model?: string) {
     const body: Record<string, string> = { content };
     if (model) body.model = model;
@@ -172,5 +180,20 @@ export const adminApi = {
     return new EventSource(`${API_URL}/api/admin/logs/${serviceName}`, {
       withCredentials: true,
     });
+  },
+
+  // Export
+  bulkExport: (userId?: number, dateFrom?: string, dateTo?: string) => {
+    const params = new URLSearchParams();
+    if (userId !== undefined) params.append('user_id', userId.toString());
+    if (dateFrom) params.append('date_from', dateFrom);
+    if (dateTo) params.append('date_to', dateTo);
+    // Use POST via form submission to handle auth cookie
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = `${API_URL}/api/admin/export/bulk?${params.toString()}`;
+    document.body.appendChild(form);
+    form.submit();
+    document.body.removeChild(form);
   },
 };
