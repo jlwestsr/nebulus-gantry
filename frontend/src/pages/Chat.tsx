@@ -3,11 +3,21 @@ import { Sidebar } from '../components/Sidebar';
 import { MessageList } from '../components/MessageList';
 import { MessageInput } from '../components/MessageInput';
 import { useChatStore } from '../stores/chatStore';
+import { useAuthStore } from '../stores/authStore';
 import { chatApi } from '../services/api';
 import type { Message } from '../types/api';
 
+function getGreeting(displayName: string): string {
+  const hour = new Date().getHours();
+  const firstName = displayName.split(' ')[0];
+  if (hour < 12) return `Good morning, ${firstName}`;
+  if (hour < 17) return `Good afternoon, ${firstName}`;
+  return `Good evening, ${firstName}`;
+}
+
 export function Chat() {
   const { currentConversationId, updateConversationTitle } = useChatStore();
+  const { user } = useAuthStore();
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
@@ -161,7 +171,7 @@ export function Chat() {
         ) : (
           /* Welcome screen when no conversation selected */
           <div className="flex-1 flex items-center justify-center px-4">
-            <div className="text-center">
+            <div className="text-center max-w-lg">
               <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-gray-700 flex items-center justify-center">
                 <svg
                   className="w-8 h-8 text-gray-400"
@@ -178,11 +188,11 @@ export function Chat() {
                 </svg>
               </div>
               <h2 className="text-xl sm:text-2xl font-semibold text-gray-200 mb-2">
-                Welcome to Nebulus Gantry
+                {user ? getGreeting(user.display_name) : 'Welcome to Nebulus Gantry'}
               </h2>
-              <p className="text-gray-400 text-sm sm:text-base max-w-md">
+              <p className="text-gray-400 text-sm sm:text-base max-w-md mx-auto">
                 Start a new conversation or select an existing one from the
-                sidebar
+                sidebar.
               </p>
             </div>
           </div>
