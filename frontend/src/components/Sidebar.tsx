@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useChatStore } from '../stores/chatStore';
 import { useUIStore } from '../stores/uiStore';
+import { chatApi } from '../services/api';
 import type { Conversation, SearchResult } from '../types/api';
 
 // Group conversations by date category, with Pinned at top
@@ -55,6 +56,7 @@ interface ConversationItemProps {
   onSelect: () => void;
   onDelete: () => void;
   onPin: () => void;
+  onExport: (format: 'json' | 'pdf') => void;
 }
 
 function ConversationItem({
@@ -63,7 +65,10 @@ function ConversationItem({
   onSelect,
   onDelete,
   onPin,
+  onExport,
 }: ConversationItemProps) {
+  const [showExportMenu, setShowExportMenu] = useState(false);
+
   return (
     <div
       className={`group flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-colors duration-200 ${
@@ -120,6 +125,57 @@ function ConversationItem({
           />
         </svg>
       </button>
+
+      {/* Export dropdown */}
+      <div className="relative">
+        <button
+          className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-gray-600 transition-all duration-200 focus:outline-none focus:opacity-100 focus:ring-2 focus:ring-blue-500/50"
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowExportMenu(!showExportMenu);
+          }}
+          title="Export conversation"
+        >
+          <svg
+            className="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+            />
+          </svg>
+        </button>
+        {showExportMenu && (
+          <div
+            className="absolute right-0 top-8 z-50 w-36 bg-gray-800 border border-gray-700 rounded-lg shadow-lg py-1"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              className="w-full px-3 py-2 text-left text-sm text-gray-300 hover:bg-gray-700 hover:text-white"
+              onClick={() => {
+                onExport('json');
+                setShowExportMenu(false);
+              }}
+            >
+              Export as JSON
+            </button>
+            <button
+              className="w-full px-3 py-2 text-left text-sm text-gray-300 hover:bg-gray-700 hover:text-white"
+              onClick={() => {
+                onExport('pdf');
+                setShowExportMenu(false);
+              }}
+            >
+              Export as PDF
+            </button>
+          </div>
+        )}
+      </div>
 
       {/* Delete button - shows on hover */}
       <button
@@ -392,6 +448,7 @@ export function Sidebar() {
                         onSelect={() => handleSelect(conv.id)}
                         onDelete={() => handleDelete(conv.id)}
                         onPin={() => handlePin(conv.id)}
+                        onExport={(format) => chatApi.exportConversation(conv.id, format)}
                       />
                     ))}
                   </div>
