@@ -63,3 +63,7 @@ class SwitchModelRequest(BaseModel):
 class SwitchModelResponse(BaseModel):
     message: str
     model_id: str
+
+
+class UnloadModelResponse(BaseModel):
+    message: str

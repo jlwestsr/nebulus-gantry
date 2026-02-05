@@ -17,12 +17,20 @@ export interface Conversation {
   updated_at: string;
 }
 
+export interface MessageMeta {
+  generation_time_ms?: number;
+  prompt_tokens?: number;
+  completion_tokens?: number;
+  total_tokens?: number;
+}
+
 export interface Message {
   id: number;
   conversation_id: number;
   role: 'user' | 'assistant';
   content: string;
   created_at: string;
+  meta?: MessageMeta;
 }
 
 export interface ApiError {

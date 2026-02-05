@@ -6,7 +6,7 @@ export function ModelsTab() {
   const [models, setModels] = useState<Model[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [switchingModel, setSwitchingModel] = useState<string | null>(null);
+  const [actionModel, setActionModel] = useState<string | null>(null);
 
   const fetchModels = useCallback(async () => {
     try {
@@ -24,17 +24,31 @@ export function ModelsTab() {
     fetchModels();
   }, [fetchModels]);
 
-  const handleSwitch = async (modelId: string) => {
-    setSwitchingModel(modelId);
+  const handleLoad = async (modelId: string) => {
+    setActionModel(modelId);
     try {
       await adminApi.switchModel(modelId);
       await fetchModels();
     } catch (err) {
       setError((err as Error).message);
     } finally {
-      setSwitchingModel(null);
+      setActionModel(null);
     }
   };
+
+  const handleUnload = async () => {
+    setActionModel('__unload__');
+    try {
+      await adminApi.unloadModel();
+      await fetchModels();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setActionModel(null);
+    }
+  };
+
+  const activeModel = models.find((m) => m.active);
 
   if (isLoading) {
     return (
@@ -48,9 +62,9 @@ export function ModelsTab() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h3 className="text-lg font-medium text-gray-200">Available Models</h3>
+          <h3 className="text-lg font-medium text-gray-200">Model Management</h3>
           <p className="text-sm text-gray-400 mt-1">
-            Switch between available language models
+            Load, switch, and unload language models on the LLM host
           </p>
         </div>
         <button
@@ -67,10 +81,33 @@ export function ModelsTab() {
         </div>
       )}
 
+      {/* Active model card */}
+      {activeModel && (
+        <div className="mb-6 p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-3 h-3 rounded-full bg-blue-400 animate-pulse" />
+              <div>
+                <div className="text-sm font-medium text-blue-300">Currently Loaded</div>
+                <div className="text-base font-mono text-gray-200 mt-0.5">{activeModel.name}</div>
+              </div>
+            </div>
+            <button
+              onClick={handleUnload}
+              disabled={actionModel === '__unload__'}
+              className="px-3 py-1.5 text-xs font-medium text-red-400 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {actionModel === '__unload__' ? 'Unloading...' : 'Unload'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Model list */}
       <div className="grid gap-3">
         {models.length === 0 ? (
           <div className="text-center py-8 text-gray-500">
-            No models available
+            No models available. Ensure TabbyAPI is running and has models configured.
           </div>
         ) : (
           models.map((model) => (
@@ -105,11 +142,11 @@ export function ModelsTab() {
                   </span>
                 ) : (
                   <button
-                    onClick={() => handleSwitch(model.id)}
-                    disabled={switchingModel === model.id}
+                    onClick={() => handleLoad(model.id)}
+                    disabled={actionModel === model.id}
                     className="px-3 py-1.5 text-xs font-medium text-blue-400 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {switchingModel === model.id ? 'Switching...' : 'Switch'}
+                    {actionModel === model.id ? 'Loading...' : 'Load'}
                   </button>
                 )}
               </div>

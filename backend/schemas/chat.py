@@ -28,6 +28,7 @@ class ConversationDetailResponse(BaseModel):
 
 class SendMessageRequest(BaseModel):
     content: str
+    model: str | None = None
 
 
 class SearchResult(BaseModel):

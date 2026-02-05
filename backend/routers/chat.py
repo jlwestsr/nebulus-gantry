@@ -1,4 +1,6 @@
+import json
 import logging
+import time
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
@@ -8,6 +10,7 @@ from backend.dependencies import get_db
 from backend.routers.auth import get_current_user
 from backend.services.chat_service import ChatService
 from backend.services.llm_service import LLMService
+from backend.services.model_service import ModelService
 from backend.schemas.chat import (
     ConversationResponse,
     ConversationDetailResponse,
@@ -211,8 +214,16 @@ async def send_message(  # noqa: C901
 
     ltm_context = build_ltm_context(similar_messages, related_facts)
 
+    # Query active model name for system prompt
+    model_service = ModelService()
+    active_model = await model_service.get_active_model()
+    model_name = active_model["name"] if active_model else "an AI assistant"
+
     # Build system message with LTM context
-    system_content = "You are Nebulus, a helpful AI assistant."
+    system_content = (
+        f"You are Nebulus Gantry, powered by {model_name}. "
+        "You are a helpful AI assistant."
+    )
     if ltm_context:
         system_content = f"{system_content}\n\n{ltm_context}"
 
@@ -224,14 +235,26 @@ async def send_message(  # noqa: C901
     for msg in messages:
         llm_messages.append({"role": msg.role, "content": msg.content})
 
-    # Stream response from LLM
+    # Stream response from LLM — use requested model or default
     llm = LLMService()
+    llm_model = request.model or "default"
 
     async def generate():
         full_response = ""
-        async for chunk in llm.stream_chat(llm_messages):
+        start_time = time.monotonic()
+        async for chunk in llm.stream_chat(llm_messages, model=llm_model):
             full_response += chunk
             yield chunk
+
+        generation_time_ms = int((time.monotonic() - start_time) * 1000)
+
+        # Emit metadata as a special suffix for the frontend to parse
+        meta: dict = {"generation_time_ms": generation_time_ms}
+        if isinstance(llm.last_usage, dict):
+            meta["prompt_tokens"] = llm.last_usage.get("prompt_tokens", 0)
+            meta["completion_tokens"] = llm.last_usage.get("completion_tokens", 0)
+            meta["total_tokens"] = llm.last_usage.get("total_tokens", 0)
+        yield f"\n\n__META__{json.dumps(meta)}"
 
         # Save assistant response after streaming completes
         assistant_msg = chat.add_message(conversation_id, "assistant", full_response)

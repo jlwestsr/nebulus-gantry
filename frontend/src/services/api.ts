@@ -79,14 +79,17 @@ export const chatApi = {
   search: (query: string) =>
     fetchApi<SearchResponse>(`/api/chat/search?q=${encodeURIComponent(query)}`),
 
-  sendMessage: async function* (conversationId: number, content: string) {
+  sendMessage: async function* (conversationId: number, content: string, model?: string) {
+    const body: Record<string, string> = { content };
+    if (model) body.model = model;
+
     const response = await fetch(
       `${API_URL}/api/chat/conversations/${conversationId}/messages`,
       {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content }),
+        body: JSON.stringify(body),
       }
     );
 
@@ -108,6 +111,14 @@ export const chatApi = {
       reader.releaseLock();
     }
   },
+};
+
+export const modelsApi = {
+  list: () =>
+    fetchApi<{ models: Model[] }>('/api/models'),
+
+  getActive: () =>
+    fetchApi<{ model: Model | null }>('/api/models/active'),
 };
 
 export const adminApi = {
@@ -149,6 +160,11 @@ export const adminApi = {
     fetchApi<{ message: string }>('/api/admin/models/switch', {
       method: 'POST',
       body: JSON.stringify({ model_id: modelId }),
+    }),
+
+  unloadModel: () =>
+    fetchApi<{ message: string }>('/api/admin/models/unload', {
+      method: 'POST',
     }),
 
   // Logs
