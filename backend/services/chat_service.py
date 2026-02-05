@@ -19,7 +19,7 @@ class ChatService:
         return (
             self.db.query(Conversation)
             .filter(Conversation.user_id == user_id)
-            .order_by(Conversation.updated_at.desc())
+            .order_by(Conversation.pinned.desc(), Conversation.updated_at.desc())
             .all()
         )
 
@@ -73,3 +73,12 @@ class ChatService:
             .order_by(Message.created_at.asc())
             .all()
         )
+
+    def toggle_pin(self, conversation_id: int, user_id: int) -> Conversation | None:
+        """Toggle the pinned status of a conversation."""
+        conv = self.get_conversation(conversation_id, user_id)
+        if conv:
+            conv.pinned = not conv.pinned
+            self.db.commit()
+            self.db.refresh(conv)
+        return conv
