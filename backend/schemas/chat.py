@@ -5,6 +5,7 @@ from pydantic import BaseModel
 class ConversationResponse(BaseModel):
     id: int
     title: str
+    pinned: bool = False
     created_at: datetime
     updated_at: datetime
 

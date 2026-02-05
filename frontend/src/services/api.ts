@@ -79,6 +79,9 @@ export const chatApi = {
   search: (query: string) =>
     fetchApi<SearchResponse>(`/api/chat/search?q=${encodeURIComponent(query)}`),
 
+  pinConversation: (id: number) =>
+    fetchApi<Conversation>(`/api/chat/conversations/${id}/pin`, { method: 'PATCH' }),
+
   sendMessage: async function* (conversationId: number, content: string, model?: string) {
     const body: Record<string, string> = { content };
     if (model) body.model = model;

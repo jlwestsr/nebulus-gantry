@@ -75,20 +75,24 @@ def search_conversations(
     user=Depends(get_current_user),
     chat: ChatService = Depends(get_chat_service),
 ):
-    """Search messages across the user's conversations."""
+    """Search messages and conversation titles across the user's conversations."""
     if not q or not q.strip():
         return SearchResponse(results=[])
 
+    from sqlalchemy import or_
     from backend.models.message import Message
     from backend.models.conversation import Conversation
 
-    # Search messages belonging to user's conversations
+    # Search messages belonging to user's conversations (message content OR title match)
     results = (
         chat.db.query(Message)
         .join(Conversation, Message.conversation_id == Conversation.id)
         .filter(
             Conversation.user_id == user.id,
-            Message.content.ilike(f"%{q.strip()}%"),
+            or_(
+                Message.content.ilike(f"%{q.strip()}%"),
+                Conversation.title.ilike(f"%{q.strip()}%"),
+            ),
         )
         .order_by(Message.created_at.desc())
         .limit(20)
@@ -169,6 +173,19 @@ def delete_conversation(
     if not chat.delete_conversation(conversation_id, user.id):
         raise HTTPException(status_code=404, detail="Conversation not found")
     return {"message": "Conversation deleted"}
+
+
+@router.patch("/conversations/{conversation_id}/pin", response_model=ConversationResponse)
+def toggle_pin_conversation(
+    conversation_id: int,
+    user=Depends(get_current_user),
+    chat: ChatService = Depends(get_chat_service),
+):
+    """Toggle the pinned status of a conversation."""
+    conversation = chat.toggle_pin(conversation_id, user.id)
+    if not conversation:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    return conversation
 
 
 @router.post("/conversations/{conversation_id}/messages")
