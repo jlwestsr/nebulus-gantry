@@ -12,6 +12,7 @@ services:
     volumes:
       - ./data:/app/data
       - ./backend:/app/backend
+      - /var/run/docker.sock:/var/run/docker.sock
     networks:
       - default
       - nebulus

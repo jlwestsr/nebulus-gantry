@@ -37,25 +37,24 @@ export function ServicesTab() {
     }
   };
 
-  const statusBadge = (status: Service['status']) => {
-    const colors = {
-      running: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
-      stopped: 'bg-red-500/20 text-red-400 border-red-500/30',
-      error: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
-    };
+  const statusBadge = (status: string) => {
+    const isRunning = status === 'running';
+    const isStopped = ['exited', 'stopped', 'dead', 'created'].includes(status);
+    const colorClass = isRunning
+      ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+      : isStopped
+        ? 'bg-red-500/20 text-red-400 border-red-500/30'
+        : 'bg-amber-500/20 text-amber-400 border-amber-500/30';
+    const dotClass = isRunning
+      ? 'bg-emerald-400'
+      : isStopped
+        ? 'bg-red-400'
+        : 'bg-amber-400';
     return (
       <span
-        className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium border ${colors[status]}`}
+        className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium border ${colorClass}`}
       >
-        <span
-          className={`w-1.5 h-1.5 rounded-full ${
-            status === 'running'
-              ? 'bg-emerald-400'
-              : status === 'stopped'
-                ? 'bg-red-400'
-                : 'bg-amber-400'
-          }`}
-        />
+        <span className={`w-1.5 h-1.5 rounded-full ${dotClass}`} />
         {status.charAt(0).toUpperCase() + status.slice(1)}
       </span>
     );

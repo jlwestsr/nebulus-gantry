@@ -47,7 +47,7 @@ export interface CreateUserRequest {
 
 export interface Service {
   name: string;
-  status: 'running' | 'stopped' | 'error';
+  status: string;
   container_id?: string;
 }
 

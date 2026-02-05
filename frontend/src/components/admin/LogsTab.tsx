@@ -1,12 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { adminApi } from '../../services/api';
-
-const SERVICES = [
-  { value: 'gantry-api', label: 'Gantry API' },
-  { value: 'gantry-ui', label: 'Gantry UI' },
-  { value: 'chromadb', label: 'ChromaDB' },
-  { value: 'tabby', label: 'TabbyAPI' },
-];
+import type { Service } from '../../types/api';
 
 const MAX_LOG_LINES = 1000;
 
@@ -24,7 +18,8 @@ const STATUS_CONFIG: Record<ConnectionStatus, { color: string; label: string }> 
 };
 
 export function LogsTab() {
-  const [selectedService, setSelectedService] = useState(SERVICES[0].value);
+  const [services, setServices] = useState<Service[]>([]);
+  const [selectedService, setSelectedService] = useState('');
   const [lines, setLines] = useState<LogLine[]>([]);
   const [status, setStatus] = useState<ConnectionStatus>('disconnected');
   const [paused, setPaused] = useState(false);
@@ -52,12 +47,29 @@ export function LogsTab() {
     }
   }, [paused]);
 
+  // Fetch available services on mount
+  useEffect(() => {
+    adminApi.listServices().then((data) => {
+      setServices(data.services);
+      if (data.services.length > 0 && !selectedService) {
+        setSelectedService(data.services[0].name);
+      }
+    }).catch(() => {
+      // Docker may be unavailable — leave services empty
+    });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Connect to SSE for the selected service
   useEffect(() => {
     // Close any previous connection
     if (esRef.current) {
       esRef.current.close();
       esRef.current = null;
+    }
+
+    if (!selectedService) {
+      setStatus('disconnected');
+      return;
     }
 
     setStatus('connecting');
@@ -128,9 +140,7 @@ export function LogsTab() {
   }, []);
 
   const currentStatus = STATUS_CONFIG[status];
-  const currentServiceLabel = SERVICES.find(
-    (s) => s.value === selectedService
-  )?.label;
+  const currentServiceLabel = selectedService || 'Service';
 
   return (
     <div>
@@ -147,9 +157,12 @@ export function LogsTab() {
             onChange={(e) => setSelectedService(e.target.value)}
             className="px-3 py-1.5 text-sm text-gray-300 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           >
-            {SERVICES.map((service) => (
-              <option key={service.value} value={service.value}>
-                {service.label}
+            {services.length === 0 && (
+              <option value="">No services available</option>
+            )}
+            {services.map((service) => (
+              <option key={service.name} value={service.name}>
+                {service.name}
               </option>
             ))}
           </select>

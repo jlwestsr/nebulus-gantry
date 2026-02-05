@@ -187,7 +187,11 @@ async def stream_logs(
         raise HTTPException(status_code=503, detail="Docker is not available")
 
     def generate() -> Generator[str, None, None]:
+        yielded = False
         for line in _docker_service.stream_logs(service_name):
+            yielded = True
             yield f"data: {line}\n\n"
+        if not yielded:
+            yield f"data: [No container found matching '{service_name}']\n\n"
 
     return StreamingResponse(generate(), media_type="text/event-stream")
