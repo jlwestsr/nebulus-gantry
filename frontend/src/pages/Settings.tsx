@@ -1,7 +1,7 @@
 import { useState, useEffect, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
-import { adminApi, authApi } from '../services/api';
+import { modelsApi, authApi } from '../services/api';
 import type { Model } from '../types/api';
 
 const THEME_KEY = 'nebulus-theme';
@@ -24,13 +24,12 @@ export function Settings() {
     let cancelled = false;
     async function fetchActiveModel() {
       try {
-        const { models } = await adminApi.listModels();
+        const { model } = await modelsApi.getActive();
         if (!cancelled) {
-          const active = models.find((m) => m.active) || null;
-          setActiveModel(active);
+          setActiveModel(model);
         }
       } catch {
-        // Non-critical: user may not have admin access
+        // Non-critical: model service may be unavailable
       } finally {
         if (!cancelled) setModelsLoading(false);
       }

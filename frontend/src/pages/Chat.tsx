@@ -49,7 +49,7 @@ export function Chat() {
 
   // Handle sending a message with streaming response
   const handleSendMessage = useCallback(
-    async (content: string) => {
+    async (content: string, model?: string) => {
       if (!currentConversationId || isSending) return;
 
       setIsSending(true);
@@ -84,7 +84,8 @@ export function Chat() {
         let fullContent = '';
         for await (const chunk of chatApi.sendMessage(
           currentConversationId,
-          content
+          content,
+          model
         )) {
           fullContent += chunk;
           // Update the assistant message content as chunks arrive

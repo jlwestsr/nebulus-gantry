@@ -8,6 +8,7 @@ from backend.dependencies import get_db
 from backend.routers.auth import get_current_user
 from backend.services.chat_service import ChatService
 from backend.services.llm_service import LLMService
+from backend.services.model_service import ModelService
 from backend.schemas.chat import (
     ConversationResponse,
     ConversationDetailResponse,
@@ -211,8 +212,16 @@ async def send_message(  # noqa: C901
 
     ltm_context = build_ltm_context(similar_messages, related_facts)
 
+    # Query active model name for system prompt
+    model_service = ModelService()
+    active_model = await model_service.get_active_model()
+    model_name = active_model["name"] if active_model else "an AI assistant"
+
     # Build system message with LTM context
-    system_content = "You are Nebulus, a helpful AI assistant."
+    system_content = (
+        f"You are Nebulus Gantry, powered by {model_name}. "
+        "You are a helpful AI assistant."
+    )
     if ltm_context:
         system_content = f"{system_content}\n\n{ltm_context}"
 
@@ -224,12 +233,13 @@ async def send_message(  # noqa: C901
     for msg in messages:
         llm_messages.append({"role": msg.role, "content": msg.content})
 
-    # Stream response from LLM
+    # Stream response from LLM — use requested model or default
     llm = LLMService()
+    llm_model = request.model or "default"
 
     async def generate():
         full_response = ""
-        async for chunk in llm.stream_chat(llm_messages):
+        async for chunk in llm.stream_chat(llm_messages, model=llm_model):
             full_response += chunk
             yield chunk
 

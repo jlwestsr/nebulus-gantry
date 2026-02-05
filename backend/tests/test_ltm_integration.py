@@ -323,7 +323,7 @@ class TestSendMessageLtmIntegration:
         mock_memory = _mock_memory_service()
         mock_graph = _mock_graph_service()
 
-        async def fake_stream(messages):
+        async def fake_stream(messages, **kwargs):
             yield "Some response"
 
         with patch(
@@ -357,7 +357,7 @@ class TestSendMessageLtmIntegration:
         mock_graph = _mock_graph_service()
 
         # Mock the LLM to return a known response
-        async def fake_stream(messages):
+        async def fake_stream(messages, **kwargs):
             yield "Hello from LLM"
 
         with patch(
@@ -399,7 +399,7 @@ class TestSendMessageLtmIntegration:
             ]
         )
 
-        async def fake_stream(messages):
+        async def fake_stream(messages, **kwargs):
             yield "Response mentioning TestEntity"
 
         with patch(
@@ -436,7 +436,7 @@ class TestSendMessageLtmIntegration:
         mock_memory.embed_message = AsyncMock(side_effect=Exception("Embed failed"))
         mock_graph = _mock_graph_service()
 
-        async def fake_stream(messages):
+        async def fake_stream(messages, **kwargs):
             yield "LLM response"
 
         with patch(
@@ -476,7 +476,7 @@ class TestSendMessageLtmIntegration:
             ]
         )
 
-        async def fake_stream(messages):
+        async def fake_stream(messages, **kwargs):
             yield "Response with Foo"
 
         with patch(
