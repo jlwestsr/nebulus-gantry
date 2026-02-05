@@ -25,10 +25,10 @@ export function MessageInput({
     try {
       const data = await modelsApi.list();
       setModels(data.models);
-      // Auto-select the active model
-      const active = data.models.find((m) => m.active);
-      if (active && !selectedModel) {
-        setSelectedModel(active.id);
+      // Auto-select the active model, or fall back to the first available
+      if (!selectedModel && data.models.length > 0) {
+        const active = data.models.find((m) => m.active);
+        setSelectedModel(active ? active.id : data.models[0].id);
       }
     } catch {
       // Non-critical
