@@ -5,6 +5,7 @@ import type {
   Message,
   AdminUser,
   CreateUserRequest,
+  UpdateUserRequest,
   Service,
   Model,
   SearchResponse,
@@ -108,6 +109,12 @@ export const adminApi = {
   createUser: (data: CreateUserRequest) =>
     fetchApi<{ user: AdminUser; message: string }>('/api/admin/users', {
       method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  updateUser: (id: number, data: UpdateUserRequest) =>
+    fetchApi<AdminUser>(`/api/admin/users/${id}`, {
+      method: 'PATCH',
       body: JSON.stringify(data),
     }),
 

@@ -45,6 +45,12 @@ export interface CreateUserRequest {
   role: 'user' | 'admin';
 }
 
+export interface UpdateUserRequest {
+  display_name?: string;
+  role?: 'user' | 'admin';
+  password?: string;
+}
+
 export interface Service {
   name: string;
   status: string;

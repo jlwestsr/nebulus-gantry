@@ -515,3 +515,54 @@ class TestUserManagementCRUD:
         )
         assert response.status_code == 400
         assert "yourself" in response.json()["detail"].lower()
+
+    def test_update_user_display_name(self, client, admin_user, regular_user):
+        """PATCH /admin/users/:id updates display name."""
+        _, token = admin_user
+        reg_user, _ = regular_user
+        response = client.patch(
+            f"/api/admin/users/{reg_user.id}",
+            json={"display_name": "New Name"},
+            cookies={"session_token": token},
+        )
+        assert response.status_code == 200
+        assert response.json()["display_name"] == "New Name"
+
+    def test_update_user_role(self, client, admin_user, regular_user):
+        """PATCH /admin/users/:id updates role."""
+        _, token = admin_user
+        reg_user, _ = regular_user
+        response = client.patch(
+            f"/api/admin/users/{reg_user.id}",
+            json={"role": "admin"},
+            cookies={"session_token": token},
+        )
+        assert response.status_code == 200
+        assert response.json()["role"] == "admin"
+
+    def test_update_user_password(self, client, admin_user, regular_user):
+        """PATCH /admin/users/:id resets password."""
+        _, token = admin_user
+        reg_user, _ = regular_user
+        response = client.patch(
+            f"/api/admin/users/{reg_user.id}",
+            json={"password": "newpassword123"},
+            cookies={"session_token": token},
+        )
+        assert response.status_code == 200
+        # Verify the user can login with the new password
+        login_resp = client.post(
+            "/api/auth/login",
+            json={"email": reg_user.email, "password": "newpassword123"},
+        )
+        assert login_resp.status_code == 200
+
+    def test_update_user_not_found(self, client, admin_user):
+        """PATCH /admin/users/:id with non-existent id returns 404."""
+        _, token = admin_user
+        response = client.patch(
+            "/api/admin/users/99999",
+            json={"display_name": "Ghost"},
+            cookies={"session_token": token},
+        )
+        assert response.status_code == 404
