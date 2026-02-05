@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { Sidebar } from '../components/Sidebar';
 import { MessageList } from '../components/MessageList';
 import { MessageInput } from '../components/MessageInput';
@@ -30,12 +30,13 @@ function getGreeting(displayName: string): string {
 }
 
 export function Chat() {
-  const { currentConversationId, updateConversationTitle } = useChatStore();
+  const { currentConversationId, updateConversationTitle, createConversation } = useChatStore();
   const { user } = useAuthStore();
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const pendingMessageRef = useRef<{ content: string; model?: string } | null>(null);
 
   // Fetch messages when conversation changes
   useEffect(() => {
@@ -168,6 +169,28 @@ export function Chat() {
     [currentConversationId, isSending, messages.length, updateConversationTitle]
   );
 
+  // Auto-send pending message when a conversation is created from the welcome screen
+  useEffect(() => {
+    if (currentConversationId && pendingMessageRef.current) {
+      const { content, model } = pendingMessageRef.current;
+      pendingMessageRef.current = null;
+      handleSendMessage(content, model);
+    }
+  }, [currentConversationId, handleSendMessage]);
+
+  // Handle sending from the welcome screen — create conversation first, then send
+  const handleWelcomeSend = useCallback(
+    async (content: string, model?: string) => {
+      pendingMessageRef.current = { content, model };
+      try {
+        await createConversation();
+      } catch {
+        pendingMessageRef.current = null;
+      }
+    },
+    [createConversation]
+  );
+
   return (
     <div className="flex h-[calc(100vh-57px)]">
       {/* Sidebar with conversations */}
@@ -199,31 +222,39 @@ export function Chat() {
           </>
         ) : (
           /* Welcome screen when no conversation selected */
-          <div className="flex-1 flex items-center justify-center px-4">
-            <div className="text-center max-w-lg">
-              <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-gray-700 flex items-center justify-center">
-                <svg
-                  className="w-8 h-8 text-gray-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={1.5}
-                    d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-                  />
-                </svg>
+          <div className="flex-1 flex flex-col">
+            <div className="flex-1 flex items-center justify-center px-4">
+              <div className="text-center max-w-lg">
+                <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-gray-700 flex items-center justify-center">
+                  <svg
+                    className="w-8 h-8 text-gray-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={1.5}
+                      d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                    />
+                  </svg>
+                </div>
+                <h2 className="text-xl sm:text-2xl font-semibold text-gray-200 mb-2">
+                  {user ? getGreeting(user.display_name) : 'Welcome to Nebulus Gantry'}
+                </h2>
+                <p className="text-gray-400 text-sm sm:text-base max-w-md mx-auto">
+                  Start a new conversation or type a message below.
+                </p>
               </div>
-              <h2 className="text-xl sm:text-2xl font-semibold text-gray-200 mb-2">
-                {user ? getGreeting(user.display_name) : 'Welcome to Nebulus Gantry'}
-              </h2>
-              <p className="text-gray-400 text-sm sm:text-base max-w-md mx-auto">
-                Start a new conversation or select an existing one from the
-                sidebar.
-              </p>
             </div>
+
+            {/* Welcome screen input */}
+            <MessageInput
+              onSend={handleWelcomeSend}
+              disabled={isSending}
+              placeholder="Message Nebulus..."
+            />
           </div>
         )}
       </div>
