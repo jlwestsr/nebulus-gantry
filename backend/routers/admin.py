@@ -14,6 +14,7 @@ from backend.schemas.admin import (
     CreateUserRequest,
     DeleteUserResponse,
     ModelInfo,
+    UpdateUserRequest,
     ModelListResponse,
     RestartServiceResponse,
     ServiceListResponse,
@@ -23,7 +24,7 @@ from backend.schemas.admin import (
     UserAdminResponse,
     UserListResponse,
 )
-from backend.services.auth_service import AuthService
+from backend.services.auth_service import AuthService, hash_password
 from backend.services.docker_service import DockerService
 from backend.services.model_service import ModelService
 
@@ -77,6 +78,28 @@ def create_user(
     except IntegrityError:
         db.rollback()
         raise HTTPException(status_code=409, detail="Email already exists")
+    return user
+
+
+@router.patch("/users/{user_id}", response_model=UserAdminResponse)
+def update_user(
+    user_id: int,
+    request: UpdateUserRequest,
+    db: DBSession = Depends(get_db),
+    admin=Depends(require_admin),
+):
+    """Update a user's display name, role, or password."""
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    if request.display_name is not None:
+        user.display_name = request.display_name
+    if request.role is not None:
+        user.role = request.role
+    if request.password is not None:
+        user.password_hash = hash_password(request.password)
+    db.commit()
+    db.refresh(user)
     return user
 
 
@@ -187,7 +210,11 @@ async def stream_logs(
         raise HTTPException(status_code=503, detail="Docker is not available")
 
     def generate() -> Generator[str, None, None]:
+        yielded = False
         for line in _docker_service.stream_logs(service_name):
+            yielded = True
             yield f"data: {line}\n\n"
+        if not yielded:
+            yield f"data: [No container found matching '{service_name}']\n\n"
 
     return StreamingResponse(generate(), media_type="text/event-stream")

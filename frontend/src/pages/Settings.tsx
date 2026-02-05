@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
-import { adminApi } from '../services/api';
+import { adminApi, authApi } from '../services/api';
 import type { Model } from '../types/api';
 
 const THEME_KEY = 'nebulus-theme';
@@ -130,6 +130,9 @@ export function Settings() {
           </div>
         </section>
 
+        {/* Change Password Section */}
+        <ChangePasswordForm />
+
         {/* Appearance Section */}
         <section className="bg-gray-800/50 border border-gray-700 rounded-lg">
           <div className="px-4 sm:px-6 py-4 border-b border-gray-700">
@@ -241,7 +244,7 @@ export function Settings() {
           </div>
         </section>
 
-        {/* About Section */}
+        {/* About Section - keep last */}
         <section className="bg-gray-800/50 border border-gray-700 rounded-lg">
           <div className="px-4 sm:px-6 py-4 border-b border-gray-700">
             <h2 className="text-base font-medium text-gray-100 flex items-center gap-2">
@@ -279,5 +282,119 @@ export function Settings() {
         </section>
       </div>
     </div>
+  );
+}
+
+function ChangePasswordForm() {
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    setMessage(null);
+
+    if (newPassword !== confirmPassword) {
+      setMessage({ type: 'error', text: 'New passwords do not match' });
+      return;
+    }
+    if (newPassword.length < 6) {
+      setMessage({ type: 'error', text: 'New password must be at least 6 characters' });
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await authApi.changePassword(currentPassword, newPassword);
+      setMessage({ type: 'success', text: 'Password changed successfully' });
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (err) {
+      setMessage({ type: 'error', text: (err as Error).message });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <section className="bg-gray-800/50 border border-gray-700 rounded-lg">
+      <div className="px-4 sm:px-6 py-4 border-b border-gray-700">
+        <h2 className="text-base font-medium text-gray-100 flex items-center gap-2">
+          <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={1.5}
+              d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+            />
+          </svg>
+          Change Password
+        </h2>
+      </div>
+      <form onSubmit={handleSubmit} className="px-4 sm:px-6 py-4 space-y-4">
+        {message && (
+          <div
+            className={`p-3 text-sm rounded-lg border ${
+              message.type === 'success'
+                ? 'text-green-300 bg-green-900/30 border-green-800'
+                : 'text-red-300 bg-red-900/30 border-red-800'
+            }`}
+          >
+            {message.text}
+          </div>
+        )}
+        <div>
+          <label className="block text-sm font-medium text-gray-400 mb-1">
+            Current Password
+          </label>
+          <input
+            type="password"
+            required
+            value={currentPassword}
+            onChange={(e) => setCurrentPassword(e.target.value)}
+            className="w-full px-3 py-2 text-sm text-gray-200 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-gray-500"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-400 mb-1">
+            New Password
+          </label>
+          <input
+            type="password"
+            required
+            minLength={6}
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+            className="w-full px-3 py-2 text-sm text-gray-200 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-gray-500"
+            placeholder="Minimum 6 characters"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-400 mb-1">
+            Confirm New Password
+          </label>
+          <input
+            type="password"
+            required
+            minLength={6}
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            className="w-full px-3 py-2 text-sm text-gray-200 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-gray-500"
+          />
+        </div>
+        <div className="flex justify-end pt-1">
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isSubmitting ? 'Changing...' : 'Change Password'}
+          </button>
+        </div>
+      </form>
+    </section>
   );
 }

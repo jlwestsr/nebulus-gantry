@@ -172,3 +172,46 @@ class TestGetMe:
             cookies={"session_token": "invalid-token-value"},
         )
         assert response.status_code == 401
+
+
+# ── Change Password tests ──────────────────────────────────────────────────
+
+
+class TestChangePassword:
+    """Test POST /api/auth/change-password."""
+
+    def test_change_password_success(self, client, test_user):
+        """Change password with correct current password succeeds."""
+        _, token = test_user
+        response = client.post(
+            "/api/auth/change-password",
+            json={"current_password": "correctpass", "new_password": "newpass123"},
+            cookies={"session_token": token},
+        )
+        assert response.status_code == 200
+        assert "successfully" in response.json()["message"].lower()
+        # Verify login works with new password
+        login_resp = client.post(
+            "/api/auth/login",
+            json={"email": "user@test.com", "password": "newpass123"},
+        )
+        assert login_resp.status_code == 200
+
+    def test_change_password_wrong_current(self, client, test_user):
+        """Change password with wrong current password returns 400."""
+        _, token = test_user
+        response = client.post(
+            "/api/auth/change-password",
+            json={"current_password": "wrongpass", "new_password": "newpass123"},
+            cookies={"session_token": token},
+        )
+        assert response.status_code == 400
+        assert "incorrect" in response.json()["detail"].lower()
+
+    def test_change_password_unauthenticated(self, client):
+        """Change password without a session cookie returns 401."""
+        response = client.post(
+            "/api/auth/change-password",
+            json={"current_password": "old", "new_password": "new"},
+        )
+        assert response.status_code == 401

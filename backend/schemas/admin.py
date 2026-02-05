@@ -21,6 +21,12 @@ class CreateUserRequest(BaseModel):
     role: str = "user"
 
 
+class UpdateUserRequest(BaseModel):
+    display_name: str | None = None
+    role: str | None = None
+    password: str | None = None
+
+
 class DeleteUserResponse(BaseModel):
     message: str
 

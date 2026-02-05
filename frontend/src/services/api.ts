@@ -5,6 +5,7 @@ import type {
   Message,
   AdminUser,
   CreateUserRequest,
+  UpdateUserRequest,
   Service,
   Model,
   SearchResponse,
@@ -46,6 +47,15 @@ export const authApi = {
     }),
 
   me: () => fetchApi<User>('/api/auth/me'),
+
+  changePassword: (currentPassword: string, newPassword: string) =>
+    fetchApi<{ message: string }>('/api/auth/change-password', {
+      method: 'POST',
+      body: JSON.stringify({
+        current_password: currentPassword,
+        new_password: newPassword,
+      }),
+    }),
 };
 
 export const chatApi = {
@@ -108,6 +118,12 @@ export const adminApi = {
   createUser: (data: CreateUserRequest) =>
     fetchApi<{ user: AdminUser; message: string }>('/api/admin/users', {
       method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  updateUser: (id: number, data: UpdateUserRequest) =>
+    fetchApi<AdminUser>(`/api/admin/users/${id}`, {
+      method: 'PATCH',
       body: JSON.stringify(data),
     }),
 
