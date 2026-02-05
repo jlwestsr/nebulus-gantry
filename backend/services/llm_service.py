@@ -1,3 +1,4 @@
+import json
 import httpx
 from typing import AsyncGenerator
 
@@ -8,6 +9,7 @@ class LLMService:
     def __init__(self):
         self.settings = Settings()
         self.base_url = self.settings.tabby_host
+        self.last_usage: dict | None = None
 
     async def stream_chat(
         self,
@@ -17,7 +19,12 @@ class LLMService:
         """
         Stream chat completion from TabbyAPI (OpenAI-compatible).
         Yields chunks of the assistant's response.
+
+        After iteration completes, self.last_usage contains token usage
+        data if the API provided it (prompt_tokens, completion_tokens,
+        total_tokens).
         """
+        self.last_usage = None
         async with httpx.AsyncClient(timeout=60.0) as client:
             try:
                 async with client.stream(
@@ -36,8 +43,10 @@ class LLMService:
                             if data == "[DONE]":
                                 break
                             try:
-                                import json
                                 chunk = json.loads(data)
+                                # Capture usage if present (typically in last chunk)
+                                if "usage" in chunk and chunk["usage"]:
+                                    self.last_usage = chunk["usage"]
                                 if content := chunk.get("choices", [{}])[0].get("delta", {}).get("content"):
                                     yield content
                             except json.JSONDecodeError:

@@ -1,4 +1,6 @@
+import json
 import logging
+import time
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
@@ -239,9 +241,20 @@ async def send_message(  # noqa: C901
 
     async def generate():
         full_response = ""
+        start_time = time.monotonic()
         async for chunk in llm.stream_chat(llm_messages, model=llm_model):
             full_response += chunk
             yield chunk
+
+        generation_time_ms = int((time.monotonic() - start_time) * 1000)
+
+        # Emit metadata as a special suffix for the frontend to parse
+        meta: dict = {"generation_time_ms": generation_time_ms}
+        if isinstance(llm.last_usage, dict):
+            meta["prompt_tokens"] = llm.last_usage.get("prompt_tokens", 0)
+            meta["completion_tokens"] = llm.last_usage.get("completion_tokens", 0)
+            meta["total_tokens"] = llm.last_usage.get("total_tokens", 0)
+        yield f"\n\n__META__{json.dumps(meta)}"
 
         # Save assistant response after streaming completes
         assistant_msg = chat.add_message(conversation_id, "assistant", full_response)

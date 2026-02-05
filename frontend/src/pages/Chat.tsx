@@ -5,7 +5,21 @@ import { MessageInput } from '../components/MessageInput';
 import { useChatStore } from '../stores/chatStore';
 import { useAuthStore } from '../stores/authStore';
 import { chatApi } from '../services/api';
-import type { Message } from '../types/api';
+import type { Message, MessageMeta } from '../types/api';
+
+const META_MARKER = '\n\n__META__';
+
+function extractMeta(text: string): { content: string; meta?: MessageMeta } {
+  const idx = text.indexOf(META_MARKER);
+  if (idx === -1) return { content: text };
+  const content = text.substring(0, idx);
+  try {
+    const meta = JSON.parse(text.substring(idx + META_MARKER.length)) as MessageMeta;
+    return { content, meta };
+  } catch {
+    return { content };
+  }
+}
 
 function getGreeting(displayName: string): string {
   const hour = new Date().getHours();
@@ -88,15 +102,29 @@ export function Chat() {
           model
         )) {
           fullContent += chunk;
+          // Strip metadata marker from display during streaming
+          const displayContent = fullContent.includes(META_MARKER)
+            ? fullContent.substring(0, fullContent.indexOf(META_MARKER))
+            : fullContent;
           // Update the assistant message content as chunks arrive
           setMessages((prev) =>
             prev.map((msg) =>
               msg.id === tempAssistantMessageId
-                ? { ...msg, content: fullContent }
+                ? { ...msg, content: displayContent }
                 : msg
             )
           );
         }
+
+        // Parse metadata from the final content
+        const { content: cleanContent, meta } = extractMeta(fullContent);
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === tempAssistantMessageId
+              ? { ...msg, content: cleanContent, meta }
+              : msg
+          )
+        );
 
         // Update conversation title if this was the first message
         // The backend should have auto-generated a title
