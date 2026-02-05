@@ -1,8 +1,10 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import type { KeyboardEvent, ChangeEvent } from 'react';
+import { modelsApi } from '../services/api';
+import type { Model } from '../types/api';
 
 interface MessageInputProps {
-  onSend: (content: string) => void;
+  onSend: (content: string, model?: string) => void;
   disabled?: boolean;
   placeholder?: string;
 }
@@ -14,6 +16,44 @@ export function MessageInput({
 }: MessageInputProps) {
   const [content, setContent] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [models, setModels] = useState<Model[]>([]);
+  const [selectedModel, setSelectedModel] = useState<string | null>(null);
+  const [showModelPicker, setShowModelPicker] = useState(false);
+  const modelPickerRef = useRef<HTMLDivElement>(null);
+
+  const fetchModels = useCallback(async () => {
+    try {
+      const data = await modelsApi.list();
+      setModels(data.models);
+      // Auto-select the active model
+      const active = data.models.find((m) => m.active);
+      if (active && !selectedModel) {
+        setSelectedModel(active.id);
+      }
+    } catch {
+      // Non-critical
+    }
+  }, [selectedModel]);
+
+  useEffect(() => {
+    fetchModels();
+  }, [fetchModels]);
+
+  // Close model picker when clicking outside
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (modelPickerRef.current && !modelPickerRef.current.contains(e.target as Node)) {
+        setShowModelPicker(false);
+      }
+    }
+    if (showModelPicker) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showModelPicker]);
+
+  const activeModel = models.find((m) => m.id === selectedModel);
+  const modelLabel = activeModel?.name || 'No model';
 
   // Auto-resize textarea based on content
   useEffect(() => {
@@ -34,7 +74,7 @@ export function MessageInput({
   const handleSubmit = () => {
     const trimmed = content.trim();
     if (trimmed && !disabled) {
-      onSend(trimmed);
+      onSend(trimmed, selectedModel || undefined);
       setContent('');
       // Reset textarea height after clearing
       if (textareaRef.current) {
@@ -56,6 +96,47 @@ export function MessageInput({
   return (
     <div className="p-3 sm:p-4 border-t border-gray-700">
       <div className="max-w-3xl mx-auto">
+        {/* Model selector */}
+        <div className="relative mb-2" ref={modelPickerRef}>
+          <button
+            onClick={() => setShowModelPicker(!showModelPicker)}
+            className="flex items-center gap-1.5 px-2.5 py-1 text-xs text-gray-400 hover:text-gray-200 rounded-md hover:bg-gray-700/50 transition-colors"
+            title="Select model"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            </svg>
+            <span className="font-mono truncate max-w-[200px]">{modelLabel}</span>
+            <svg className={`w-3 h-3 transition-transform ${showModelPicker ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+          {showModelPicker && models.length > 0 && (
+            <div className="absolute bottom-full left-0 mb-1 w-72 bg-gray-800 border border-gray-600 rounded-lg shadow-xl z-50 py-1 max-h-48 overflow-y-auto">
+              {models.map((m) => (
+                <button
+                  key={m.id}
+                  onClick={() => {
+                    setSelectedModel(m.id);
+                    setShowModelPicker(false);
+                  }}
+                  className={`w-full text-left px-3 py-2 text-sm transition-colors ${
+                    m.id === selectedModel
+                      ? 'bg-blue-500/15 text-blue-400'
+                      : 'text-gray-300 hover:bg-gray-700'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono text-xs truncate">{m.name}</span>
+                    {m.active && (
+                      <span className="text-[10px] text-green-400 bg-green-500/10 px-1.5 py-0.5 rounded">loaded</span>
+                    )}
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
         <div className="flex items-end gap-2 sm:gap-3 bg-gray-700 rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 focus-within:ring-2 focus-within:ring-blue-500/50 transition-shadow duration-200">
           <textarea
             ref={textareaRef}

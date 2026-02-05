@@ -1,6 +1,7 @@
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import type { Message } from '../types/api';
+import { usePreferencesStore } from '../stores/preferencesStore';
 
 interface MessageBubbleProps {
   message: Message;
@@ -8,12 +9,22 @@ interface MessageBubbleProps {
 
 export function MessageBubble({ message }: MessageBubbleProps) {
   const isUser = message.role === 'user';
+  const { showTimestamps, showTokenUsage, showGenerationSpeed } = usePreferencesStore();
 
-  // Format timestamp for hover display
   const formatTime = (dateStr: string) => {
     const date = new Date(dateStr);
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
+
+  const meta = message.meta;
+  const hasMetaToShow =
+    !isUser && meta && (showTokenUsage || showGenerationSpeed);
+
+  // Compute generation speed (tokens/sec) from metadata
+  const tokensPerSec =
+    meta?.completion_tokens && meta?.generation_time_ms && meta.generation_time_ms > 0
+      ? ((meta.completion_tokens / meta.generation_time_ms) * 1000).toFixed(1)
+      : null;
 
   return (
     <div
@@ -68,13 +79,37 @@ export function MessageBubble({ message }: MessageBubbleProps) {
           </div>
         )}
 
-        {/* Timestamp - shows on hover */}
-        <div
-          className={`mt-1 text-xs opacity-0 group-hover:opacity-100 transition-opacity duration-200 ${
-            isUser ? 'text-blue-200' : 'text-gray-400'
-          }`}
-        >
-          {formatTime(message.created_at)}
+        {/* Footer: timestamp + metadata */}
+        <div className="mt-1 flex items-center gap-2 flex-wrap">
+          {/* Timestamp — persistent or hover-only based on preference */}
+          <span
+            className={`text-xs ${
+              showTimestamps
+                ? isUser ? 'text-blue-200/70' : 'text-gray-500'
+                : `opacity-0 group-hover:opacity-100 transition-opacity duration-200 ${
+                    isUser ? 'text-blue-200' : 'text-gray-400'
+                  }`
+            }`}
+          >
+            {formatTime(message.created_at)}
+          </span>
+
+          {/* Token usage + speed (AI messages only) */}
+          {hasMetaToShow && (
+            <span className="text-xs text-gray-500 flex items-center gap-1.5">
+              {showTokenUsage && meta.total_tokens != null && meta.total_tokens > 0 && (
+                <span title={`Prompt: ${meta.prompt_tokens ?? '?'} | Completion: ${meta.completion_tokens ?? '?'}`}>
+                  {meta.total_tokens} tokens
+                </span>
+              )}
+              {showGenerationSpeed && tokensPerSec && (
+                <span>
+                  {showTokenUsage && meta.total_tokens != null && meta.total_tokens > 0 ? '· ' : ''}
+                  {tokensPerSec} tok/s
+                </span>
+              )}
+            </span>
+          )}
         </div>
       </div>
     </div>

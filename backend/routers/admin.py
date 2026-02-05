@@ -21,6 +21,7 @@ from backend.schemas.admin import (
     ServiceStatus,
     SwitchModelRequest,
     SwitchModelResponse,
+    UnloadModelResponse,
     UserAdminResponse,
     UserListResponse,
 )
@@ -191,6 +192,18 @@ async def switch_model(request: SwitchModelRequest, admin=Depends(require_admin)
         message=f"Model switched to {request.model_id}",
         model_id=request.model_id,
     )
+
+
+@router.post("/models/unload", response_model=UnloadModelResponse)
+async def unload_model(admin=Depends(require_admin)):
+    """Unload the currently loaded model from TabbyAPI."""
+    success = await _model_service.unload_model()
+    if not success:
+        raise HTTPException(
+            status_code=503,
+            detail="Failed to unload model. Is TabbyAPI available?",
+        )
+    return UnloadModelResponse(message="Model unloaded successfully")
 
 
 # ── Log Streaming ─────────────────────────────────────────────────────────────

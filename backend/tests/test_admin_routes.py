@@ -566,3 +566,87 @@ class TestUserManagementCRUD:
             cookies={"session_token": token},
         )
         assert response.status_code == 404
+
+
+# ── Model Unload tests ──────────────────────────────────────────────────────
+
+
+class TestModelUnload:
+    """Test the admin model unload endpoint."""
+
+    def test_unload_model_unauthenticated(self, client):
+        """POST /admin/models/unload should require authentication."""
+        response = client.post("/api/admin/models/unload")
+        assert response.status_code == 401
+
+    def test_unload_model_non_admin(self, client, regular_user):
+        """POST /admin/models/unload should require admin role."""
+        _, token = regular_user
+        response = client.post(
+            "/api/admin/models/unload",
+            cookies={"session_token": token},
+        )
+        assert response.status_code == 403
+
+    def test_unload_model_tabby_unavailable(self, client, admin_user):
+        """POST /admin/models/unload returns 503 when TabbyAPI is unreachable."""
+        _, token = admin_user
+        response = client.post(
+            "/api/admin/models/unload",
+            cookies={"session_token": token},
+        )
+        # TabbyAPI not running in test environment -> 503
+        assert response.status_code == 503
+
+    def test_unload_model_success(self, client, admin_user):
+        """POST /admin/models/unload returns 200 when unload succeeds."""
+        _, token = admin_user
+        with patch("backend.routers.admin._model_service") as mock_svc:
+            from unittest.mock import AsyncMock
+            mock_svc.unload_model = AsyncMock(return_value=True)
+            response = client.post(
+                "/api/admin/models/unload",
+                cookies={"session_token": token},
+            )
+        assert response.status_code == 200
+        assert "unloaded" in response.json()["message"].lower()
+
+
+# ── Non-admin Model Routes tests ────────────────────────────────────────────
+
+
+class TestModelRoutes:
+    """Test the non-admin model routes (/api/models)."""
+
+    def test_list_models_unauthenticated(self, client):
+        """GET /api/models should require authentication."""
+        response = client.get("/api/models")
+        assert response.status_code == 401
+
+    def test_list_models_authenticated(self, client, regular_user):
+        """GET /api/models should work for any authenticated user."""
+        _, token = regular_user
+        response = client.get(
+            "/api/models",
+            cookies={"session_token": token},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert "models" in data
+        assert isinstance(data["models"], list)
+
+    def test_get_active_model_unauthenticated(self, client):
+        """GET /api/models/active should require authentication."""
+        response = client.get("/api/models/active")
+        assert response.status_code == 401
+
+    def test_get_active_model_authenticated(self, client, regular_user):
+        """GET /api/models/active should work for any authenticated user."""
+        _, token = regular_user
+        response = client.get(
+            "/api/models/active",
+            cookies={"session_token": token},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert "model" in data
