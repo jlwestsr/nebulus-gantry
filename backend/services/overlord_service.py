@@ -31,12 +31,18 @@ try:
     from nebulus_swarm.overlord.task_parser import TaskParser
     from nebulus_swarm.overlord.proposal_manager import ProposalStore, ProposalState
     from nebulus_swarm.overlord.detectors import DetectionEngine
-    from nebulus_swarm.overlord.overlord_daemon import OverlordDaemon
 
     _OVERLORD_AVAILABLE = True
 except ImportError as exc:
     _IMPORT_ERROR = str(exc)
     logger.warning("Overlord modules not available: %s", exc)
+
+# Daemon import is optional (requires slack_bolt which is heavy)
+_OverlordDaemon = None
+try:
+    from nebulus_swarm.overlord.overlord_daemon import OverlordDaemon as _OverlordDaemon
+except ImportError:
+    logger.info("OverlordDaemon not available (slack_bolt not installed)")
 
 
 # ── Service ──────────────────────────────────────────────────────────────────
@@ -96,15 +102,16 @@ class OverlordService:
 
         # Daemon status
         daemon_info = {"running": False, "pid": None}
-        try:
-            pid = OverlordDaemon.read_pid()
-            if pid is not None:
-                daemon_info = {
-                    "running": OverlordDaemon.check_running(pid),
-                    "pid": pid,
-                }
-        except Exception:
-            pass
+        if _OverlordDaemon is not None:
+            try:
+                pid = _OverlordDaemon.read_pid()
+                if pid is not None:
+                    daemon_info = {
+                        "running": _OverlordDaemon.check_running(pid),
+                        "pid": pid,
+                    }
+            except Exception:
+                pass
 
         # Config summary
         autonomy_levels = get_autonomy_summary(self._config)
