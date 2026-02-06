@@ -9,6 +9,15 @@ import type {
   Service,
   Model,
   SearchResponse,
+  Collection,
+  Document,
+  DocumentSearchResponse,
+  CreateCollectionRequest,
+  UpdateCollectionRequest,
+  DocumentScope,
+  Persona,
+  CreatePersonaRequest,
+  UpdatePersonaRequest,
 } from '../types/api';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
@@ -129,6 +138,119 @@ export const modelsApi = {
     fetchApi<{ model: Model | null }>('/api/models/active'),
 };
 
+// ─── Documents / Knowledge Vault ─────────────────────────────────────────────
+
+export const documentApi = {
+  // Collections
+  listCollections: () => fetchApi<Collection[]>('/api/documents/collections'),
+
+  createCollection: (data: CreateCollectionRequest) =>
+    fetchApi<Collection>('/api/documents/collections', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  getCollection: (id: number) => fetchApi<Collection>(`/api/documents/collections/${id}`),
+
+  updateCollection: (id: number, data: UpdateCollectionRequest) =>
+    fetchApi<Collection>(`/api/documents/collections/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+
+  deleteCollection: (id: number) =>
+    fetchApi<{ message: string }>(`/api/documents/collections/${id}`, {
+      method: 'DELETE',
+    }),
+
+  // Documents
+  listDocuments: (collectionId?: number) => {
+    const url = collectionId
+      ? `/api/documents?collection_id=${collectionId}`
+      : '/api/documents';
+    return fetchApi<Document[]>(url);
+  },
+
+  getDocument: (id: number) => fetchApi<Document>(`/api/documents/${id}`),
+
+  deleteDocument: (id: number) =>
+    fetchApi<{ message: string }>(`/api/documents/${id}`, {
+      method: 'DELETE',
+    }),
+
+  uploadDocument: async (file: File, collectionId?: number): Promise<Document> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    if (collectionId !== undefined) {
+      formData.append('collection_id', collectionId.toString());
+    }
+
+    const response = await fetch(`${API_URL}/api/documents/upload`, {
+      method: 'POST',
+      credentials: 'include',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ detail: 'Upload failed' }));
+      throw new Error(error.detail || 'Upload failed');
+    }
+
+    return response.json();
+  },
+
+  search: (query: string, collectionIds?: number[], topK?: number) =>
+    fetchApi<DocumentSearchResponse>('/api/documents/search', {
+      method: 'POST',
+      body: JSON.stringify({
+        query,
+        collection_ids: collectionIds,
+        top_k: topK ?? 5,
+      }),
+    }),
+
+  // Conversation document scope
+  setDocumentScope: (conversationId: number, documentScope: DocumentScope[] | null) =>
+    fetchApi<Conversation>(`/api/chat/conversations/${conversationId}/document-scope`, {
+      method: 'PATCH',
+      body: JSON.stringify({ document_scope: documentScope }),
+    }),
+};
+
+// ─── Personas ────────────────────────────────────────────────────────────────
+
+export const personaApi = {
+  list: () => fetchApi<Persona[]>('/api/personas'),
+
+  get: (id: number) => fetchApi<Persona>(`/api/personas/${id}`),
+
+  create: (data: CreatePersonaRequest) =>
+    fetchApi<Persona>('/api/personas', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  update: (id: number, data: UpdatePersonaRequest) =>
+    fetchApi<Persona>(`/api/personas/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+
+  delete: (id: number) =>
+    fetchApi<{ message: string }>(`/api/personas/${id}`, {
+      method: 'DELETE',
+    }),
+
+  // Conversation persona
+  setConversationPersona: (conversationId: number, personaId: number | null) =>
+    fetchApi<Conversation>(`/api/chat/conversations/${conversationId}/persona`, {
+      method: 'PATCH',
+      body: JSON.stringify({ persona_id: personaId }),
+    }),
+};
+
+// ─── Admin ───────────────────────────────────────────────────────────────────
+
 export const adminApi = {
   // Users
   listUsers: () =>
@@ -196,4 +318,24 @@ export const adminApi = {
     form.submit();
     document.body.removeChild(form);
   },
+
+  // System Personas (admin only)
+  listSystemPersonas: () => fetchApi<Persona[]>('/api/admin/personas'),
+
+  createSystemPersona: (data: CreatePersonaRequest) =>
+    fetchApi<Persona>('/api/admin/personas', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  updateSystemPersona: (id: number, data: UpdatePersonaRequest) =>
+    fetchApi<Persona>(`/api/admin/personas/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+
+  deleteSystemPersona: (id: number) =>
+    fetchApi<{ message: string }>(`/api/admin/personas/${id}`, {
+      method: 'DELETE',
+    }),
 };

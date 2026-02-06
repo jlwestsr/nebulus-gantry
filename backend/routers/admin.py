@@ -29,6 +29,8 @@ from backend.schemas.admin import (
 from backend.services.auth_service import AuthService, hash_password
 from backend.services.docker_service import DockerService
 from backend.services.model_service import ModelService
+from backend.services.persona_service import PersonaService
+from backend.schemas.persona import PersonaCreate, PersonaUpdate, PersonaResponse
 
 logger = logging.getLogger(__name__)
 
@@ -264,4 +266,88 @@ def bulk_export(
         content=zip_buffer.getvalue(),
         media_type="application/zip",
         headers={"Content-Disposition": "attachment; filename=conversations-export.zip"},
+    )
+
+
+# ── System Personas ─────────────────────────────────────────────────────────────
+
+
+def get_persona_service(db: DBSession = Depends(get_db)) -> PersonaService:
+    return PersonaService(db)
+
+
+@router.post("/personas", response_model=PersonaResponse, status_code=201)
+def create_system_persona(
+    data: PersonaCreate,
+    admin=Depends(require_admin),
+    service: PersonaService = Depends(get_persona_service),
+):
+    """Create a new system persona (available to all users)."""
+    persona = service.create_persona(
+        user_id=None,  # System persona
+        name=data.name,
+        description=data.description,
+        system_prompt=data.system_prompt,
+        temperature=data.temperature,
+        model_id=data.model_id,
+    )
+    return _persona_to_response(persona)
+
+
+@router.get("/personas", response_model=list[PersonaResponse])
+def list_system_personas(
+    admin=Depends(require_admin),
+    service: PersonaService = Depends(get_persona_service),
+):
+    """List all system personas."""
+    personas = service.list_system_personas()
+    return [_persona_to_response(p) for p in personas]
+
+
+@router.patch("/personas/{persona_id}", response_model=PersonaResponse)
+def update_system_persona(
+    persona_id: int,
+    data: PersonaUpdate,
+    admin=Depends(require_admin),
+    service: PersonaService = Depends(get_persona_service),
+):
+    """Update a system persona."""
+    persona = service.update_system_persona(
+        persona_id=persona_id,
+        name=data.name,
+        description=data.description,
+        system_prompt=data.system_prompt,
+        temperature=data.temperature,
+        model_id=data.model_id,
+    )
+    if not persona:
+        raise HTTPException(status_code=404, detail="System persona not found")
+    return _persona_to_response(persona)
+
+
+@router.delete("/personas/{persona_id}")
+def delete_system_persona(
+    persona_id: int,
+    admin=Depends(require_admin),
+    service: PersonaService = Depends(get_persona_service),
+):
+    """Delete a system persona."""
+    if not service.delete_system_persona(persona_id):
+        raise HTTPException(status_code=404, detail="System persona not found")
+    return {"message": "System persona deleted"}
+
+
+def _persona_to_response(persona) -> PersonaResponse:
+    """Convert a Persona model to response."""
+    return PersonaResponse(
+        id=persona.id,
+        user_id=persona.user_id,
+        name=persona.name,
+        description=persona.description,
+        system_prompt=persona.system_prompt,
+        temperature=persona.temperature,
+        model_id=persona.model_id,
+        is_default=persona.is_default,
+        is_system=persona.user_id is None,
+        created_at=persona.created_at,
     )

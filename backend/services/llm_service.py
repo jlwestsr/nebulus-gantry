@@ -15,26 +15,36 @@ class LLMService:
         self,
         messages: list[dict],
         model: str = "default",
+        temperature: float | None = None,
     ) -> AsyncGenerator[str, None]:
         """
         Stream chat completion from TabbyAPI (OpenAI-compatible).
         Yields chunks of the assistant's response.
+
+        Args:
+            messages: List of message dicts with role and content.
+            model: Model ID to use (default: "default").
+            temperature: Optional temperature override (0.0-2.0).
 
         After iteration completes, self.last_usage contains token usage
         data if the API provided it (prompt_tokens, completion_tokens,
         total_tokens).
         """
         self.last_usage = None
+        request_body = {
+            "model": model,
+            "messages": messages,
+            "stream": True,
+        }
+        if temperature is not None:
+            request_body["temperature"] = temperature
+
         async with httpx.AsyncClient(timeout=60.0) as client:
             try:
                 async with client.stream(
                     "POST",
                     f"{self.base_url}/v1/chat/completions",
-                    json={
-                        "model": model,
-                        "messages": messages,
-                        "stream": True,
-                    },
+                    json=request_body,
                 ) as response:
                     response.raise_for_status()
                     async for line in response.aiter_lines():
