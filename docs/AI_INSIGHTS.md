@@ -45,8 +45,35 @@ This document serves as the **long-term memory** for AI agents working on **Nebu
   - ChromaDB: `8001` (on `nebulus_ai-network`, mapped as port 8000 inside the container)
 - **ChromaDB Host**: In `docker-compose.yml`, `CHROMA_HOST` is set to `http://chromadb:8000` (the container's internal port), not `http://localhost:8001`.
 
-## 5. Implementation Completeness (v2)
+## 5. Knowledge Vault & RAG Patterns (Tier 1.5)
+
+- **Document Service Architecture**: `DocumentService` handles upload, text extraction, chunking, and ChromaDB indexing. Text extractors: `pypdf` for PDF, `python-docx` for DOCX, direct read for TXT/CSV.
+- **Chunking Strategy**: 2000-character chunks with 100-character overlap. Metadata includes `document_id`, `chunk_index`, `filename` for citation reconstruction.
+- **ChromaDB Collection Naming**: User documents use `user_{user_id}_documents` collection pattern (mirrors LTM pattern `user_{user_id}_ltm`).
+- **RAG Context Injection**: `build_rag_context()` in `chat.py` queries ChromaDB for top-k similar chunks, formats them with `[Source: filename]` headers, and prepends to system prompt alongside LTM context.
+- **Document Scope**: Conversations can optionally scope RAG to specific documents/collections via `document_scope` JSON field. If empty, RAG searches all user documents.
+- **Frontend Integration**: `KnowledgeVault.tsx` is a collapsible sidebar section. Uses `documentStore` for state. Upload triggers immediate indexing (status: processing → ready/failed).
+
+## 6. Personas Patterns (Tier 1.5)
+
+- **Persona Types**: User personas (`user_id` set) are private. System personas (`user_id = NULL`) are admin-created and visible to all users.
+- **Conversation Assignment**: `persona_id` FK on conversations. When set, the persona's `system_prompt` replaces the default system prompt in `stream_message()`.
+- **Temperature Override**: Personas can specify `temperature` (0.0-2.0). `LLMService.stream_chat()` accepts optional `temperature` parameter that overrides the model default.
+- **Access Control Pattern**: `PersonaService` methods check `user_id` ownership for user personas. System personas (user_id=NULL) are read-only except via admin endpoints.
+- **Frontend Flow**: `PersonaSelector.tsx` dropdown in chat header → fetches personas on mount → calls `PATCH /api/chat/conversations/{id}/persona` on change.
+
+## 7. Implementation Completeness (v2)
 
 - **Admin Log Streaming**: Fully implemented. `DockerService.stream_logs()` → SSE endpoint → `LogsTab` with live viewer, auto-scroll, pause/clear, connection status. Uses `EventSource` with cookie auth.
+- **Knowledge Vault (Tier 1.5)**: Fully implemented. Document upload (PDF/TXT/CSV/DOCX), ChromaDB indexing, RAG retrieval with citations, collection management. 22 tests.
+- **Personas (Tier 1.5)**: Fully implemented. User and system personas, temperature control, conversation assignment, admin management. 26 tests.
 - **Light Theme**: Not implemented. `Settings.tsx` shows "not yet available" message. Dark mode only.
-- **v2 Maturity**: ~98% complete. All core features (auth, chat, LTM, admin services/models/users/logs, settings) are production-ready with tests.
+- **v2 Maturity**: Tier 1 complete (1.1-1.5). 272 backend tests passing. Ready for Tier 2 (compliance features).
+
+## 8. Session Notes (2026-02-05)
+
+- **Tier 1.5 Released**: Knowledge Vault + Personas shipped as `v0.1.5`. Branch `feat/knowledge-vault-personas` merged to `develop` then `main`.
+- **Flake8 Patterns**: Test files with `os.environ.setdefault()` before imports need `# noqa: E402` on all subsequent imports. Use `# noqa: E402, F401` when the import is also only for side effects (model registration).
+- **F-string Without Placeholders**: Flake8 F541 catches `f"static string"` — remove the `f` prefix if no interpolation is needed.
+- **Unused Import Cleanup**: When removing unused schema imports from routers, verify they're not used in endpoint signatures before deleting.
+- **Combined Commits**: When features are tightly coupled (shared files like `api.ts`, `types/api.ts`), a single combined commit is cleaner than trying to split artificially.
