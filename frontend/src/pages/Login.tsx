@@ -27,11 +27,8 @@ export function Login() {
       <div className="w-full max-w-md p-6 sm:p-8 space-y-6 bg-gray-800 rounded-xl shadow-lg border border-gray-700">
         <div className="text-center">
           <h1 className="flex items-center justify-center gap-2.5 text-n-text">
-            <svg className="h-6 w-6 opacity-90" viewBox="0 0 128 128" fill="none" stroke="currentColor" strokeWidth={10} strokeLinecap="square" strokeLinejoin="miter" aria-hidden="true">
-              <path d="M20 36V20h88v24" />
-              <path d="M108 92v16H20V92" />
-              <path d="M44 44l20 20 20-20" />
-              <path d="M44 84l20-20 20 20" />
+            <svg className="h-6 w-6 opacity-90" viewBox="0 0 128 128" fill="none" stroke="currentColor" strokeWidth={8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M24 72H48L62 36L78 92L90 52H108" />
             </svg>
             <span className="text-lg tracking-[0.12em] font-semibold">
               NEBULUS <span className="text-n-text-secondary font-medium">GANTRY</span>
