@@ -292,7 +292,7 @@ huggingface-cli download TheBloke/ModelName-GGUF \
   --local-dir ModelName
 ```
 
-2. **Verify model files:**
+1. **Verify model files:**
 
 ```text
 models/ModelName/
@@ -302,11 +302,11 @@ models/ModelName/
 └── ...
 ```
 
-3. **Restart TabbyAPI** (or wait for auto-detection)
+1. **Restart TabbyAPI** (or wait for auto-detection)
 
-4. **Refresh Gantry admin dashboard**
+2. **Refresh Gantry admin dashboard**
 
-5. **New model appears** in available models list
+3. **New model appears** in available models list
 
 **Supported formats:**
 
@@ -324,16 +324,16 @@ models/ModelName/
 # Stop TabbyAPI process
 ```
 
-2. **Delete model directory:**
+1. **Delete model directory:**
 
 ```bash
 cd tabbyAPI/models
 rm -rf ModelName
 ```
 
-3. **Restart TabbyAPI**
+1. **Restart TabbyAPI**
 
-4. **Model removed** from Gantry's list
+2. **Model removed** from Gantry's list
 
 ### Update Models
 
@@ -346,11 +346,11 @@ huggingface-cli download TheBloke/ModelName-v2-GGUF \
   --local-dir ModelName-v2
 ```
 
-2. **Switch to new model** in Gantry
+1. **Switch to new model** in Gantry
 
-3. **Test new model**
+2. **Test new model**
 
-4. **Delete old version** if satisfied
+3. **Delete old version** if satisfied
 
 **Note:** Keep old version until new one proven stable
 
@@ -645,9 +645,9 @@ curl http://localhost:5000/v1/chat/completions \
   }'
 ```
 
-3. **Verify response quality**
-4. **Check performance** (tokens/sec)
-5. **Switch in Gantry** if satisfied
+1. **Verify response quality**
+2. **Check performance** (tokens/sec)
+3. **Switch in Gantry** if satisfied
 
 ### Model Lifecycle
 
