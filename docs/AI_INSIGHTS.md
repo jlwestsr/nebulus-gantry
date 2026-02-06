@@ -150,3 +150,16 @@ This document serves as the **long-term memory** for AI agents working on **Nebu
 - Model must be loaded before chat works: `POST /v1/model/load {"model_name": "..."}`
 - 503 errors indicate no model loaded, not service down
 - Model loading streams progress: `{"module": N, "modules": 67, "status": "processing"}`
+
+## 10. Documentation & Wiki
+
+- **GitHub wiki**: Cloned at `../nebulus-gantry.wiki/` (sibling directory). Uses SSH remote (`git@github.com:jlwestsr/nebulus-gantry.wiki.git`), `master` branch.
+- **Wiki pages** (9): Home, Architecture, Installation, Configuration, Knowledge-Vault, Long-Term-Memory, Admin-Dashboard, API-Reference, Developer-Guide.
+- **Wiki initialization**: GitHub wikis must be initialized via the web UI first (create one placeholder page), then local content can be force-pushed.
+- **Ecosystem wikis**: All four project wikis are live:
+  - `nebulus-gantry.wiki` — 9 pages (this project)
+  - `nebulus-edge.wiki` — 5 pages
+  - `nebulus-core.wiki` — 8 pages
+  - `nebulus-prime.wiki` — 10 pages
+- **Cross-project doc sync**: When a feature ships, update the corresponding wiki. Wiki repos are independent git repos — commit and push separately from the main repo.
+- **README links wiki**: The README references wiki pages for Installation, Configuration, Knowledge Vault, Long-Term Memory, Admin Dashboard, API Reference, Architecture, Deployment, and Developer Guide. Keep wiki page names consistent with these links.
