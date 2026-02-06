@@ -1,139 +1,235 @@
-# Nebulus Gantry v2
+# Nebulus Gantry
 
-A branded AI chat interface for the **Nebulus Prime** ecosystem. Gantry provides a Claude.AI-like conversational UI backed by streaming LLM responses, long-term memory, and an admin control plane.
+### Self-Hosted AI Chat Interface with Memory & RAG
 
-## Tech Stack
+A production-ready web application for deploying your own AI assistant. Works with any OpenAI-compatible API (TabbyAPI, Ollama, vLLM) and includes document search, long-term memory, and enterprise admin features.
 
-| Layer | Technology |
-|-------|-----------|
-| Frontend | React 19 + TypeScript + Vite 7 + Tailwind CSS v4 |
-| State | Zustand stores (auth, chat, toast, ui) |
-| Backend | FastAPI 0.109 + Python 3.12 + SQLAlchemy 2 |
-| Database | SQLite (via aiosqlite) |
-| LTM | ChromaDB (vector search) + NetworkX (knowledge graph) |
-| Auth | Session cookies (httponly) + bcrypt |
-| Streaming | SSE (Server-Sent Events) for chat responses |
-| LLM | TabbyAPI (OpenAI-compatible `/v1/chat/completions`) |
-| Containers | Docker Compose (backend + frontend) |
+[🚀 Quick Start](#-quick-start) • [📚 Wiki](../../wiki) • [🎯 Features](#-features) • [🏗️ Architecture](#%EF%B8%8F-architecture)
 
-## Architecture
+[![License](https://img.shields.io/badge/license-Proprietary-blue.svg)](LICENSE)
+[![Python](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.109-009688.svg)](https://fastapi.tiangolo.com/)
+[![React](https://img.shields.io/badge/React-19-61dafb.svg)](https://react.dev/)
 
-```text
- Browser (React SPA)
-     |
-     | HTTP / SSE
-     v
- FastAPI Backend (:8000)
-     |
-     +---> SQLite          (conversations, messages, users, sessions)
-     +---> ChromaDB (:8001) (semantic vector search)
-     +---> NetworkX         (entity knowledge graph, persisted as JSON)
-     +---> TabbyAPI (:5000) (LLM inference, streaming)
-     +---> Docker API       (service management)
-```
+![Gantry Chat Interface](docs/images/gantry-interface.png)
 
-## Project Structure
+---
 
-```text
-nebulus-gantry/
-├── backend/
-│   ├── main.py                  # FastAPI app + CORS + routers
-│   ├── config.py                # Settings dataclass (env vars)
-│   ├── database.py              # SQLAlchemy engine + session
-│   ├── dependencies.py          # get_db dependency
-│   ├── models/
-│   │   ├── user.py              # User model (email, role, password_hash)
-│   │   ├── conversation.py      # Conversation model
-│   │   ├── message.py           # Message model (role, content)
-│   │   └── session.py           # Session model (token, expiry)
-│   ├── schemas/
-│   │   ├── auth.py              # Login/UserResponse schemas
-│   │   ├── chat.py              # Conversation/Message/Search schemas
-│   │   └── admin.py             # User/Service/Model admin schemas
-│   ├── services/
-│   │   ├── auth_service.py      # Authentication + session management
-│   │   ├── chat_service.py      # Conversation + message CRUD
-│   │   ├── llm_service.py       # TabbyAPI streaming client (httpx)
-│   │   ├── memory_service.py    # ChromaDB vector embeddings
-│   │   ├── graph_service.py     # NetworkX entity graph
-│   │   ├── docker_service.py    # Docker container management
-│   │   └── model_service.py     # TabbyAPI model listing/switching
-│   ├── routers/
-│   │   ├── auth.py              # /api/auth/*
-│   │   ├── chat.py              # /api/chat/*
-│   │   └── admin.py             # /api/admin/* (admin-only)
-│   ├── tests/
-│   ├── requirements.txt
-│   └── Dockerfile
-├── frontend/
-│   ├── src/
-│   │   ├── components/
-│   │   │   ├── Layout.tsx       # App shell (sidebar + header + content)
-│   │   │   ├── Sidebar.tsx      # Conversation list + new chat
-│   │   │   ├── MessageList.tsx  # Scrollable message feed
-│   │   │   ├── MessageBubble.tsx # Individual message rendering
-│   │   │   ├── MessageInput.tsx # Text input with send button
-│   │   │   ├── SearchModal.tsx  # Ctrl+K search overlay
-│   │   │   ├── Toast.tsx        # Notification toasts
-│   │   │   ├── Button.tsx       # Reusable button component
-│   │   │   ├── Input.tsx        # Reusable input component
-│   │   │   ├── ProtectedRoute.tsx
-│   │   │   └── admin/
-│   │   │       ├── ServicesTab.tsx
-│   │   │       ├── ModelsTab.tsx
-│   │   │       ├── LogsTab.tsx
-│   │   │       └── UsersTab.tsx
-│   │   ├── pages/
-│   │   │   ├── Chat.tsx         # Main chat view
-│   │   │   ├── Login.tsx        # Login form
-│   │   │   ├── Admin.tsx        # Admin panel (tabbed)
-│   │   │   └── Settings.tsx     # User settings
-│   │   ├── stores/
-│   │   │   ├── authStore.ts     # Auth state + login/logout
-│   │   │   ├── chatStore.ts     # Conversations + messages + streaming
-│   │   │   ├── toastStore.ts    # Toast notifications
-│   │   │   └── uiStore.ts      # UI state (sidebar, theme)
-│   │   ├── services/
-│   │   │   └── api.ts           # HTTP client (fetch wrapper)
-│   │   └── types/
-│   │       └── api.ts           # TypeScript interfaces
-│   ├── package.json
-│   └── Dockerfile
-├── docker-compose.yml
-├── docs/
-│   ├── plans/
-│   ├── features/
-│   └── bugs/
-├── CONTEXT.md
-└── README.md
-```
+## ✨ Features
 
-## Getting Started
+### 🎨 Beautiful Chat Interface
+
+- **Dark-themed UI** inspired by Claude.AI - Professional, distraction-free design
+- **Real-time streaming** - SSE-powered responses with typewriter effect
+- **Markdown rendering** - Code blocks with syntax highlighting, tables, lists
+- **Mobile responsive** - Collapsible sidebar, adaptive layout
+- **Conversation management** - Search, pin, export, and organize chats
+
+### 🧠 Long-Term Memory
+
+- **Vector Search** - ChromaDB semantic search across all conversation history
+- **Knowledge Graphs** - Automatic entity extraction and relationship mapping with NetworkX
+- **Contextual Awareness** - Relevant history automatically injected into each response
+- **Cross-conversation memory** - AI remembers context from past sessions
+
+### 📚 Knowledge Vault (RAG)
+
+- **Document upload** - Supports PDF, DOCX, TXT, CSV formats
+- **Automatic processing** - Smart chunking (2000 chars) with overlap for context preservation
+- **Semantic search** - Vector embeddings for accurate document retrieval
+- **Source citations** - Responses include references to specific document chunks
+- **Collection management** - Organize documents into searchable collections
+- **Persistence verified** - All uploads survive container rebuilds
+
+### 👥 Multi-User & Admin
+
+- **Role-based authentication** - Admin and user roles with session-based auth
+- **User management** - Create, update, delete users via admin dashboard
+- **Model switching** - Hot-swap between LLMs without restart (TabbyAPI integration)
+- **Service monitoring** - View and manage Docker container status
+- **Real-time logs** - Stream logs from backend, frontend, or LLM services
+- **Audit trail** - Track user actions and system events
+
+### 🔌 Flexible Backend Support
+
+- **LLM**: Works with any OpenAI-compatible API
+  - TabbyAPI (ExLlamaV2, llama.cpp)
+  - Ollama (Llama, Mistral, Qwen, etc.)
+  - vLLM (production inference server)
+  - LocalAI, LM Studio, text-generation-webui
+- **Memory**: ChromaDB for vector embeddings and semantic search
+- **Database**: SQLite by default (PostgreSQL, MySQL via SQLAlchemy)
+- **Deployment**: Docker Compose with hot-reload for development
+
+---
+
+## 🚀 Quick Start
 
 ### Prerequisites
 
-- **Docker & Docker Compose** (recommended)
-- Or for local dev: **Python 3.12+** and **Node.js 20+**
-- External services: **TabbyAPI** (LLM), **ChromaDB** (optional, for LTM)
+- **Docker & Docker Compose** (recommended path)
+- **OpenAI-compatible LLM API** (TabbyAPI, Ollama, vLLM, etc.)
+- **ChromaDB instance** (optional but recommended for memory features)
 
-### Docker (quickest)
+### 1. Clone & Configure
 
 ```bash
-docker-compose up --build
+git clone https://github.com/jlwestsr/nebulus-gantry.git
+cd nebulus-gantry
+
+# Create environment file
+cat > .env << 'EOF'
+DATABASE_URL=sqlite:///./data/gantry.db
+CHROMA_HOST=http://chromadb:8000
+TABBY_HOST=http://your-llm-api:5000
+SECRET_KEY=change-this-to-a-random-secret
+SESSION_EXPIRE_HOURS=24
+VITE_API_URL=http://localhost:8000
+EOF
 ```
 
-- Frontend: <http://localhost:3000>
-- Backend: <http://localhost:8000>
-- API docs: <http://localhost:8000/docs>
+### 2. Run with Docker
 
-### Local Development
+```bash
+docker compose up -d
+```
+
+**Access Points:**
+
+- 🌐 **Frontend**: <http://localhost:3001>
+- 🔧 **Backend API**: <http://localhost:8000>
+- 📖 **API Docs**: <http://localhost:8000/docs> (interactive Swagger UI)
+
+### 3. Create Admin User
+
+```bash
+docker compose exec backend python -c "
+from backend.services.auth_service import AuthService
+from backend.database import get_engine, get_session_maker
+engine = get_engine()
+Session = get_session_maker(engine)
+db = Session()
+auth = AuthService(db)
+user = auth.create_user(
+    email='admin@example.com',
+    password='your-secure-password',
+    role='admin',
+    display_name='Admin'
+)
+print(f'Created admin user: {user.email}')
+db.close()
+"
+```
+
+### 4. Start Chatting
+
+Navigate to <http://localhost:3001>, log in with your admin credentials, and start your first conversation. The AI will remember context across sessions and you can upload documents for RAG-powered answers.
+
+---
+
+## 🏗️ Architecture
+
+```text
+┌─────────────────────────────────────────────────────────────┐
+│                    Browser (React SPA)                       │
+│  ┌──────────┬──────────┬──────────┬──────────┬──────────┐  │
+│  │ Chat UI  │ Knowledge│ Admin    │ Settings │ Search   │  │
+│  │          │ Vault    │ Panel    │          │ (Ctrl+K) │  │
+│  └──────────┴──────────┴──────────┴──────────┴──────────┘  │
+└────────────────────┬────────────────────────────────────────┘
+                     │ HTTP / SSE Streaming
+┌────────────────────▼────────────────────────────────────────┐
+│              FastAPI Backend (:8000)                         │
+│  ┌──────────────────────────────────────────────────────┐  │
+│  │ Routers:  /auth  /chat  /admin  /documents           │  │
+│  ├──────────────────────────────────────────────────────┤  │
+│  │ Services: Auth │ Chat │ LLM │ Memory │ Graph │ Docs  │  │
+│  └──────────────────────────────────────────────────────┘  │
+│                                                              │
+│  ┌───────────┬────────────┬─────────────┬─────────────┐   │
+│  │ SQLite    │ ChromaDB   │ NetworkX    │ LLM API     │   │
+│  │ (users,   │ (vector    │ (knowledge  │ (streaming  │   │
+│  │ messages, │ embeddings)│ graph JSON) │ responses)  │   │
+│  │ docs)     │            │             │             │   │
+│  └───────────┴────────────┴─────────────┴─────────────┘   │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Technology Stack:**
+
+| Layer | Technology | Purpose |
+|-------|-----------|---------|
+| **Frontend** | React 19, TypeScript, Vite 7 | Modern SPA with hot reload |
+| **Styling** | Tailwind CSS v4 | Utility-first, dark theme |
+| **State** | Zustand | Lightweight global state |
+| **Backend** | FastAPI 0.109, Python 3.12 | Async API with auto docs |
+| **ORM** | SQLAlchemy 2 | Type-safe database queries |
+| **Database** | SQLite (default) | Zero-config, file-based DB |
+| **Vectors** | ChromaDB | Semantic search & embeddings |
+| **Graphs** | NetworkX | Entity relationship mapping |
+| **Auth** | Session cookies, bcrypt | Secure, httponly sessions |
+| **Streaming** | SSE (Server-Sent Events) | Real-time chat responses |
+| **LLM** | OpenAI-compatible API | TabbyAPI, Ollama, vLLM, etc. |
+| **Containers** | Docker Compose | Orchestrated deployment |
+
+---
+
+## 📖 Documentation
+
+Comprehensive guides available in the [GitHub Wiki](../../wiki):
+
+| Guide | Description |
+|-------|-------------|
+| **[Installation](../../wiki/Installation)** | Detailed setup for Docker and manual deployment |
+| **[Configuration](../../wiki/Configuration)** | Environment variables, LLM backends, ChromaDB |
+| **[Knowledge Vault](../../wiki/Knowledge-Vault)** | Document upload, RAG setup, search optimization |
+| **[Long-Term Memory](../../wiki/Long-Term-Memory)** | Vector search, knowledge graphs, context injection |
+| **[Admin Dashboard](../../wiki/Admin-Dashboard)** | User management, model switching, logs |
+| **[API Reference](../../wiki/API-Reference)** | REST endpoints, SSE streaming, authentication |
+| **[Architecture](../../wiki/Architecture)** | System design, data flow, service interaction |
+| **[Deployment](../../wiki/Deployment)** | Production checklist, HTTPS, reverse proxy, scaling |
+| **[Developer Guide](../../wiki/Developer-Guide)** | Local setup, testing, contributing |
+
+---
+
+## 🎯 Use Cases
+
+### For Developers
+
+- ✅ **Self-hosted ChatGPT alternative** - Complete control over your AI infrastructure
+- ✅ **Clean architecture** - FastAPI + React with proper separation of concerns
+- ✅ **Full API access** - Build integrations, bots, or custom frontends
+- ✅ **Docker-first** - Reproducible environments, easy deployment
+- ✅ **Open to extend** - Add custom models, tools, or integrations
+
+### For Enterprises
+
+- 🔒 **Private deployment** - No data leaves your infrastructure
+- 📋 **Compliance-friendly** - GDPR, HIPAA, SOC2 compatible when self-hosted
+- 👥 **Multi-user with RBAC** - Admin and user roles, session management
+- 📊 **Audit controls** - User actions, system logs, conversation exports
+- 🔐 **Security-first** - Bcrypt passwords, httponly cookies, CORS controls
+
+### For AI Enthusiasts
+
+- 🦙 **Beautiful UI for local LLMs** - Llama, Mistral, Qwen, Yi, DeepSeek, etc.
+- 📚 **Built-in RAG** - Upload PDFs, query your documents with citations
+- 🧠 **Memory system** - AI remembers context across sessions
+- 🐳 **One-command deploy** - `docker compose up` and you're running
+- 🎨 **Claude.AI-inspired UX** - Professional dark theme, smooth animations
+
+---
+
+## 🔧 Development
+
+### Local Setup (without Docker)
 
 **Backend:**
 
 ```bash
 cd backend
 python3 -m venv venv
-source venv/bin/activate
+source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 uvicorn main:app --reload --port 8000
 ```
@@ -146,86 +242,144 @@ npm install
 npm run dev
 ```
 
-The frontend dev server starts on <http://localhost:5173> by default.
+Frontend dev server: <http://localhost:5173>
+Backend API: <http://localhost:8000>
 
-### First Run
-
-The database is auto-created on first startup. Create an admin user by running the seed script or through the API. Default credentials are configured per deployment.
-
-## Configuration
-
-All configuration is via environment variables:
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `DATABASE_URL` | `sqlite:///./data/gantry.db` | SQLAlchemy database URL |
-| `SECRET_KEY` | `dev-secret-change-in-production` | Session signing secret |
-| `CHROMA_HOST` | `http://localhost:8001` | ChromaDB endpoint |
-| `TABBY_HOST` | `http://localhost:5000` | TabbyAPI endpoint |
-| `SESSION_EXPIRE_HOURS` | `24` | Session cookie lifetime |
-| `VITE_API_URL` | `http://localhost:8000` | Backend URL (frontend) |
-
-## API Overview
-
-All endpoints require authentication via `session_token` cookie unless noted.
-
-### Auth (`/api/auth`)
-
-| Method | Path | Description |
-|--------|------|-------------|
-| POST | `/api/auth/login` | Authenticate, returns session cookie |
-| POST | `/api/auth/logout` | Invalidate session |
-| GET | `/api/auth/me` | Get current user profile |
-
-### Chat (`/api/chat`)
-
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/api/chat/search?q=` | Search messages across conversations |
-| POST | `/api/chat/conversations` | Create new conversation |
-| GET | `/api/chat/conversations` | List user conversations |
-| GET | `/api/chat/conversations/:id` | Get conversation with messages |
-| DELETE | `/api/chat/conversations/:id` | Delete conversation |
-| POST | `/api/chat/conversations/:id/messages` | Send message (SSE streaming response) |
-
-### Admin (`/api/admin`) -- requires admin role
-
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/api/admin/users` | List all users |
-| POST | `/api/admin/users` | Create user |
-| DELETE | `/api/admin/users/:id` | Delete user |
-| GET | `/api/admin/services` | List Docker services |
-| POST | `/api/admin/services/:name/restart` | Restart a service |
-| GET | `/api/admin/models` | List available LLM models |
-| POST | `/api/admin/models/switch` | Switch active model |
-| GET | `/api/admin/logs/:service` | Stream service logs (SSE) |
-
-### Health
-
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/health` | Health check |
-
-## Features
-
-- **Chat interface** -- dark theme, Claude.AI-like layout with conversation sidebar
-- **Streaming responses** -- real-time SSE from TabbyAPI
-- **Long-term memory** -- ChromaDB semantic search + NetworkX entity graph injected into system prompt
-- **Conversation search** -- Ctrl+K quick search across all messages
-- **Admin panel** -- manage users, Docker services, LLM models, and view logs
-- **Settings page** -- profile editing, appearance preferences, model info
-- **Toast notifications** -- non-blocking feedback for actions and errors
-- **Mobile responsive** -- collapsible sidebar, adaptive layout
-- **Multi-user auth** -- session cookies, bcrypt passwords, admin/user roles
-
-## Testing
+### Testing
 
 ```bash
 cd backend
-python -m pytest tests/ -v
+pytest tests/ -v
+
+# Run with coverage
+pytest tests/ --cov=backend --cov-report=html
 ```
 
-## License
+**Current test status:** 276 tests passing
 
-Proprietary -- West AI Labs.
+### Contributing
+
+See [Contributing Guide](../../wiki/Contributing) for:
+
+- Code style guidelines (Black, Flake8, ESLint)
+- Commit conventions (Conventional Commits)
+- Pull request process
+- Development workflow
+
+---
+
+## 📦 Deployment
+
+### Docker Compose (Recommended)
+
+```bash
+# Production deployment
+docker compose up -d
+
+# View logs
+docker compose logs -f
+
+# Restart services
+docker compose restart backend frontend
+```
+
+### Production Checklist
+
+Before deploying to production:
+
+- [ ] **Change `SECRET_KEY`** to a random 32+ character string
+- [ ] **Configure HTTPS** via reverse proxy (nginx, Caddy, Traefik)
+- [ ] **Set up backups** for `./data` directory (SQLite, knowledge graphs)
+- [ ] **Review CORS settings** in `backend/main.py`
+- [ ] **Create strong admin password** (min 12 chars, mixed case, symbols)
+- [ ] **Configure ChromaDB persistence** with external volume
+- [ ] **Set `SESSION_EXPIRE_HOURS`** to appropriate value (default: 24)
+- [ ] **Enable firewall** rules (allow 80/443, block 8000/3001 externally)
+- [ ] **Set up monitoring** (uptime, logs, resource usage)
+
+See [Production Deployment Guide](../../wiki/Deployment) for detailed instructions.
+
+---
+
+## 🛠️ Configuration
+
+Key environment variables:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `DATABASE_URL` | `sqlite:///./data/gantry.db` | SQLAlchemy database connection string |
+| `SECRET_KEY` | `dev-secret-change-in-production` | Session signing secret (change in prod!) |
+| `CHROMA_HOST` | `http://localhost:8000` | ChromaDB HTTP endpoint for vectors |
+| `TABBY_HOST` | `http://localhost:5000` | LLM API endpoint (OpenAI-compatible) |
+| `SESSION_EXPIRE_HOURS` | `24` | Session cookie lifetime in hours |
+| `VITE_API_URL` | `http://localhost:8000` | Backend URL for frontend (build-time) |
+
+Full configuration guide: [Wiki > Configuration](../../wiki/Configuration)
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! Please:
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feat/amazing-feature`)
+3. Commit your changes (`git commit -m 'feat: add amazing feature'`)
+4. Push to the branch (`git push origin feat/amazing-feature`)
+5. Open a Pull Request
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
+
+---
+
+## 📊 Project Status
+
+- ✅ **v2.0** - Complete rewrite (FastAPI + React)
+- ✅ **Streaming chat** - SSE real-time responses
+- ✅ **Long-term memory** - ChromaDB + NetworkX
+- ✅ **Knowledge Vault** - RAG with document upload
+- ✅ **Admin panel** - Users, models, services, logs
+- ✅ **Model switching** - Hot-swap LLMs via TabbyAPI
+- ✅ **Conversation export** - JSON and PDF formats
+- ✅ **Searchable history** - Ctrl+K command palette
+- 🚧 **Personas** - Custom system prompts (planned)
+- 🚧 **Multi-modal** - Image upload support (planned)
+
+---
+
+## 📄 License
+
+**Proprietary** - West AI Labs LLC
+
+This software is proprietary and not open source. All rights reserved.
+
+---
+
+## 🌟 Acknowledgments
+
+Built with excellent open-source tools:
+
+- [FastAPI](https://fastapi.tiangolo.com/) - Modern Python web framework
+- [React](https://react.dev/) - UI library
+- [ChromaDB](https://www.trychroma.com/) - Vector database
+- [Tailwind CSS](https://tailwindcss.com/) - Utility-first CSS
+- [Zustand](https://github.com/pmndrs/zustand) - State management
+- [NetworkX](https://networkx.org/) - Graph algorithms
+
+UI design inspired by [Claude.AI](https://claude.ai) and [ChatGPT](https://chat.openai.com).
+
+---
+
+## 🔗 Related Projects
+
+Part of the **Nebulus AI Ecosystem**:
+
+- **[Nebulus Prime](https://github.com/jlwestsr/nebulus-prime)** - Complete local AI infrastructure (Linux/NVIDIA)
+- **[Nebulus Edge](https://github.com/jlwestsr/nebulus-edge)** - macOS deployment with MLX (Apple Silicon)
+- **[Nebulus Core](https://github.com/jlwestsr/nebulus-core)** - Shared Python library and CLI framework
+
+---
+
+**[⬆ Back to Top](#nebulus-gantry)**
+
+*Made with ❤️ for the self-hosted AI community*
