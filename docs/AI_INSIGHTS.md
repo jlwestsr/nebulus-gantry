@@ -77,3 +77,76 @@ This document serves as the **long-term memory** for AI agents working on **Nebu
 - **F-string Without Placeholders**: Flake8 F541 catches `f"static string"` — remove the `f` prefix if no interpolation is needed.
 - **Unused Import Cleanup**: When removing unused schema imports from routers, verify they're not used in endpoint signatures before deleting.
 - **Combined Commits**: When features are tightly coupled (shared files like `api.ts`, `types/api.ts`), a single combined commit is cleaner than trying to split artificially.
+
+## 9. Session Notes (2026-02-06) — Tier 1.5 Manual Testing
+
+### Database Initialization
+
+- **New tables require restart or manual creation**: After adding new models (Persona, Collection, Document), the tables may not exist if the container was running during code deployment. Run `Base.metadata.create_all(bind=engine)` inside the container or restart to trigger table creation.
+- **Database location**: Production database is at `/app/data/gantry.db` (inside container), configured via `DATABASE_URL=sqlite:///./data/gantry.db`.
+- **Schema uses `role` not `is_admin`**: The User model uses a `role` column (`admin`/`user`) rather than a boolean `is_admin`.
+
+### Personas Feature — Verified Working
+
+| Test | Status |
+|------|--------|
+| Create user persona | ✅ |
+| List personas (user + system) | ✅ |
+| Assign persona to conversation | ✅ |
+| Chat uses persona's system_prompt | ✅ |
+| Temperature override (tested 0.3) | ✅ |
+| Admin create system persona | ✅ |
+| System personas visible to all users | ✅ |
+
+**API Endpoints Tested:**
+
+- `POST /api/personas` — Create user persona
+- `GET /api/personas` — List all (user + system)
+- `PATCH /api/chat/conversations/{id}/persona` — Assign persona
+- `POST /api/admin/personas` — Create system persona
+
+### Knowledge Vault Feature — Verified Working
+
+| Test | Status |
+|------|--------|
+| Create collection | ✅ |
+| Upload TXT document | ✅ |
+| Document chunking & ChromaDB indexing | ✅ |
+| List documents (with collection filter) | ✅ |
+| Semantic search across documents | ✅ |
+| Set document scope on conversation | ✅ |
+| RAG retrieval injects context into chat | ✅ |
+| Delete document (removes from DB + ChromaDB) | ✅ |
+| Update collection metadata | ✅ |
+
+**API Endpoints Tested:**
+
+- `POST /api/documents/collections` — Create collection
+- `POST /api/documents/upload` — Upload document (multipart/form-data)
+- `GET /api/documents?collection_id=` — List documents
+- `POST /api/documents/search` — Semantic search
+- `PATCH /api/chat/conversations/{id}/document-scope` — Set RAG scope
+- `DELETE /api/documents/{id}` — Delete document
+- `PATCH /api/documents/collections/{id}` — Update collection
+
+**Document Scope Format:**
+
+```json
+{"document_scope": [{"type": "collection", "id": 1}]}
+{"document_scope": [{"type": "document", "id": 1}, {"type": "document", "id": 2}]}
+```
+
+### RAG Verification
+
+- Uploaded two test documents (`test-doc.txt`, `api-guide.txt`)
+- Semantic search correctly ranked `api-guide.txt` higher for authentication queries
+- Chat with document scope correctly retrieved:
+  - Supported formats (PDF, TXT, CSV, DOCX) and 10MB limit
+  - Key components (React 19, FastAPI, TabbyAPI, ChromaDB)
+- Responses grounded in document content, not hallucinated
+
+### TabbyAPI Notes
+
+- Model must be loaded before chat works: `POST /v1/model/load {"model_name": "..."}`
+- 503 errors indicate no model loaded, not service down
+- Model loading streams progress: `{"module": N, "modules": 67, "status": "processing"}`
