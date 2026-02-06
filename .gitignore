@@ -41,7 +41,12 @@ data/
 !data/.gitkeep
 
 # Claude Code
-.claude/
+# Claude Code - ignore cache but commit config
+.claude/cache/
+.claude/logs/
+.claude/tmp/
+.claude/agents/  # Custom user agents
+# Commit: .claude/config.json, .claude/README.md
 
 # Reference symlinks (external projects)
 reference_nebulus

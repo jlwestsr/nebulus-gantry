@@ -1,0 +1,84 @@
+{
+  "project": "nebulus-gantry",
+  "description": "FastAPI + React AI chat interface with memory and RAG",
+  "mcpServers": {
+    "pyright-lsp": {
+      "disabled": false,
+      "priority": "high",
+      "reason": "FastAPI backend with extensive type hints"
+    },
+    "typescript-lsp": {
+      "disabled": false,
+      "priority": "high",
+      "reason": "React 19 + TypeScript frontend"
+    },
+    "github": {
+      "disabled": false,
+      "priority": "high",
+      "reason": "Heavy GitHub workflow (PRs, wiki, releases)"
+    },
+    "context7": {
+      "disabled": false,
+      "priority": "medium",
+      "reason": "Up-to-date docs for FastAPI, React 19, ChromaDB"
+    },
+    "playwright": {
+      "disabled": false,
+      "priority": "high",
+      "reason": "UI testing (Knowledge Vault, chat interface)"
+    },
+    "serena": {
+      "disabled": false,
+      "priority": "high",
+      "reason": "Semantic code navigation for large codebase"
+    },
+    "superpowers": {
+      "disabled": false,
+      "priority": "high",
+      "reason": "Brainstorming, TDD, debugging workflows"
+    },
+    "pr-review-toolkit": {
+      "disabled": false,
+      "priority": "medium",
+      "reason": "Automated code quality checks"
+    },
+    "commit-commands": {
+      "disabled": false,
+      "priority": "medium",
+      "reason": "Git workflow automation"
+    },
+    "feature-dev": {
+      "disabled": false,
+      "priority": "medium",
+      "reason": "Feature development workflows"
+    },
+    "security-guidance": {
+      "disabled": false,
+      "priority": "medium",
+      "reason": "Production deployment security"
+    },
+    "supabase": {
+      "disabled": true,
+      "reason": "Not using Supabase - direct SQLite/PostgreSQL"
+    },
+    "ralph-loop": {
+      "disabled": true,
+      "reason": "No automation loops in current workflow"
+    }
+  },
+  "projectSettings": {
+    "backend": {
+      "language": "Python",
+      "version": "3.12",
+      "framework": "FastAPI 0.109",
+      "lsp": "pyright",
+      "testFramework": "pytest"
+    },
+    "frontend": {
+      "language": "TypeScript",
+      "framework": "React 19",
+      "buildTool": "Vite 7",
+      "lsp": "typescript-language-server"
+    }
+  }
+}
