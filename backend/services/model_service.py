@@ -76,7 +76,7 @@ class ModelService:
             async with httpx.AsyncClient(timeout=30.0) as client:
                 response = await client.post(
                     f"{self.base_url}/v1/model/load",
-                    json={"name": model_id},
+                    json={"model_name": model_id},
                 )
                 response.raise_for_status()
                 return True

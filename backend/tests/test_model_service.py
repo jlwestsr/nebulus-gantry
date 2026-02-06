@@ -221,7 +221,7 @@ class TestSwitchModel:
         assert result is True
         mock_client.post.assert_called_once_with(
             f"{svc.base_url}/v1/model/load",
-            json={"name": "llama-3-8b"},
+            json={"model_name": "llama-3-8b"},
         )
 
     def test_switch_returns_false_on_connection_error(self):
