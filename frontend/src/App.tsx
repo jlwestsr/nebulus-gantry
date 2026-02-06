@@ -8,6 +8,7 @@ import { Login } from './pages/Login';
 import { Chat } from './pages/Chat';
 import { Admin } from './pages/Admin';
 import { Settings } from './pages/Settings';
+import { Personas } from './pages/Personas';
 
 function App() {
   const checkAuth = useAuthStore((state) => state.checkAuth);
@@ -31,6 +32,7 @@ function App() {
                   <Route path="/" element={<Chat />} />
                   <Route path="/admin" element={<Admin />} />
                   <Route path="/settings" element={<Settings />} />
+                  <Route path="/personas" element={<Personas />} />
                 </Routes>
               </Layout>
             </ProtectedRoute>

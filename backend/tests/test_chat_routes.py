@@ -237,7 +237,7 @@ class TestSendMessage:
         )
         conv_id = create_resp.json()["id"]
 
-        async def fake_stream(messages, model="default"):
+        async def fake_stream(messages, model="default", temperature=None):
             yield "Hello "
             yield "world"
 

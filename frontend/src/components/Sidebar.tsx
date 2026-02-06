@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useChatStore } from '../stores/chatStore';
 import { useUIStore } from '../stores/uiStore';
 import { chatApi } from '../services/api';
+import { KnowledgeVault } from './KnowledgeVault';
 import type { Conversation, SearchResult } from '../types/api';
 
 // Group conversations by date category, with Pinned at top
@@ -387,6 +388,11 @@ export function Sidebar() {
             </button>
           )}
         </div>
+      </div>
+
+      {/* Knowledge Vault */}
+      <div className="px-2">
+        <KnowledgeVault />
       </div>
 
       {/* Conversation List or Search Results */}

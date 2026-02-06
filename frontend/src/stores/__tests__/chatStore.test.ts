@@ -12,8 +12,8 @@ vi.mock('../../services/api', () => ({
 import { chatApi } from '../../services/api';
 
 const mockConversations = [
-  { id: 1, title: 'First', created_at: '2026-01-01', updated_at: '2026-01-01' },
-  { id: 2, title: 'Second', created_at: '2026-01-02', updated_at: '2026-01-02' },
+  { id: 1, title: 'First', pinned: false, persona_id: null, persona_name: null, document_scope: null, created_at: '2026-01-01', updated_at: '2026-01-01' },
+  { id: 2, title: 'Second', pinned: false, persona_id: null, persona_name: null, document_scope: null, created_at: '2026-01-02', updated_at: '2026-01-02' },
 ];
 
 describe('chatStore', () => {
@@ -52,7 +52,7 @@ describe('chatStore', () => {
   describe('createConversation', () => {
     it('prepends new conversation and selects it', async () => {
       useChatStore.setState({ conversations: mockConversations });
-      const newConv = { id: 3, title: 'New Conversation', created_at: '2026-01-03', updated_at: '2026-01-03' };
+      const newConv = { id: 3, title: 'New Conversation', pinned: false, persona_id: null, persona_name: null, document_scope: null, created_at: '2026-01-03', updated_at: '2026-01-03' };
       vi.mocked(chatApi.createConversation).mockResolvedValue(newConv);
 
       const id = await useChatStore.getState().createConversation();

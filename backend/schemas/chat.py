@@ -7,6 +7,9 @@ class ConversationResponse(BaseModel):
     id: int
     title: str
     pinned: bool = False
+    persona_id: int | None = None
+    persona_name: str | None = None  # For display
+    document_scope: str | None = None  # JSON string
     created_at: datetime
     updated_at: datetime
 

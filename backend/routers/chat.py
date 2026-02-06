@@ -4,6 +4,7 @@ import time
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse, JSONResponse, Response
+from pydantic import BaseModel
 from sqlalchemy.orm import Session as DBSession
 
 from backend.dependencies import get_db
@@ -18,6 +19,7 @@ from backend.schemas.chat import (
     SearchResult,
     SearchResponse,
 )
+from backend.schemas.persona import SetConversationPersonaRequest
 
 logger = logging.getLogger(__name__)
 
@@ -67,6 +69,18 @@ def _create_graph_service(user_id: int):
     """Factory for GraphService. Lazy import to handle missing networkx gracefully."""
     from backend.services.graph_service import GraphService
     return GraphService(user_id)
+
+
+def _create_document_service(db: DBSession):
+    """Factory for DocumentService."""
+    from backend.services.document_service import DocumentService
+    return DocumentService(db)
+
+
+def _create_persona_service(db: DBSession):
+    """Factory for PersonaService."""
+    from backend.services.persona_service import PersonaService
+    return PersonaService(db)
 
 
 @router.get("/search", response_model=SearchResponse)
@@ -237,6 +251,7 @@ async def send_message(  # noqa: C901
     request: SendMessageRequest,
     user=Depends(get_current_user),
     chat: ChatService = Depends(get_chat_service),
+    db: DBSession = Depends(get_db),
 ):
     # Verify conversation exists and belongs to user
     conversation = chat.get_conversation(conversation_id, user.id)
@@ -274,18 +289,54 @@ async def send_message(  # noqa: C901
 
     ltm_context = build_ltm_context(similar_messages, related_facts)
 
+    # --- RAG: Query document knowledge vault ---
+    rag_context = ""
+    if conversation.document_scope:
+        try:
+            document_service = _create_document_service(db)
+            document_scope = json.loads(conversation.document_scope)
+            rag_context = document_service.build_rag_context(
+                user_id=user.id,
+                query=request.content,
+                document_scope=document_scope,
+                top_k=3,
+            )
+        except Exception as e:
+            logger.warning(f"RAG context build failed: {e}")
+
+    # --- Persona: Load persona system prompt if assigned ---
+    persona = None
+    persona_temperature = None
+    if conversation.persona_id:
+        try:
+            persona_service = _create_persona_service(db)
+            persona = persona_service.get_persona(conversation.persona_id, user.id)
+            if persona:
+                persona_temperature = persona.temperature
+        except Exception as e:
+            logger.warning(f"Failed to load persona: {e}")
+
     # Query active model name for system prompt
     model_service = ModelService()
     active_model = await model_service.get_active_model()
     model_name = active_model["name"] if active_model else "an AI assistant"
 
-    # Build system message with LTM context
-    system_content = (
-        f"You are Nebulus Gantry, powered by {model_name}. "
-        "You are a helpful AI assistant."
-    )
+    # Build system message
+    if persona:
+        # Use persona's system prompt
+        system_content = persona.system_prompt
+    else:
+        # Default system prompt
+        system_content = (
+            f"You are Nebulus Gantry, powered by {model_name}. "
+            "You are a helpful AI assistant."
+        )
+
+    # Append context from LTM and RAG
     if ltm_context:
         system_content = f"{system_content}\n\n{ltm_context}"
+    if rag_context:
+        system_content = f"{system_content}\n\n{rag_context}"
 
     # Get conversation history for context
     messages = chat.get_messages(conversation_id)
@@ -302,7 +353,9 @@ async def send_message(  # noqa: C901
     async def generate():
         full_response = ""
         start_time = time.monotonic()
-        async for chunk in llm.stream_chat(llm_messages, model=llm_model):
+        async for chunk in llm.stream_chat(
+            llm_messages, model=llm_model, temperature=persona_temperature
+        ):
             full_response += chunk
             yield chunk
 
@@ -361,3 +414,53 @@ async def send_message(  # noqa: C901
                 logger.warning(f"Failed to update knowledge graph: {e}")
 
     return StreamingResponse(generate(), media_type="text/event-stream")
+
+
+@router.patch("/conversations/{conversation_id}/persona", response_model=ConversationResponse)
+def set_conversation_persona(
+    conversation_id: int,
+    request: SetConversationPersonaRequest,
+    user=Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+):
+    """Set the persona for a conversation."""
+    persona_service = _create_persona_service(db)
+    conversation = persona_service.set_conversation_persona(
+        conversation_id=conversation_id,
+        persona_id=request.persona_id,
+        user_id=user.id,
+    )
+    if not conversation:
+        raise HTTPException(
+            status_code=404,
+            detail="Conversation or persona not found",
+        )
+    return conversation
+
+
+class SetDocumentScopeRequest(BaseModel):
+    """Request to set document scope for RAG."""
+    document_scope: list[dict] | None = None  # [{"type": "document"|"collection", "id": int}]
+
+
+@router.patch("/conversations/{conversation_id}/document-scope", response_model=ConversationResponse)
+def set_conversation_document_scope(
+    conversation_id: int,
+    request: SetDocumentScopeRequest,
+    user=Depends(get_current_user),
+    chat: ChatService = Depends(get_chat_service),
+):
+    """Set the document scope for RAG in a conversation."""
+    conversation = chat.get_conversation(conversation_id, user.id)
+    if not conversation:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+
+    # Serialize document scope as JSON
+    if request.document_scope:
+        conversation.document_scope = json.dumps(request.document_scope)
+    else:
+        conversation.document_scope = None
+
+    chat.db.commit()
+    chat.db.refresh(conversation)
+    return conversation
