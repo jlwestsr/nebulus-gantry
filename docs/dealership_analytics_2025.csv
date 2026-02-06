@@ -1,0 +1,51 @@
+sale_id,sale_date,customer_id,customer_name,vehicle_make,vehicle_model,vehicle_year,vehicle_type,sale_price,cost_price,profit_margin,salesperson,financing_type,trade_in_value,days_on_lot,source_channel
+S001,2025-01-05,C1001,Sarah Johnson,Toyota,Camry,2024,Sedan,28500,24200,15.07,Mike Torres,Finance,8500,12,Referral
+S002,2025-01-08,C1002,Robert Chen,Honda,CR-V,2024,SUV,32900,28100,14.58,Lisa Park,Cash,0,8,Website
+S003,2025-01-12,C1003,Maria Garcia,Ford,F-150,2023,Truck,45200,39800,11.95,Mike Torres,Finance,12000,45,Walk-in
+S004,2025-01-15,C1004,James Wilson,Chevrolet,Malibu,2024,Sedan,27300,23500,13.92,David Kim,Lease,0,18,Social Media
+S005,2025-01-18,C1005,Jennifer Brown,Nissan,Rogue,2024,SUV,31200,26800,14.10,Lisa Park,Finance,7200,22,Referral
+S006,2025-01-22,C1006,Michael Davis,Toyota,RAV4,2024,SUV,33800,29200,13.62,Mike Torres,Finance,9800,15,Website
+S007,2025-01-25,C1007,Emily Martinez,Honda,Accord,2024,Sedan,29900,25600,12.59,Sarah Lee,Cash,0,10,Walk-in
+S008,2025-01-28,C1008,David Anderson,Ford,Explorer,2023,SUV,48500,42300,12.78,David Kim,Finance,15000,38,Email Campaign
+S009,2025-02-01,C1009,Jessica Taylor,Chevrolet,Equinox,2024,SUV,30100,26200,12.96,Lisa Park,Lease,0,25,Website
+S010,2025-02-03,C1010,Christopher Lee,Toyota,Corolla,2024,Sedan,24800,21200,14.52,Mike Torres,Finance,6500,9,Referral
+S011,2025-02-05,C1011,Amanda White,Nissan,Altima,2024,Sedan,28200,24100,14.54,Sarah Lee,Cash,0,14,Social Media
+S012,2025-02-08,C1012,Daniel Harris,Ford,Mustang,2024,Coupe,42900,37200,13.29,David Kim,Finance,0,32,Walk-in
+S013,2025-02-10,C1013,Stephanie Clark,Honda,Pilot,2024,SUV,42100,36800,12.59,Lisa Park,Finance,11200,28,Website
+S014,2025-02-12,C1014,Matthew Lewis,Chevrolet,Silverado,2023,Truck,52800,46500,11.93,Mike Torres,Finance,18500,52,Referral
+S015,2025-02-15,C1015,Lauren Walker,Toyota,Highlander,2024,SUV,44300,38900,12.19,Sarah Lee,Finance,13200,19,Email Campaign
+S016,2025-02-18,C1016,Andrew Hall,Nissan,Sentra,2024,Sedan,22900,19600,14.41,David Kim,Cash,0,7,Website
+S017,2025-02-20,C1017,Nicole Allen,Honda,Civic,2024,Sedan,26400,22700,13.99,Lisa Park,Finance,5800,11,Walk-in
+S018,2025-02-22,C1018,Ryan Young,Ford,Edge,2024,SUV,39800,34600,13.06,Mike Torres,Lease,0,24,Social Media
+S019,2025-02-25,C1019,Megan King,Chevrolet,Traverse,2024,SUV,41200,36100,12.38,Sarah Lee,Finance,10500,30,Referral
+S020,2025-02-27,C1020,Kevin Wright,Toyota,Tacoma,2023,Truck,38900,34200,12.08,David Kim,Finance,9200,41,Website
+S021,2025-03-01,C1021,Rachel Scott,Nissan,Murano,2024,SUV,37500,32800,12.53,Lisa Park,Finance,8900,21,Email Campaign
+S022,2025-03-03,C1022,Brandon Green,Honda,Odyssey,2024,Minivan,38700,33900,12.40,Mike Torres,Finance,0,16,Walk-in
+S023,2025-03-05,C1023,Ashley Adams,Ford,Escape,2024,SUV,32400,28200,12.96,Sarah Lee,Cash,0,13,Website
+S024,2025-03-08,C1024,Justin Baker,Chevrolet,Camaro,2024,Coupe,38200,33100,13.35,David Kim,Finance,0,27,Social Media
+S025,2025-03-10,C1025,Brittany Nelson,Toyota,4Runner,2023,SUV,46800,41200,11.99,Lisa Park,Finance,14800,48,Referral
+S026,2025-03-12,C1026,Tyler Carter,Nissan,Pathfinder,2024,SUV,40900,35800,12.48,Mike Torres,Finance,10200,23,Website
+S027,2025-03-15,C1027,Samantha Mitchell,Honda,HR-V,2024,SUV,27800,24100,13.31,Sarah Lee,Lease,0,17,Email Campaign
+S028,2025-03-17,C1028,Jordan Perez,Ford,Bronco,2024,SUV,52300,46100,11.85,David Kim,Finance,0,35,Walk-in
+S029,2025-03-19,C1029,Kayla Roberts,Chevrolet,Blazer,2024,SUV,36700,32000,12.81,Lisa Park,Finance,8100,26,Website
+S030,2025-03-22,C1030,Cameron Turner,Toyota,Prius,2024,Hybrid,31200,27400,12.16,Mike Torres,Cash,0,20,Referral
+S031,2025-03-24,C1031,Morgan Phillips,Nissan,Kicks,2024,SUV,23500,20300,13.62,Sarah Lee,Finance,0,8,Social Media
+S032,2025-03-26,C1032,Austin Campbell,Honda,Ridgeline,2024,Truck,41800,36700,12.20,David Kim,Finance,11800,31,Website
+S033,2025-03-28,C1033,Taylor Parker,Ford,Ranger,2024,Truck,35200,30800,12.50,Lisa Park,Finance,7400,29,Email Campaign
+S034,2025-03-30,C1034,Jordan Evans,Chevrolet,Tahoe,2023,SUV,62500,55800,10.71,Mike Torres,Finance,22000,58,Walk-in
+S035,2025-04-01,C1035,Casey Edwards,Toyota,Sienna,2024,Minivan,42900,37800,11.90,Sarah Lee,Finance,12500,24,Referral
+S036,2025-04-03,C1036,Riley Collins,Nissan,Frontier,2024,Truck,34700,30400,12.39,David Kim,Cash,0,15,Website
+S037,2025-04-05,C1037,Dakota Stewart,Honda,Passport,2024,SUV,39400,34500,12.43,Lisa Park,Finance,9600,19,Social Media
+S038,2025-04-08,C1038,Peyton Sanchez,Ford,Transit,2024,Van,43200,38100,11.81,Mike Torres,Finance,0,33,Walk-in
+S039,2025-04-10,C1039,Quinn Morris,Chevrolet,Colorado,2024,Truck,37900,33200,12.40,Sarah Lee,Finance,8500,28,Website
+S040,2025-04-12,C1040,Avery Rogers,Toyota,Tundra,2023,Truck,51200,45600,10.94,David Kim,Finance,16800,46,Email Campaign
+S041,2025-04-15,C1041,Skylar Reed,Nissan,Armada,2024,SUV,54800,48900,10.77,Lisa Park,Finance,19200,37,Referral
+S042,2025-04-17,C1042,River Cook,Honda,Insight,2024,Hybrid,28900,25200,12.78,Mike Torres,Cash,0,12,Website
+S043,2025-04-19,C1043,Sage Morgan,Ford,EcoSport,2024,SUV,26700,23300,12.70,Sarah Lee,Lease,0,21,Social Media
+S044,2025-04-22,C1044,Phoenix Bell,Chevrolet,Bolt,2024,Electric,32500,28700,11.69,David Kim,Finance,0,40,Walk-in
+S045,2025-04-24,C1045,Rowan Murphy,Toyota,Venza,2024,SUV,38800,34100,12.11,Lisa Park,Finance,10800,25,Website
+S046,2025-04-26,C1046,Sage Bailey,Nissan,Maxima,2024,Sedan,41300,36400,11.86,Mike Torres,Finance,13500,34,Email Campaign
+S047,2025-04-28,C1047,Finley Rivera,Honda,Clarity,2024,Hybrid,35600,31200,12.36,Sarah Lee,Cash,0,18,Referral
+S048,2025-04-30,C1048,Hayden Cooper,Ford,Expedition,2023,SUV,68200,61500,9.83,David Kim,Finance,24500,62,Walk-in
+S049,2025-05-02,C1049,Parker Richardson,Chevrolet,Suburban,2023,SUV,71800,65200,9.20,Lisa Park,Finance,28000,68,Website
+S050,2025-05-04,C1050,Emerson Cox,Toyota,Sequoia,2023,SUV,66500,59800,10.08,Mike Torres,Finance,23200,55,Referral
