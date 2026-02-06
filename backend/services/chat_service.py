@@ -53,8 +53,9 @@ class ChatService:
         # Update conversation's updated_at and auto-title on first user message
         conversation = self.db.query(Conversation).filter(Conversation.id == conversation_id).first()
         if conversation:
-            from datetime import datetime
-            conversation.updated_at = datetime.utcnow()
+            from datetime import datetime, timezone
+            # Use naive UTC datetime for SQLite compatibility
+            conversation.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
 
             if role == "user" and conversation.title == "New Conversation":
                 title = content.strip()[:60]

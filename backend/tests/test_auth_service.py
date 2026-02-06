@@ -1,6 +1,6 @@
 """Tests for AuthService: password hashing, user creation, authentication, sessions."""
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 # Set test database URL before any backend imports to avoid the module-level
 # create_all in dependencies.py trying to open the default sqlite file.
@@ -197,7 +197,7 @@ class TestSessions:
         token = auth.create_session(user.id)
         # Manually expire the session by setting expires_at to the past
         session_obj = db.query(Session).filter(Session.token == token).first()
-        session_obj.expires_at = datetime.utcnow() - timedelta(hours=1)
+        session_obj.expires_at = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(hours=1)
         db.commit()
         result = auth.validate_session(token)
         assert result is None
