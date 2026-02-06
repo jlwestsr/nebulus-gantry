@@ -90,6 +90,7 @@ class ExportService:
 
         # Lazy import to avoid loading fpdf2 if not needed
         from fpdf import FPDF
+        from fpdf.enums import XPos, YPos
 
         pdf = FPDF()
         pdf.set_auto_page_break(auto=True, margin=15)
@@ -97,7 +98,7 @@ class ExportService:
 
         # Header
         pdf.set_font("Helvetica", "B", 16)
-        pdf.cell(0, 10, conversation.title, ln=True, align="C")
+        pdf.cell(0, 10, conversation.title, new_x=XPos.LMARGIN, new_y=YPos.NEXT, align="C")
 
         pdf.set_font("Helvetica", "", 10)
         pdf.set_text_color(128, 128, 128)
@@ -106,9 +107,9 @@ class ExportService:
             first_date = messages[0].created_at.strftime("%Y-%m-%d %H:%M")
             last_date = messages[-1].created_at.strftime("%Y-%m-%d %H:%M")
             date_range = f"{first_date} - {last_date}"
-        pdf.cell(0, 6, f"User: {user_name}", ln=True, align="C")
+        pdf.cell(0, 6, f"User: {user_name}", new_x=XPos.LMARGIN, new_y=YPos.NEXT, align="C")
         if date_range:
-            pdf.cell(0, 6, date_range, ln=True, align="C")
+            pdf.cell(0, 6, date_range, new_x=XPos.LMARGIN, new_y=YPos.NEXT, align="C")
         pdf.ln(5)
 
         # Reset text color
@@ -127,7 +128,7 @@ class ExportService:
                 label = "Assistant:"
 
             timestamp = msg.created_at.strftime("%H:%M")
-            pdf.cell(0, 8, f"{label} ({timestamp})", ln=True)
+            pdf.cell(0, 8, f"{label} ({timestamp})", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
 
             # Message content
             pdf.set_font("Helvetica", "", 10)
@@ -141,7 +142,7 @@ class ExportService:
         pdf.set_font("Helvetica", "I", 8)
         pdf.set_text_color(128, 128, 128)
         export_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
-        pdf.cell(0, 5, f"Exported from Nebulus Gantry on {export_time}", ln=True, align="C")
+        pdf.cell(0, 5, f"Exported from Nebulus Gantry on {export_time}", new_x=XPos.LMARGIN, new_y=YPos.NEXT, align="C")
 
         return bytes(pdf.output())
 

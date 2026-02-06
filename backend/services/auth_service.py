@@ -1,6 +1,6 @@
 import secrets
 import bcrypt
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from sqlalchemy.orm import Session as DBSession
 
 from backend.models.user import User
@@ -44,7 +44,8 @@ class AuthService:
 
     def create_session(self, user_id: int) -> str:
         token = secrets.token_urlsafe(32)
-        expires_at = datetime.utcnow() + timedelta(hours=self.settings.session_expire_hours)
+        # Use naive UTC datetime for SQLite compatibility
+        expires_at = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(hours=self.settings.session_expire_hours)
         session = Session(user_id=user_id, token=token, expires_at=expires_at)
         self.db.add(session)
         self.db.commit()
@@ -54,7 +55,7 @@ class AuthService:
         session = self.db.query(Session).filter(Session.token == token).first()
         if not session:
             return None
-        if session.expires_at < datetime.utcnow():
+        if session.expires_at < datetime.now(timezone.utc).replace(tzinfo=None):
             self.db.delete(session)
             self.db.commit()
             return None

@@ -5,7 +5,7 @@ import os
 os.environ.setdefault("DATABASE_URL", "sqlite:///:memory:")
 
 import pytest  # noqa: E402
-from datetime import datetime, timedelta  # noqa: E402
+from datetime import datetime, timedelta, timezone  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
 from sqlalchemy import create_engine  # noqa: E402
 from sqlalchemy.orm import sessionmaker  # noqa: E402
@@ -165,7 +165,8 @@ class TestPinnedSorting:
     def test_pinned_conversations_first(self, client, test_user, db):
         """Test that pinned conversations appear before non-pinned ones."""
         user, token = test_user
-        now = datetime.utcnow()
+        # Use naive UTC datetime for SQLite compatibility
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
 
         # Create multiple conversations with varying dates and pin status
         conv1 = Conversation(
