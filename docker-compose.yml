@@ -8,11 +8,13 @@ services:
       - CHROMA_HOST=http://chromadb:8000
       - TABBY_HOST=http://tabby:5000
       - SECRET_KEY=dev-secret-change-in-production
-      - PYTHONPATH=/app
+      - PYTHONPATH=/app:/atom
     volumes:
       - ./data:/app/data
       - ./backend:/app/backend
       - /var/run/docker.sock:/var/run/docker.sock
+      - ../nebulus-atom:/atom:ro
+      - ${HOME}/.atom:/root/.atom:ro
     networks:
       - default
       - nebulus

@@ -8,6 +8,7 @@ import { Login } from './pages/Login';
 import { Chat } from './pages/Chat';
 import { Admin } from './pages/Admin';
 import { Settings } from './pages/Settings';
+import { Overlord } from './pages/Overlord';
 import { Personas } from './pages/Personas';
 
 function App() {
@@ -31,6 +32,7 @@ function App() {
                 <Routes>
                   <Route path="/" element={<Chat />} />
                   <Route path="/admin" element={<Admin />} />
+                  <Route path="/overlord" element={<Overlord />} />
                   <Route path="/settings" element={<Settings />} />
                   <Route path="/personas" element={<Personas />} />
                 </Routes>
