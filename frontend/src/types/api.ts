@@ -165,3 +165,130 @@ export interface DocumentScope {
   type: 'document' | 'collection';
   id: number;
 }
+
+// ── Overlord types ────────────────────────────────────────────────────────
+
+export interface OverlordGitState {
+  branch: string;
+  clean: boolean;
+  ahead: number;
+  behind: number;
+  last_commit: string;
+  last_commit_date: string;
+  stale_branches: string[];
+}
+
+export interface OverlordTestHealth {
+  has_tests: boolean;
+  test_command: string | null;
+}
+
+export interface OverlordProjectStatus {
+  name: string;
+  role: string;
+  git: OverlordGitState;
+  tests: OverlordTestHealth;
+  issues: string[];
+}
+
+export interface OverlordDaemonStatus {
+  running: boolean;
+  pid: number | null;
+}
+
+export interface OverlordConfigSummary {
+  autonomy_levels: Record<string, string>;
+  scheduled_tasks: Array<{ name: string; cron: string; enabled: boolean }>;
+}
+
+export interface OverlordDashboard {
+  projects: OverlordProjectStatus[];
+  daemon: OverlordDaemonStatus;
+  config: OverlordConfigSummary;
+}
+
+export interface OverlordGraph {
+  adjacency: Record<string, string[]>;
+  ascii: string;
+}
+
+export interface OverlordMemoryEntry {
+  id: string;
+  timestamp: string;
+  category: string;
+  project: string | null;
+  content: string;
+  metadata: Record<string, unknown>;
+}
+
+export interface OverlordMemoryList {
+  entries: OverlordMemoryEntry[];
+  count: number;
+}
+
+export interface OverlordScope {
+  projects: string[];
+  branches: string[];
+  destructive: boolean;
+  reversible: boolean;
+  affects_remote: boolean;
+  estimated_impact: string;
+}
+
+export interface OverlordStep {
+  id: string;
+  action: string;
+  project: string;
+  dependencies: string[];
+  model_tier: string | null;
+  timeout: number;
+}
+
+export interface OverlordPlan {
+  task: string;
+  steps: OverlordStep[];
+  scope: OverlordScope;
+  estimated_duration: number;
+  requires_approval: boolean;
+}
+
+export interface OverlordStepResult {
+  step_id: string;
+  success: boolean;
+  output: string;
+  error: string | null;
+  duration: number;
+}
+
+export interface OverlordDispatchResult {
+  status: string;
+  steps: OverlordStepResult[];
+  reason: string;
+}
+
+export interface OverlordProposal {
+  id: string;
+  task: string;
+  scope_projects: string[];
+  scope_impact: string;
+  affects_remote: boolean;
+  reason: string;
+  state: string;
+  created_at: string;
+  resolved_at: string | null;
+  result_summary: string | null;
+}
+
+export interface OverlordDetection {
+  detector: string;
+  project: string;
+  severity: string;
+  description: string;
+  proposed_action: string;
+}
+
+export interface OverlordNotificationStats {
+  urgent_count: number;
+  buffered_count: number;
+  last_digest_time: string | null;
+}

@@ -63,7 +63,7 @@ export function ServicesTab() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="text-gray-400">Loading services...</div>
+        <div className="text-n-muted">Loading services...</div>
       </div>
     );
   }
@@ -72,14 +72,14 @@ export function ServicesTab() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h3 className="text-lg font-medium text-gray-200">Container Services</h3>
-          <p className="text-sm text-gray-400 mt-1">
+          <h3 className="text-lg font-medium text-n-text">Container Services</h3>
+          <p className="text-sm text-n-muted mt-1">
             Manage Nebulus container services
           </p>
         </div>
         <button
           onClick={fetchServices}
-          className="px-3 py-1.5 text-sm text-gray-300 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors"
+          className="px-3 py-1.5 text-sm text-n-text-secondary bg-n-panel-2 hover:bg-n-hover rounded-lg transition-colors"
         >
           Refresh
         </button>
@@ -91,41 +91,41 @@ export function ServicesTab() {
         </div>
       )}
 
-      <div className="overflow-hidden rounded-lg border border-gray-700">
+      <div className="overflow-hidden rounded-lg border border-n-border">
         <table className="w-full">
           <thead>
-            <tr className="bg-gray-800/50">
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+            <tr className="bg-n-panel">
+              <th className="px-4 py-3 text-left text-xs font-medium text-n-muted uppercase tracking-wider">
                 Service
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-xs font-medium text-n-muted uppercase tracking-wider">
                 Status
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-xs font-medium text-n-muted uppercase tracking-wider">
                 Container ID
               </th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">
+              <th className="px-4 py-3 text-right text-xs font-medium text-n-muted uppercase tracking-wider">
                 Actions
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-700">
+          <tbody className="divide-y divide-n-border">
             {services.length === 0 ? (
               <tr>
-                <td colSpan={4} className="px-4 py-8 text-center text-gray-500">
+                <td colSpan={4} className="px-4 py-8 text-center text-n-muted">
                   No services found
                 </td>
               </tr>
             ) : (
               services.map((service) => (
-                <tr key={service.name} className="hover:bg-gray-800/30 transition-colors">
-                  <td className="px-4 py-3 text-sm font-medium text-gray-200">
+                <tr key={service.name} className="hover:bg-n-hover transition-colors">
+                  <td className="px-4 py-3 text-sm font-medium text-n-text">
                     {service.name}
                   </td>
                   <td className="px-4 py-3 text-sm">
                     {statusBadge(service.status)}
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-400 font-mono">
+                  <td className="px-4 py-3 text-sm text-n-muted font-mono">
                     {service.container_id
                       ? service.container_id.substring(0, 12)
                       : '--'}

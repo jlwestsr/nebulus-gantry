@@ -18,6 +18,16 @@ import type {
   Persona,
   CreatePersonaRequest,
   UpdatePersonaRequest,
+  OverlordDashboard,
+  OverlordProjectStatus,
+  OverlordGraph,
+  OverlordMemoryList,
+  OverlordMemoryEntry,
+  OverlordPlan,
+  OverlordDispatchResult,
+  OverlordProposal,
+  OverlordDetection,
+  OverlordNotificationStats,
 } from '../types/api';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
@@ -338,4 +348,83 @@ export const adminApi = {
     fetchApi<{ message: string }>(`/api/admin/personas/${id}`, {
       method: 'DELETE',
     }),
+};
+
+// ─── Overlord ─────────────────────────────────────────────────────────────
+
+export const overlordApi = {
+  // Tier 1: Dashboard
+  getDashboard: () => fetchApi<OverlordDashboard>('/api/overlord/dashboard'),
+
+  scanProject: (project: string) =>
+    fetchApi<OverlordProjectStatus>(`/api/overlord/scan/${encodeURIComponent(project)}`),
+
+  getGraph: () => fetchApi<OverlordGraph>('/api/overlord/graph'),
+
+  // Tier 2: Memory
+  listMemory: (params?: { query?: string; category?: string; project?: string; limit?: number }) => {
+    const searchParams = new URLSearchParams();
+    if (params?.query) searchParams.append('query', params.query);
+    if (params?.category) searchParams.append('category', params.category);
+    if (params?.project) searchParams.append('project', params.project);
+    if (params?.limit) searchParams.append('limit', params.limit.toString());
+    const qs = searchParams.toString();
+    return fetchApi<OverlordMemoryList>(`/api/overlord/memory${qs ? `?${qs}` : ''}`);
+  },
+
+  addMemory: (data: { category: string; content: string; project?: string }) =>
+    fetchApi<{ id: string; message: string }>('/api/overlord/memory', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  deleteMemory: (id: string) =>
+    fetchApi<{ message: string }>(`/api/overlord/memory/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    }),
+
+  // Tier 3: Dispatch
+  parseTask: (task: string) =>
+    fetchApi<OverlordPlan>('/api/overlord/dispatch/parse', {
+      method: 'POST',
+      body: JSON.stringify({ task }),
+    }),
+
+  executeTask: (task: string, autoApprove = false) =>
+    fetchApi<OverlordDispatchResult>('/api/overlord/dispatch/execute', {
+      method: 'POST',
+      body: JSON.stringify({ task, auto_approve: autoApprove }),
+    }),
+
+  listProposals: (state?: string) => {
+    const qs = state ? `?state=${encodeURIComponent(state)}` : '';
+    return fetchApi<{ proposals: OverlordProposal[] }>(`/api/overlord/proposals${qs}`);
+  },
+
+  approveProposal: (id: string) =>
+    fetchApi<{ message: string; result?: OverlordDispatchResult }>(
+      `/api/overlord/proposals/${encodeURIComponent(id)}/approve`,
+      { method: 'POST' }
+    ),
+
+  denyProposal: (id: string, reason = '') =>
+    fetchApi<{ message: string }>(
+      `/api/overlord/proposals/${encodeURIComponent(id)}/deny`,
+      { method: 'POST', body: JSON.stringify({ reason }) }
+    ),
+
+  // Tier 4: Audit
+  getAuditProposals: (state?: string, limit?: number) => {
+    const searchParams = new URLSearchParams();
+    if (state) searchParams.append('state', state);
+    if (limit) searchParams.append('limit', limit.toString());
+    const qs = searchParams.toString();
+    return fetchApi<{ proposals: OverlordProposal[] }>(`/api/overlord/audit/proposals${qs ? `?${qs}` : ''}`);
+  },
+
+  getDetections: () =>
+    fetchApi<{ detections: OverlordDetection[] }>('/api/overlord/audit/detections'),
+
+  getNotificationStats: () =>
+    fetchApi<OverlordNotificationStats>('/api/overlord/audit/notifications'),
 };

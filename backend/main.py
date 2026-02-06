@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from backend.routers import admin, auth, chat, documents, models, personas
+from backend.routers import admin, auth, chat, documents, models, overlord, personas
 
 app = FastAPI(title="Nebulus Gantry", version="2.0.0")
 
@@ -20,6 +20,7 @@ app.include_router(auth.router)
 app.include_router(chat.router)
 app.include_router(documents.router)
 app.include_router(models.router)
+app.include_router(overlord.router)
 app.include_router(personas.router)
 
 

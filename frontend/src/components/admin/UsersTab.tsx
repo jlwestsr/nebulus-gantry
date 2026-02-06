@@ -49,7 +49,7 @@ export function UsersTab() {
     const colors =
       role === 'admin'
         ? 'bg-purple-500/20 text-purple-400 border-purple-500/30'
-        : 'bg-gray-500/20 text-gray-400 border-gray-500/30';
+        : 'bg-n-panel-2 text-n-muted border-n-border';
     return (
       <span
         className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${colors}`}
@@ -62,7 +62,7 @@ export function UsersTab() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="text-gray-400">Loading users...</div>
+        <div className="text-n-muted">Loading users...</div>
       </div>
     );
   }
@@ -71,14 +71,14 @@ export function UsersTab() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h3 className="text-lg font-medium text-gray-200">User Management</h3>
-          <p className="text-sm text-gray-400 mt-1">
+          <h3 className="text-lg font-medium text-n-text">User Management</h3>
+          <p className="text-sm text-n-muted mt-1">
             Manage users and their roles
           </p>
         </div>
         <button
           onClick={() => setShowAddForm(true)}
-          className="px-3 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+          className="px-3 py-1.5 text-sm font-medium text-white bg-n-accent hover:bg-n-accent/80 rounded-lg transition-colors"
         >
           Add User
         </button>
@@ -115,37 +115,37 @@ export function UsersTab() {
         />
       )}
 
-      <div className="overflow-hidden rounded-lg border border-gray-700">
+      <div className="overflow-hidden rounded-lg border border-n-border">
         <table className="w-full">
           <thead>
-            <tr className="bg-gray-800/50">
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+            <tr className="bg-n-panel">
+              <th className="px-4 py-3 text-left text-xs font-medium text-n-muted uppercase tracking-wider">
                 User
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-xs font-medium text-n-muted uppercase tracking-wider">
                 Email
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-xs font-medium text-n-muted uppercase tracking-wider">
                 Role
               </th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">
+              <th className="px-4 py-3 text-right text-xs font-medium text-n-muted uppercase tracking-wider">
                 Actions
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-700">
+          <tbody className="divide-y divide-n-border">
             {users.length === 0 ? (
               <tr>
-                <td colSpan={4} className="px-4 py-8 text-center text-gray-500">
+                <td colSpan={4} className="px-4 py-8 text-center text-n-muted">
                   No users found
                 </td>
               </tr>
             ) : (
               users.map((user) => (
-                <tr key={user.id} className="hover:bg-gray-800/30 transition-colors">
-                  <td className="px-4 py-3 text-sm font-medium text-gray-200">
+                <tr key={user.id} className="hover:bg-n-hover transition-colors">
+                  <td className="px-4 py-3 text-sm font-medium text-n-text">
                     <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-full bg-gray-600 flex items-center justify-center text-xs font-medium text-gray-300">
+                      <div className="w-7 h-7 rounded-full bg-n-panel-2 flex items-center justify-center text-xs font-medium text-n-text-secondary">
                         {user.display_name
                           .split(' ')
                           .map((n) => n[0])
@@ -156,14 +156,14 @@ export function UsersTab() {
                       {user.display_name}
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-400">
+                  <td className="px-4 py-3 text-sm text-n-muted">
                     {user.email}
                   </td>
                   <td className="px-4 py-3 text-sm">{roleBadge(user.role)}</td>
                   <td className="px-4 py-3 text-right">
                     {confirmDeleteId === user.id ? (
                       <div className="flex items-center justify-end gap-2">
-                        <span className="text-xs text-gray-400">Confirm?</span>
+                        <span className="text-xs text-n-muted">Confirm?</span>
                         <button
                           onClick={() => handleDelete(user.id)}
                           disabled={deletingUserId === user.id}
@@ -173,7 +173,7 @@ export function UsersTab() {
                         </button>
                         <button
                           onClick={() => setConfirmDeleteId(null)}
-                          className="px-2.5 py-1 text-xs font-medium text-gray-400 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors"
+                          className="px-2.5 py-1 text-xs font-medium text-n-muted bg-n-panel-2 hover:bg-n-hover rounded-lg transition-colors"
                         >
                           No
                         </button>
@@ -246,12 +246,12 @@ function AddUserForm({
       />
 
       {/* Modal */}
-      <div className="relative w-full max-w-md bg-gray-800 border border-gray-700 rounded-xl shadow-2xl p-6">
+      <div className="relative w-full max-w-md bg-n-panel border border-n-border rounded-lg shadow-2xl p-6">
         <div className="flex items-center justify-between mb-5">
-          <h4 className="text-lg font-medium text-gray-200">Add New User</h4>
+          <h4 className="text-lg font-medium text-n-text">Add New User</h4>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-200 transition-colors"
+            className="text-n-muted hover:text-n-text transition-colors"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -261,7 +261,7 @@ function AddUserForm({
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">
+            <label className="block text-sm font-medium text-n-text-secondary mb-1">
               Display Name
             </label>
             <input
@@ -271,13 +271,13 @@ function AddUserForm({
               onChange={(e) =>
                 setFormData({ ...formData, display_name: e.target.value })
               }
-              className="w-full px-3 py-2 text-sm text-gray-200 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-gray-500"
+              className="w-full px-3 py-2 text-sm text-n-text bg-n-panel-2 border border-n-border rounded-lg focus:outline-none focus:ring-2 focus:ring-n-accent focus:border-transparent placeholder-n-muted"
               placeholder="John Doe"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">
+            <label className="block text-sm font-medium text-n-text-secondary mb-1">
               Email
             </label>
             <input
@@ -287,13 +287,13 @@ function AddUserForm({
               onChange={(e) =>
                 setFormData({ ...formData, email: e.target.value })
               }
-              className="w-full px-3 py-2 text-sm text-gray-200 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-gray-500"
+              className="w-full px-3 py-2 text-sm text-n-text bg-n-panel-2 border border-n-border rounded-lg focus:outline-none focus:ring-2 focus:ring-n-accent focus:border-transparent placeholder-n-muted"
               placeholder="john@example.com"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">
+            <label className="block text-sm font-medium text-n-text-secondary mb-1">
               Password
             </label>
             <input
@@ -304,13 +304,13 @@ function AddUserForm({
               onChange={(e) =>
                 setFormData({ ...formData, password: e.target.value })
               }
-              className="w-full px-3 py-2 text-sm text-gray-200 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-gray-500"
+              className="w-full px-3 py-2 text-sm text-n-text bg-n-panel-2 border border-n-border rounded-lg focus:outline-none focus:ring-2 focus:ring-n-accent focus:border-transparent placeholder-n-muted"
               placeholder="Minimum 6 characters"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">
+            <label className="block text-sm font-medium text-n-text-secondary mb-1">
               Role
             </label>
             <select
@@ -321,7 +321,7 @@ function AddUserForm({
                   role: e.target.value as 'user' | 'admin',
                 })
               }
-              className="w-full px-3 py-2 text-sm text-gray-200 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 text-sm text-n-text bg-n-panel-2 border border-n-border rounded-lg focus:outline-none focus:ring-2 focus:ring-n-accent focus:border-transparent"
             >
               <option value="user">User</option>
               <option value="admin">Admin</option>
@@ -332,14 +332,14 @@ function AddUserForm({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-gray-300 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors"
+              className="px-4 py-2 text-sm font-medium text-n-text-secondary bg-n-panel-2 hover:bg-n-hover rounded-lg transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-2 text-sm font-medium text-white bg-n-accent hover:bg-n-accent/80 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSubmitting ? 'Creating...' : 'Create User'}
             </button>
@@ -395,12 +395,12 @@ function EditUserForm({
       />
 
       {/* Modal */}
-      <div className="relative w-full max-w-md bg-gray-800 border border-gray-700 rounded-xl shadow-2xl p-6">
+      <div className="relative w-full max-w-md bg-n-panel border border-n-border rounded-lg shadow-2xl p-6">
         <div className="flex items-center justify-between mb-5">
-          <h4 className="text-lg font-medium text-gray-200">Edit User</h4>
+          <h4 className="text-lg font-medium text-n-text">Edit User</h4>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-200 transition-colors"
+            className="text-n-muted hover:text-n-text transition-colors"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -410,19 +410,19 @@ function EditUserForm({
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">
+            <label className="block text-sm font-medium text-n-text-secondary mb-1">
               Email
             </label>
             <input
               type="email"
               disabled
               value={user.email}
-              className="w-full px-3 py-2 text-sm text-gray-500 bg-gray-700/50 border border-gray-600 rounded-lg cursor-not-allowed"
+              className="w-full px-3 py-2 text-sm text-n-muted bg-n-panel-2 border border-n-border rounded-lg cursor-not-allowed"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">
+            <label className="block text-sm font-medium text-n-text-secondary mb-1">
               Display Name
             </label>
             <input
@@ -432,12 +432,12 @@ function EditUserForm({
               onChange={(e) =>
                 setFormData({ ...formData, display_name: e.target.value })
               }
-              className="w-full px-3 py-2 text-sm text-gray-200 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-gray-500"
+              className="w-full px-3 py-2 text-sm text-n-text bg-n-panel-2 border border-n-border rounded-lg focus:outline-none focus:ring-2 focus:ring-n-accent focus:border-transparent placeholder-n-muted"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">
+            <label className="block text-sm font-medium text-n-text-secondary mb-1">
               Role
             </label>
             <select
@@ -448,7 +448,7 @@ function EditUserForm({
                   role: e.target.value as 'user' | 'admin',
                 })
               }
-              className="w-full px-3 py-2 text-sm text-gray-200 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 text-sm text-n-text bg-n-panel-2 border border-n-border rounded-lg focus:outline-none focus:ring-2 focus:ring-n-accent focus:border-transparent"
             >
               <option value="user">User</option>
               <option value="admin">Admin</option>
@@ -456,7 +456,7 @@ function EditUserForm({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">
+            <label className="block text-sm font-medium text-n-text-secondary mb-1">
               Reset Password
             </label>
             <input
@@ -464,7 +464,7 @@ function EditUserForm({
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
               minLength={6}
-              className="w-full px-3 py-2 text-sm text-gray-200 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-gray-500"
+              className="w-full px-3 py-2 text-sm text-n-text bg-n-panel-2 border border-n-border rounded-lg focus:outline-none focus:ring-2 focus:ring-n-accent focus:border-transparent placeholder-n-muted"
               placeholder="Leave blank to keep current password"
             />
           </div>
@@ -473,14 +473,14 @@ function EditUserForm({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-gray-300 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors"
+              className="px-4 py-2 text-sm font-medium text-n-text-secondary bg-n-panel-2 hover:bg-n-hover rounded-lg transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-2 text-sm font-medium text-white bg-n-accent hover:bg-n-accent/80 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSubmitting ? 'Saving...' : 'Save Changes'}
             </button>

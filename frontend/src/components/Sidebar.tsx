@@ -96,7 +96,7 @@ function ConversationItem({
 
       {/* Title */}
       <span className="flex-1 truncate text-sm">
-        {conversation.title || 'New conversation'}
+        {conversation.title || 'New thread'}
       </span>
 
       {/* Pin button - shows on hover or when pinned */}
@@ -110,7 +110,7 @@ function ConversationItem({
           e.stopPropagation();
           onPin();
         }}
-        title={conversation.pinned ? 'Unpin conversation' : 'Pin conversation'}
+        title={conversation.pinned ? 'Unpin thread' : 'Pin thread'}
       >
         <svg
           className="w-4 h-4"
@@ -135,7 +135,7 @@ function ConversationItem({
             e.stopPropagation();
             setShowExportMenu(!showExportMenu);
           }}
-          title="Export conversation"
+          title="Export thread"
         >
           <svg
             className="w-4 h-4"
@@ -185,7 +185,7 @@ function ConversationItem({
           e.stopPropagation();
           onDelete();
         }}
-        title="Delete conversation"
+        title="Delete thread"
       >
         <svg
           className="w-4 h-4"
@@ -297,7 +297,7 @@ export function Sidebar() {
 
   const handleDelete = async (id: number) => {
     // Simple confirmation before delete
-    if (window.confirm('Delete this conversation?')) {
+    if (window.confirm('Delete this thread?')) {
       try {
         await deleteConversation(id);
       } catch {
@@ -350,7 +350,7 @@ export function Sidebar() {
               d="M12 4v16m8-8H4"
             />
           </svg>
-          <span className="text-sm font-medium">New Chat</span>
+          <span className="text-sm font-medium">New Thread</span>
         </button>
       </div>
 
@@ -372,7 +372,7 @@ export function Sidebar() {
           </svg>
           <input
             type="text"
-            placeholder="Search conversations..."
+            placeholder="Search threads..."
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             className="w-full pl-9 pr-8 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent"
@@ -432,7 +432,7 @@ export function Sidebar() {
               </div>
             ) : groupedConversations.length === 0 ? (
               <div className="text-center py-8 text-sm text-gray-500">
-                No conversations yet
+                No threads yet
               </div>
             ) : (
               groupedConversations.map(([group, convs]) => (

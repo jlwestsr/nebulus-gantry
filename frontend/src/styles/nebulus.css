@@ -1,0 +1,58 @@
+/*
+ * Nebulus Brand Tokens
+ * Source of truth: docs/brand/BRAND.md
+ *
+ * Monochrome-first. Accent is state-only (#6F75EC).
+ * Both themes use the same token names — values swap via .dark class.
+ */
+
+/* LIGHT mode (default) */
+:root {
+  --n-bg: #F6F6F6;
+  --n-panel: #FFF;
+  --n-panel-2: #F0F0F0;
+  --n-text: #101010;
+  --n-text-secondary: #404040;
+  --n-muted: #6B6B6B;
+  --n-border: #D2D2D2;
+  --n-hover: #E8E8E8;
+
+  /* Accent — Blue/Violet (state-only) */
+  --n-accent: #6F75EC;
+  --n-accent-weak: rgb(111 117 236 / 14%);
+  --n-accent-ghost: rgb(111 117 236 / 8%);
+}
+
+/* DARK mode */
+.dark {
+  --n-bg: #141416;
+  --n-panel: #222226;
+  --n-panel-2: #2A2A30;
+  --n-text: #F2F2F2;
+  --n-text-secondary: #C8C8C8;
+  --n-muted: #969696;
+  --n-border: #3C3C42;
+  --n-hover: #333;
+  --n-accent: #6F75EC;
+  --n-accent-weak: rgb(111 117 236 / 14%);
+  --n-accent-ghost: rgb(111 117 236 / 8%);
+}
+
+/*
+ * Register n-* tokens with Tailwind v4.
+ * @theme inline keeps var() references dynamic at runtime,
+ * so .dark class overrides propagate correctly.
+ */
+@theme inline {
+  --color-n-bg: var(--n-bg);
+  --color-n-panel: var(--n-panel);
+  --color-n-panel-2: var(--n-panel-2);
+  --color-n-text: var(--n-text);
+  --color-n-text-secondary: var(--n-text-secondary);
+  --color-n-muted: var(--n-muted);
+  --color-n-border: var(--n-border);
+  --color-n-hover: var(--n-hover);
+  --color-n-accent: var(--n-accent);
+  --color-n-accent-weak: var(--n-accent-weak);
+  --color-n-accent-ghost: var(--n-accent-ghost);
+}

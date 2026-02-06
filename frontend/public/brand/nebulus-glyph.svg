@@ -1,0 +1,26 @@
+<svg
+  width="128"
+  height="128"
+  viewBox="0 0 128 128"
+  xmlns="http://www.w3.org/2000/svg"
+  role="img"
+  aria-label="Nebulus system glyph">
+
+  <title>Nebulus Glyph</title>
+
+  <g
+    fill="none"
+    stroke="currentColor"
+    stroke-width="10"
+    stroke-linecap="square"
+    stroke-linejoin="miter">
+
+    <!-- Outer containment frame (partial) -->
+    <path d="M20 36V20h88v24"/>
+    <path d="M108 92v16H20V92"/>
+
+    <!-- Internal structure -->
+    <path d="M44 44l20 20 20-20"/>
+    <path d="M44 84l20-20 20 20"/>
+  </g>
+</svg>

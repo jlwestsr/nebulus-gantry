@@ -8,7 +8,7 @@ class ChatService:
     def __init__(self, db: DBSession):
         self.db = db
 
-    def create_conversation(self, user_id: int, title: str = "New Conversation") -> Conversation:
+    def create_conversation(self, user_id: int, title: str = "New Thread") -> Conversation:
         conversation = Conversation(user_id=user_id, title=title)
         self.db.add(conversation)
         self.db.commit()
@@ -57,7 +57,7 @@ class ChatService:
             # Use naive UTC datetime for SQLite compatibility
             conversation.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
 
-            if role == "user" and conversation.title == "New Conversation":
+            if role == "user" and conversation.title == "New Thread":
                 title = content.strip()[:60]
                 if len(content.strip()) > 60:
                     title = title.rsplit(" ", 1)[0] + "..."

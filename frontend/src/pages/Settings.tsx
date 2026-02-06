@@ -44,6 +44,7 @@ export function Settings() {
   const handleThemeChange = (newTheme: Theme) => {
     setTheme(newTheme);
     localStorage.setItem(THEME_KEY, newTheme);
+    document.documentElement.classList.toggle('dark', newTheme === 'dark');
   };
 
   return (
@@ -266,7 +267,7 @@ export function Settings() {
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-400">Application</span>
-                <span className="text-sm text-gray-200">Nebulus Gantry</span>
+                <span className="text-sm tracking-[0.08em] text-gray-200">NEBULUS GANTRY</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-400">Version</span>

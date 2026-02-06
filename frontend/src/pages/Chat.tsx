@@ -22,13 +22,6 @@ function extractMeta(text: string): { content: string; meta?: MessageMeta } {
   }
 }
 
-function getGreeting(displayName: string): string {
-  const hour = new Date().getHours();
-  const firstName = displayName.split(' ')[0];
-  if (hour < 12) return `Good morning, ${firstName}`;
-  if (hour < 17) return `Good afternoon, ${firstName}`;
-  return `Good evening, ${firstName}`;
-}
 
 export function Chat() {
   const { currentConversationId, updateConversationTitle, createConversation, setModelSwitching } = useChatStore();
@@ -151,7 +144,7 @@ export function Chat() {
           // Fetch the updated conversation to get the new title
           try {
             const data = await chatApi.getConversation(currentConversationId);
-            if (data.conversation.title !== 'New Conversation') {
+            if (data.conversation.title !== 'New Thread') {
               updateConversationTitle(
                 currentConversationId,
                 data.conversation.title
@@ -223,7 +216,7 @@ export function Chat() {
             {/* Chat Header with Persona Selector */}
             <div className="flex items-center justify-between px-4 py-2 border-b border-gray-700/50">
               <div className="text-sm text-gray-400 truncate">
-                {currentConversation?.title || 'New Conversation'}
+                {currentConversation?.title || 'New Thread'}
               </div>
               <PersonaSelector
                 conversationId={currentConversationId}
@@ -254,7 +247,7 @@ export function Chat() {
             />
           </>
         ) : (
-          /* Welcome screen when no conversation selected */
+          /* Empty state when no thread selected */
           <div className="flex-1 flex flex-col">
             <div className="flex-1 flex items-center justify-center px-4">
               <div className="text-center max-w-lg">
@@ -269,15 +262,15 @@ export function Chat() {
                       strokeLinecap="round"
                       strokeLinejoin="round"
                       strokeWidth={1.5}
-                      d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                      d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
                     />
                   </svg>
                 </div>
                 <h2 className="text-xl sm:text-2xl font-semibold text-gray-200 mb-2">
-                  {user ? getGreeting(user.display_name) : 'Welcome to Nebulus Gantry'}
+                  No threads yet.
                 </h2>
                 <p className="text-gray-400 text-sm sm:text-base max-w-md mx-auto">
-                  Start a new conversation or type a message below.
+                  Start a new thread to work with Nebulus, or resume an existing one.
                 </p>
               </div>
             </div>

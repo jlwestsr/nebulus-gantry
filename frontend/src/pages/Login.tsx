@@ -26,7 +26,12 @@ export function Login() {
     <div className="min-h-screen flex items-center justify-center bg-gray-900 px-4">
       <div className="w-full max-w-md p-6 sm:p-8 space-y-6 bg-gray-800 rounded-xl shadow-lg border border-gray-700">
         <div className="text-center">
-          <h1 className="text-3xl font-bold text-gray-100">Nebulus Gantry</h1>
+          <h1 className="flex items-center justify-center gap-2.5 text-n-text">
+            <img src="/brand/nebulus-glyph.svg" className="h-6 w-6 opacity-90" alt="Nebulus" />
+            <span className="text-lg tracking-[0.12em] font-semibold">
+              NEBULUS <span className="text-n-text-secondary font-medium">GANTRY</span>
+            </span>
+          </h1>
           <p className="mt-2 text-gray-400">Sign in to continue</p>
         </div>
 
