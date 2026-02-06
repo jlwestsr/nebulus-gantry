@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import type { KeyboardEvent, ChangeEvent } from 'react';
 import { modelsApi } from '../services/api';
 import type { Model } from '../types/api';
+import { useChatStore } from '../stores/chatStore';
 
 interface MessageInputProps {
   onSend: (content: string, model?: string) => void;
@@ -20,6 +21,8 @@ export function MessageInput({
   const [selectedModel, setSelectedModel] = useState<string | null>(null);
   const [showModelPicker, setShowModelPicker] = useState(false);
   const modelPickerRef = useRef<HTMLDivElement>(null);
+
+  const { isModelSwitching, targetModel, setModelSwitching } = useChatStore();
 
   const fetchModels = useCallback(async () => {
     try {
@@ -71,14 +74,28 @@ export function MessageInput({
     setContent(e.target.value);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const trimmed = content.trim();
     if (trimmed && !disabled) {
+      // Check if model needs switching
+      const activeModel = models.find((m) => m.active);
+      if (selectedModel && activeModel && selectedModel !== activeModel.id) {
+        setModelSwitching(true, selectedModel);
+      }
+
       onSend(trimmed, selectedModel || undefined);
       setContent('');
       // Reset textarea height after clearing
       if (textareaRef.current) {
         textareaRef.current.style.height = 'auto';
+      }
+
+      // Refresh models after a short delay to reflect the switch
+      if (isModelSwitching) {
+        setTimeout(() => {
+          fetchModels();
+          setModelSwitching(false);
+        }, 1000);
       }
     }
   };
@@ -174,7 +191,16 @@ export function MessageInput({
             </svg>
           </button>
         </div>
-        {disabled && (
+        {isModelSwitching && targetModel && (
+          <div className="mt-2 text-center text-xs text-yellow-500/80 flex items-center justify-center gap-2">
+            <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span>Switching to {targetModel}... (this may take 5-30 seconds)</span>
+          </div>
+        )}
+        {disabled && !isModelSwitching && (
           <div className="mt-2 text-center text-xs text-gray-500">
             Generating response...
           </div>

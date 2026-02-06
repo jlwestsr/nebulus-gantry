@@ -31,7 +31,7 @@ function getGreeting(displayName: string): string {
 }
 
 export function Chat() {
-  const { currentConversationId, updateConversationTitle, createConversation } = useChatStore();
+  const { currentConversationId, updateConversationTitle, createConversation, setModelSwitching } = useChatStore();
   const { user } = useAuthStore();
   const [messages, setMessages] = useState<Message[]>([]);
   const [currentConversation, setCurrentConversation] = useState<Conversation | null>(null);
@@ -182,9 +182,11 @@ export function Chat() {
         );
       } finally {
         setIsSending(false);
+        // Clear model switching state after streaming completes
+        setModelSwitching(false);
       }
     },
-    [currentConversationId, isSending, messages.length, updateConversationTitle]
+    [currentConversationId, isSending, messages.length, updateConversationTitle, setModelSwitching]
   );
 
   // Auto-send pending message when a conversation is created from the welcome screen

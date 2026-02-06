@@ -8,6 +8,10 @@ interface ChatState {
   isLoading: boolean;
   error: string | null;
 
+  // Model switching state
+  isModelSwitching: boolean;
+  targetModel: string | null;
+
   // Search state
   searchQuery: string;
   searchResults: SearchResult[];
@@ -22,6 +26,9 @@ interface ChatState {
   // Pin action
   pinConversation: (id: number) => Promise<void>;
 
+  // Model switching actions
+  setModelSwitching: (switching: boolean, model?: string) => void;
+
   // Search actions
   setSearchQuery: (query: string) => void;
   performSearch: (query: string) => Promise<void>;
@@ -33,6 +40,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
   currentConversationId: null,
   isLoading: false,
   error: null,
+
+  // Model switching state
+  isModelSwitching: false,
+  targetModel: null,
 
   // Search state
   searchQuery: '',
@@ -132,5 +143,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   clearSearch: () => {
     set({ searchQuery: '', searchResults: [], isSearching: false });
+  },
+
+  setModelSwitching: (switching: boolean, model?: string) => {
+    set({ isModelSwitching: switching, targetModel: model || null });
   },
 }));

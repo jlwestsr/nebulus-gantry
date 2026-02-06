@@ -316,8 +316,21 @@ async def send_message(  # noqa: C901
         except Exception as e:
             logger.warning(f"Failed to load persona: {e}")
 
-    # Query active model name for system prompt
+    # Ensure requested model is loaded (auto-switch if needed)
     model_service = ModelService()
+    if request.model:
+        active_model = await model_service.get_active_model()
+        if not active_model or active_model["id"] != request.model:
+            logger.info(f"Switching model from {active_model['id'] if active_model else 'none'} to {request.model}")
+            switch_success = await model_service.switch_model(request.model)
+            if not switch_success:
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Failed to load model '{request.model}'. Please try again or select a different model."
+                )
+            logger.info(f"Model switched successfully to {request.model}")
+
+    # Query active model name for system prompt
     active_model = await model_service.get_active_model()
     model_name = active_model["name"] if active_model else "an AI assistant"
 
