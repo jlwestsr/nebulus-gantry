@@ -591,11 +591,14 @@ class TestModelUnload:
     def test_unload_model_tabby_unavailable(self, client, admin_user):
         """POST /admin/models/unload returns 503 when TabbyAPI is unreachable."""
         _, token = admin_user
-        response = client.post(
-            "/api/admin/models/unload",
-            cookies={"session_token": token},
-        )
-        # TabbyAPI not running in test environment -> 503
+        with patch("backend.routers.admin._model_service") as mock_svc:
+            from unittest.mock import AsyncMock
+
+            mock_svc.unload_model = AsyncMock(return_value=False)
+            response = client.post(
+                "/api/admin/models/unload",
+                cookies={"session_token": token},
+            )
         assert response.status_code == 503
 
     def test_unload_model_success(self, client, admin_user):

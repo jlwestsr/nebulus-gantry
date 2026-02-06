@@ -356,11 +356,11 @@ class TestCascadeDelete:
 class TestDocumentSearch:
     """Test document search functionality."""
 
-    def test_search_returns_empty_when_chroma_unavailable(self, db):
+    @patch.object(DocumentService, "_get_chroma_collection", return_value=None)
+    def test_search_returns_empty_when_chroma_unavailable(self, mock_chroma, db):
         """Returns empty results when ChromaDB is unavailable."""
         user = _make_user(db)
         service = DocumentService(db)
-        # ChromaDB should be unavailable in tests
 
         results = service.search_documents(user.id, "test query")
         assert results == []

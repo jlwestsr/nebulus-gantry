@@ -32,4 +32,4 @@ services:
 networks:
   nebulus:
     external: true
-    name: nebulus_ai-network
+    name: nebulus-prime_ai-network
