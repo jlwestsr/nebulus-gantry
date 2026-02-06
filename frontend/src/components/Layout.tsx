@@ -77,7 +77,12 @@ export function Layout({ children }: LayoutProps) {
             </button>
 
             <h1 className="flex items-center gap-2 text-n-text">
-              <img src="/brand/nebulus-glyph.svg" className="h-4 w-4 opacity-90" alt="Nebulus" />
+              <svg className="h-4 w-4 opacity-90" viewBox="0 0 128 128" fill="none" stroke="currentColor" strokeWidth={10} strokeLinecap="square" strokeLinejoin="miter" aria-hidden="true">
+                <path d="M20 36V20h88v24" />
+                <path d="M108 92v16H20V92" />
+                <path d="M44 44l20 20 20-20" />
+                <path d="M44 84l20-20 20 20" />
+              </svg>
               <span className="text-sm tracking-[0.12em] font-semibold">
                 NEBULUS <span className="text-n-text-secondary font-medium">GANTRY</span>
               </span>
