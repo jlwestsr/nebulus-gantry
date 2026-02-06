@@ -2,10 +2,11 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { Sidebar } from '../components/Sidebar';
 import { MessageList } from '../components/MessageList';
 import { MessageInput } from '../components/MessageInput';
+import { PersonaSelector } from '../components/PersonaSelector';
 import { useChatStore } from '../stores/chatStore';
 import { useAuthStore } from '../stores/authStore';
 import { chatApi } from '../services/api';
-import type { Message, MessageMeta } from '../types/api';
+import type { Message, MessageMeta, Conversation, Persona } from '../types/api';
 
 const META_MARKER = '\n\n__META__';
 
@@ -33,6 +34,7 @@ export function Chat() {
   const { currentConversationId, updateConversationTitle, createConversation } = useChatStore();
   const { user } = useAuthStore();
   const [messages, setMessages] = useState<Message[]>([]);
+  const [currentConversation, setCurrentConversation] = useState<Conversation | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -42,6 +44,7 @@ export function Chat() {
   useEffect(() => {
     if (!currentConversationId) {
       setMessages([]);
+      setCurrentConversation(null);
       return;
     }
 
@@ -51,9 +54,11 @@ export function Chat() {
       try {
         const data = await chatApi.getConversation(currentConversationId);
         setMessages(data.messages);
+        setCurrentConversation(data.conversation);
       } catch (err) {
         setError((err as Error).message);
         setMessages([]);
+        setCurrentConversation(null);
       } finally {
         setIsLoading(false);
       }
@@ -61,6 +66,19 @@ export function Chat() {
 
     fetchMessages();
   }, [currentConversationId]);
+
+  // Handle persona change
+  const handlePersonaChange = useCallback((persona: Persona | null) => {
+    setCurrentConversation((prev) =>
+      prev
+        ? {
+            ...prev,
+            persona_id: persona?.id ?? null,
+            persona_name: persona?.name ?? null,
+          }
+        : null
+    );
+  }, []);
 
   // Handle sending a message with streaming response
   const handleSendMessage = useCallback(
@@ -200,6 +218,19 @@ export function Chat() {
       <div className="flex-1 flex flex-col bg-gray-800 min-w-0">
         {currentConversationId ? (
           <>
+            {/* Chat Header with Persona Selector */}
+            <div className="flex items-center justify-between px-4 py-2 border-b border-gray-700/50">
+              <div className="text-sm text-gray-400 truncate">
+                {currentConversation?.title || 'New Conversation'}
+              </div>
+              <PersonaSelector
+                conversationId={currentConversationId}
+                currentPersonaId={currentConversation?.persona_id ?? null}
+                currentPersonaName={currentConversation?.persona_name ?? null}
+                onPersonaChange={handlePersonaChange}
+              />
+            </div>
+
             {/* Error display */}
             {error && (
               <div className="px-4 py-2 bg-red-900/50 text-red-200 text-sm text-center border-b border-red-800/30">

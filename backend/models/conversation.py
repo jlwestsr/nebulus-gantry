@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean, Text
 from sqlalchemy.orm import relationship
 from backend.database import Base
 
@@ -14,5 +14,16 @@ class Conversation(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+    # Knowledge Vault: document scope for RAG
+    document_scope = Column(Text, nullable=True)  # JSON array of doc/collection IDs
+
+    # Personas: assigned persona for this conversation
+    persona_id = Column(
+        Integer, ForeignKey("personas.id", ondelete="SET NULL"), nullable=True
+    )
+
     user = relationship("User", backref="conversations")
-    messages = relationship("Message", back_populates="conversation", cascade="all, delete-orphan")
+    messages = relationship(
+        "Message", back_populates="conversation", cascade="all, delete-orphan"
+    )
+    persona = relationship("Persona")

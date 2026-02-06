@@ -5,8 +5,9 @@ import { ModelsTab } from '../components/admin/ModelsTab';
 import { LogsTab } from '../components/admin/LogsTab';
 import { UsersTab } from '../components/admin/UsersTab';
 import { DataTab } from '../components/admin/DataTab';
+import { PersonasTab } from '../components/admin/PersonasTab';
 
-type TabId = 'services' | 'models' | 'logs' | 'users' | 'data';
+type TabId = 'services' | 'models' | 'logs' | 'users' | 'data' | 'personas';
 
 interface Tab {
   id: TabId;
@@ -85,6 +86,20 @@ const TABS: Tab[] = [
       </svg>
     ),
   },
+  {
+    id: 'personas',
+    label: 'Personas',
+    icon: (
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={1.5}
+          d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+        />
+      </svg>
+    ),
+  },
 ];
 
 export function Admin() {
@@ -103,6 +118,8 @@ export function Admin() {
         return <UsersTab />;
       case 'data':
         return <DataTab />;
+      case 'personas':
+        return <PersonasTab />;
     }
   };
 
