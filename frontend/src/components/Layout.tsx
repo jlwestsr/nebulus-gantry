@@ -76,8 +76,11 @@ export function Layout({ children }: LayoutProps) {
               </svg>
             </button>
 
-            <h1 className="text-xl font-semibold text-gray-100">
-              Nebulus Gantry
+            <h1 className="flex items-center gap-2 text-n-text">
+              <img src="/brand/nebulus-glyph.svg" className="h-4 w-4 opacity-90" alt="Nebulus" />
+              <span className="text-sm tracking-[0.12em] font-semibold">
+                NEBULUS <span className="text-n-text-secondary font-medium">GANTRY</span>
+              </span>
             </h1>
           </div>
 
@@ -86,7 +89,7 @@ export function Layout({ children }: LayoutProps) {
             <button
               onClick={openSearch}
               className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-400 bg-gray-700 border border-gray-600 rounded-lg hover:bg-gray-600 hover:text-gray-200 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-              title="Search conversations (Ctrl+K)"
+              title="Search threads (Ctrl+K)"
             >
               <svg
                 className="w-4 h-4"

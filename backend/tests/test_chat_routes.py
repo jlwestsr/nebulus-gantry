@@ -97,7 +97,7 @@ class TestCreateConversation:
         assert response.status_code == 200
         data = response.json()
         assert "id" in data
-        assert data["title"] == "New Conversation"
+        assert data["title"] == "New Thread"
 
     def test_create_conversation_unauthenticated(self, client):
         """POST /api/chat/conversations without cookie returns 401."""

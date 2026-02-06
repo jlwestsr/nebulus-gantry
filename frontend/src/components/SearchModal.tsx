@@ -145,7 +145,7 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
             value={query}
             onChange={(e) => handleInputChange(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Search conversations..."
+            placeholder="Search threads..."
             className="flex-1 bg-transparent text-gray-100 placeholder-gray-500 text-base outline-none"
           />
           {isSearching && (
@@ -166,7 +166,7 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
 
           {!query.trim() && (
             <div className="px-4 py-8 text-center text-gray-500 text-sm">
-              Type to search across all conversations
+              Type to search across all threads
             </div>
           )}
 

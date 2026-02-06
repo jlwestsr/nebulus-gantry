@@ -46,7 +46,7 @@ export function DataTab() {
       <div>
         <h2 className="text-lg font-medium text-gray-100">Data Export</h2>
         <p className="mt-1 text-sm text-gray-400">
-          Export conversation data as a ZIP file containing JSON files.
+          Export thread data as a ZIP file containing JSON files.
         </p>
       </div>
 
@@ -129,7 +129,7 @@ export function DataTab() {
                     d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
                   />
                 </svg>
-                Export Conversations
+                Export Threads
               </>
             )}
           </button>
@@ -137,8 +137,8 @@ export function DataTab() {
 
         {/* Help text */}
         <p className="text-xs text-gray-500">
-          The export will download a ZIP file containing one JSON file per conversation.
-          Each JSON file includes the conversation metadata and all messages.
+          The export will download a ZIP file containing one JSON file per thread.
+          Each JSON file includes the thread metadata and all messages.
         </p>
       </div>
     </div>

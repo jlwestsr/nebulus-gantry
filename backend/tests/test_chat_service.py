@@ -64,14 +64,14 @@ class TestCreateConversation:
     """Test ChatService.create_conversation."""
 
     def test_creates_with_default_title(self, db):
-        """Default title is 'New Conversation', correct user_id, non-null id."""
+        """Default title is 'New Thread', correct user_id, non-null id."""
         user = _make_user(db)
         chat = ChatService(db)
         conv = chat.create_conversation(user.id)
 
         assert conv.id is not None
         assert conv.user_id == user.id
-        assert conv.title == "New Conversation"
+        assert conv.title == "New Thread"
 
     def test_creates_with_custom_title(self, db):
         """Custom title parameter is stored correctly."""
@@ -226,12 +226,12 @@ class TestAddMessage:
         assert msg.content == "Hello, world!"
 
     def test_auto_titles_on_first_user_message(self, db):
-        """First user message replaces 'New Conversation' title."""
+        """First user message replaces 'New Thread' title."""
         user = _make_user(db)
         chat = ChatService(db)
         conv = chat.create_conversation(user.id)
 
-        assert conv.title == "New Conversation"
+        assert conv.title == "New Thread"
         chat.add_message(conv.id, "user", "Tell me about Python")
         db.refresh(conv)
 
@@ -277,7 +277,7 @@ class TestAddMessage:
         chat.add_message(conv.id, "assistant", "I can help with that")
         db.refresh(conv)
 
-        assert conv.title == "New Conversation"
+        assert conv.title == "New Thread"
 
 
 # -- TestGetMessages ----------------------------------------------------------
