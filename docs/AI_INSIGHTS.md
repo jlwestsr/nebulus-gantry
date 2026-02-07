@@ -21,7 +21,7 @@ This document serves as the **long-term memory** for AI agents working on **Nebu
 - **CORS Origins**: The backend CORS configuration must include all development ports. Missing a port (e.g., `3001` for the frontend Docker container) will cause silent request failures.
 - **Tailwind CSS v4 Import Syntax**: The CSS entry point MUST use `@import "tailwindcss"` (bare specifier), NOT `@import url("tailwindcss")`. The `url()` wrapper prevents the `@tailwindcss/vite` plugin's content scanner from connecting to the module graph, resulting in theme/base loading but zero utility classes generated. The `stylelint` `import-notation` rule is disabled in `.stylelintrc.json` to prevent auto-fixing back to `url()` syntax.
 - **Tailwind CSS v4 Syntax**: Tailwind v4 uses `@plugin` syntax, not `@import` for plugins. Do not use Tailwind v3 patterns.
-- **Conversation Title Matching**: The frontend uses "New Conversation" as the default title for new conversations. This string must match the backend default exactly for auto-title generation to work correctly.
+- **Thread Title Matching**: The frontend uses "New Thread" as the default title for new threads. This string must match the backend default in `chat_service.py` exactly for auto-title generation to work correctly.
 - **PYTHONPATH for Tests**: Pre-commit hooks run `pytest` with `PYTHONPATH` set to include `src/` and the project root. If tests fail in pre-commit but pass locally, check the `PYTHONPATH` configuration in `.pre-commit-config.yaml`.
 - **Docker `follow=True` Hangs Tests**: The `DockerService.stream_logs()` method uses `follow=True` which creates an infinite stream. Tests that hit the SSE log endpoint **must** mock `_docker_service` — otherwise the test client will hang indefinitely waiting for the stream to end.
 - **Test File E402 Imports**: Several test files use `os.environ.setdefault("DATABASE_URL", ...)` before imports, triggering flake8 E402. These are suppressed with `# noqa: E402` and are necessary — the env var must be set before any backend module is imported.
@@ -67,7 +67,7 @@ This document serves as the **long-term memory** for AI agents working on **Nebu
 - **Admin Log Streaming**: Fully implemented. `DockerService.stream_logs()` → SSE endpoint → `LogsTab` with live viewer, auto-scroll, pause/clear, connection status. Uses `EventSource` with cookie auth.
 - **Knowledge Vault (Tier 1.5)**: Fully implemented. Document upload (PDF/TXT/CSV/DOCX), ChromaDB indexing, RAG retrieval with citations, collection management. 22 tests.
 - **Personas (Tier 1.5)**: Fully implemented. User and system personas, temperature control, conversation assignment, admin management. 26 tests.
-- **Light Theme**: Not implemented. `Settings.tsx` shows "not yet available" message. Dark mode only.
+- **Light/Dark Theme**: Implemented. `Settings.tsx` toggles `.dark` class on `<html>` via `document.documentElement.classList.toggle()`. Theme persists in `localStorage('nebulus-theme')`. Default is dark.
 - **v2 Maturity**: Tier 1 complete (1.1-1.5). 272 backend tests passing. Ready for Tier 2 (compliance features).
 
 ## 8. Session Notes (2026-02-05)
@@ -150,3 +150,37 @@ This document serves as the **long-term memory** for AI agents working on **Nebu
 - Model must be loaded before chat works: `POST /v1/model/load {"model_name": "..."}`
 - 503 errors indicate no model loaded, not service down
 - Model loading streams progress: `{"module": N, "modules": 67, "status": "processing"}`
+
+## 10. Session Notes (2026-02-06) — Brand Integration Phase 2
+
+### Tailwind v4 Dark Mode with CSS Custom Properties
+
+- **`@theme` resolves `var()` statically**: In Tailwind v4, `@theme { --color-n-bg: var(--n-bg); }` resolves `var(--n-bg)` at build time using `:root` values. The `.dark` class overrides never propagate. The entire app renders in light theme even when `.dark` is on `<html>`.
+- **Fix: `@theme inline`**: Use `@theme inline { --color-n-bg: var(--n-bg); }` — the `inline` keyword keeps `var()` references dynamic at runtime so `.dark` class overrides work correctly.
+- **CSS variable declarations outside `@layer base`**: Move `:root` and `.dark` blocks out of `@layer base` for proper specificity. `@layer base` has lower priority than unlayered rules.
+- **`.dark` class must be applied**: The app defaults to dark theme but nothing was adding `class="dark"` to `<html>`. Fixed in three places: `index.html` (default), `main.tsx` (reads localStorage on load), `Settings.tsx` (toggles class on change via `document.documentElement.classList.toggle`).
+- **`@custom-variant dark`**: Not needed if using `.dark` class directly in CSS selectors. Only needed if you want `dark:` utility variants to respond to the class instead of `prefers-color-scheme`.
+
+### Brand Token Architecture (`nebulus.css`)
+
+- **Token flow**: `:root`/`.dark` define `--n-*` raw values → `@theme inline` maps `--color-n-*: var(--n-*)` → Tailwind generates `bg-n-*`, `text-n-*`, `border-n-*` utilities.
+- **File location**: `frontend/src/styles/nebulus.css`, imported via `@import "./styles/nebulus.css"` in `index.css`.
+- **Dark theme calibrated values**: `--n-bg: #141416`, `--n-panel: #222226`, `--n-panel-2: #2A2A30`, `--n-border: #3C3C42`, `--n-muted: #969696`.
+
+### SVG Glyph as `<img>` vs Inline `<svg>`
+
+- **`currentColor` does not inherit via `<img>`**: When an SVG with `stroke="currentColor"` is loaded as `<img src="...">`, `currentColor` defaults to black — it cannot inherit the parent element's CSS color. The glyph renders as a black mark on dark backgrounds.
+- **Fix: inline `<svg>`**: Inline SVGs inherit `currentColor` from the parent's `color` property (via `text-n-text` etc.). Always use inline SVGs when `currentColor` inheritance is needed.
+- **Static SVG file kept for favicon**: `public/brand/nebulus-glyph.svg` is still used as the favicon (`<link rel="icon">`). Favicons don't need `currentColor` — browsers render them in their own context.
+
+### Micro-Glyph Design at Icon Scale
+
+- **Complex glyphs collapse at 16px**: The original containment-frame + chevron glyph (4 paths, partial box with X-like crossings) was visually identical to a browser broken-image icon at 16px. Design for the target size, not the design canvas.
+- **Final glyph: Neural Spike**: `M24 72H48L62 36L78 92L90 52H108` — a single continuous waveform stroke. Flat baseline entry, asymmetric peak-trough-recovery, flat exit. StrokeWidth 10 at 16px, 8 at 24px.
+- **Glyph selection criteria**: No closed geometry (avoids box/container confusion), no line crossings, no symmetry, open endpoints at different positions.
+
+### Thread Terminology
+
+- **"Conversation" → "Thread" everywhere in UI**: All user-facing copy uses "thread(s)". Internal code (variable names, API routes, database models) still uses "conversation" — only the display strings changed.
+- **Backend default title**: `chat_service.py` uses `"New Thread"` as the default title. Frontend checks `data.conversation.title !== 'New Thread'` for auto-title detection. These strings must match exactly.
+- **Conversation title in AI_INSIGHTS.md Section 2**: The pitfall note about "Conversation Title Matching" still references the old string. The actual default is now `"New Thread"`.
