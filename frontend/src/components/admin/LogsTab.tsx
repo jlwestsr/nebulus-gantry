@@ -26,6 +26,7 @@ export function LogsTab() {
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const esRef = useRef<EventSource | null>(null);
+  const mountedRef = useRef(true);
   const userScrolledUpRef = useRef(false);
   const nextIdRef = useRef(0);
   const pausedRef = useRef(false);
@@ -81,12 +82,15 @@ export function LogsTab() {
     const es = adminApi.streamLogs(selectedService);
     esRef.current = es;
 
+    mountedRef.current = true;
+
     es.onopen = () => {
+      if (!mountedRef.current) return;
       setStatus('connected');
     };
 
     es.onmessage = (event: MessageEvent) => {
-      if (pausedRef.current) return;
+      if (!mountedRef.current || pausedRef.current) return;
       setLines((prev) => {
         const updated = [...prev, { id: nextIdRef.current++, text: event.data }];
         if (updated.length > MAX_LOG_LINES) {
@@ -97,6 +101,7 @@ export function LogsTab() {
     };
 
     es.onerror = () => {
+      if (!mountedRef.current) return;
       // EventSource will try to reconnect automatically for non-fatal errors,
       // but if the readyState is CLOSED, it won't reconnect.
       if (es.readyState === EventSource.CLOSED) {
@@ -107,6 +112,7 @@ export function LogsTab() {
     };
 
     return () => {
+      mountedRef.current = false;
       es.close();
       esRef.current = null;
     };

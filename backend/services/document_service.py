@@ -10,14 +10,12 @@ Provides:
 """
 import io
 import logging
-from typing import Optional
 
-import chromadb
 from sqlalchemy.orm import Session as DBSession
 
-from backend.config import Settings
 from backend.models.collection import Collection
 from backend.models.document import Document
+from backend.services.chroma_pool import get_chroma_client
 
 logger = logging.getLogger(__name__)
 
@@ -109,29 +107,12 @@ class DocumentService:
 
     def __init__(self, db: DBSession):
         self.db = db
-        self.settings = Settings()
-        self._chroma_client: Optional[chromadb.HttpClient] = None
-        self._chroma_available = False
-
-        try:
-            host_url = self.settings.chroma_host
-            if host_url.startswith("http://"):
-                host_url = host_url[7:]
-            elif host_url.startswith("https://"):
-                host_url = host_url[8:]
-
-            if ":" in host_url:
-                host, port_str = host_url.split(":", 1)
-                port = int(port_str)
-            else:
-                host = host_url
-                port = 8000
-
-            self._chroma_client = chromadb.HttpClient(host=host, port=port)
-            self._chroma_available = True
+        self._chroma_client = get_chroma_client()
+        self._chroma_available = self._chroma_client is not None
+        if self._chroma_available:
             logger.info("DocumentService: ChromaDB connected")
-        except Exception as e:
-            logger.warning(f"ChromaDB unavailable for documents: {e}")
+        else:
+            logger.warning("ChromaDB unavailable for documents")
 
     def _get_collection_name(self, user_id: int) -> str:
         """Get the ChromaDB collection name for a user's documents."""

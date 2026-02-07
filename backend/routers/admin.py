@@ -41,6 +41,11 @@ _model_service = ModelService()
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
 
+def shutdown_docker_service() -> None:
+    """Close the Docker client on application shutdown."""
+    _docker_service.close()
+
+
 def require_admin(user=Depends(get_current_user)):
     """Dependency that ensures the current user has admin role.
 

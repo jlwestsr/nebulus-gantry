@@ -25,6 +25,17 @@ class DockerService:
     def available(self) -> bool:
         return self._available
 
+    def close(self) -> None:
+        """Close the Docker client and release file descriptors."""
+        if self.client is not None:
+            try:
+                self.client.close()
+            except Exception:
+                pass
+            self.client = None
+            self._available = False
+            logger.info("Docker client closed")
+
     def list_services(self) -> list[dict]:
         """List Nebulus-related containers."""
         if not self.available:
