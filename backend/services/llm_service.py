@@ -2,13 +2,12 @@ import json
 import httpx
 from typing import AsyncGenerator
 
-from backend.config import Settings
+from backend.platform import get_llm_base_url
 
 
 class LLMService:
     def __init__(self):
-        self.settings = Settings()
-        self.base_url = self.settings.tabby_host
+        self.base_url = get_llm_base_url()
         self.last_usage: dict | None = None
 
     async def stream_chat(

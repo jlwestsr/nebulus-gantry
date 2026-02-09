@@ -8,15 +8,14 @@ unreachable (returns empty list / False).
 import httpx
 import logging
 
-from backend.config import Settings
+from backend.platform import get_llm_base_url
 
 logger = logging.getLogger(__name__)
 
 
 class ModelService:
     def __init__(self):
-        self.settings = Settings()
-        self.base_url = self.settings.tabby_host
+        self.base_url = get_llm_base_url()
 
     async def get_active_model(self) -> dict | None:
         """Query TabbyAPI for the currently loaded model.
