@@ -12,9 +12,7 @@ empty results without crashing the application.
 import logging
 from typing import Optional
 
-import chromadb
-
-from backend.config import Settings
+from backend.services.chroma_pool import get_chroma_client
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +22,7 @@ class MemoryService:
     Service for managing semantic memory using ChromaDB.
 
     Each user has their own collection for message storage and retrieval.
+    Uses a shared ChromaDB client from the connection pool.
     """
 
     def __init__(self, user_id: int):
@@ -34,28 +33,13 @@ class MemoryService:
             user_id: The user ID for which to create/access the collection.
         """
         self.user_id = user_id
-        self.settings = Settings()
         self.collection = None
         self._available = False
 
         try:
-            # Parse host and port from chroma_host URL
-            host_url = self.settings.chroma_host
-            # Remove protocol if present
-            if host_url.startswith("http://"):
-                host_url = host_url[7:]
-            elif host_url.startswith("https://"):
-                host_url = host_url[8:]
-
-            # Split host and port
-            if ":" in host_url:
-                host, port_str = host_url.split(":", 1)
-                port = int(port_str)
-            else:
-                host = host_url
-                port = 8000
-
-            self.client = chromadb.HttpClient(host=host, port=port)
+            self.client = get_chroma_client()
+            if self.client is None:
+                raise ConnectionError("ChromaDB client unavailable")
             self.collection = self.client.get_or_create_collection(
                 name=f"user_{user_id}_messages"
             )
