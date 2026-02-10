@@ -224,3 +224,62 @@ This document serves as the **long-term memory** for AI agents working on **Nebu
 ### Release
 
 - Tagged `v2.2.0` on `main`. Previous release was `v2.1.0`.
+
+## 12. Session Notes (2026-02-10) — Track 6: Gantry-Overlord Unification
+
+### Track 6 Overview
+
+Track 6 unifies Gantry's chat interface with the Overlord meta-orchestrator. The user talks to one AI; Overlord routes to the right backend (Claude, Gemini, Local LLM, or the dispatch engine). Design doc: `docs/plans/2026-02-10-gantry-overlord-unification.md`.
+
+### Phase A: Backend Plumbing — Complete
+
+- **Dispatch Protocol**: `DispatchRequest` → SSE stream of `DispatchEvent` objects (`thinking`, `content`, `action`, `result`, `status`, `approval_request`, `error`). Schema in `backend/schemas/dispatch.py`.
+- **Conversation Router** (`backend/services/conversation_router.py`): Pattern-based intent classification (halt > status > dispatch > question). Worker selection heuristics: code keywords → Claude, strategy keywords → Gemini, default → Local LLM.
+- **SSE Endpoint**: `POST /api/chat/dispatch` streams `DispatchEvent` objects. Frontend consumes via `dispatchApi.sendMessage()` async generator using `ReadableStream` reader.
+- **Dispatch Bridge** (`dispatch_from_chat()` in `overlord_service.py`): Bridges Gantry chat to the real Dispatcher (Analyze → Brief → Provision → Execute → Review). Creates WorkQueue task, runs governance, builds workers dict, calls `Dispatcher.dispatch_task()`. Falls back to `execute_task()` if Dispatcher modules unavailable.
+- **Governance Enforcement**: `run_governance_check()` in OverlordService runs pre-dispatch checks via `GovernanceEngine.pre_dispatch_check()`. Both the ConversationRouter and `dispatch_from_chat()` enforce governance.
+- **Test Count**: 398 tests after Phase A (49 new: 7 dispatch bridge, 16 conversation router, 26 existing overlord router).
+
+### Phase A: GAP Fixes
+
+- **GAP-1 (Wrong Dispatch Engine)**: `_handle_dispatch()` in ConversationRouter originally called `execute_task()` (Phase 2 DispatchEngine) instead of the real Dispatcher. Fixed by calling `dispatch_from_chat()` which routes through the full Dispatcher lifecycle.
+- **GAP-2 (Governance Bypass)**: ConversationRouter's dispatch path had no governance check. Fixed by adding `svc.run_governance_check()` before `svc.dispatch_from_chat()`.
+- **Test Isolation for nebulus_swarm**: Since `nebulus_swarm` isn't installed in Gantry's venv, tests use `sys.modules` injection via an `inject_modules` pytest fixture. Mock `ModuleType` objects are created for the entire `nebulus_swarm.overlord.*` hierarchy. Setting `sys.modules[key] = None` blocks imports even in environments where the package is installed (e.g., pre-commit venv at `/home/jlwestsr/.python3_venv`).
+
+### Phase B: Situation Map UI — Complete
+
+- **SituationMap.tsx** (`frontend/src/components/SituationMap.tsx`): Collapsible right-side panel with three sections:
+  - Active Agents: Polls `GET /api/overlord/dispatch/active` every 5s. Worker badges: Claude = purple/violet, Gemini = blue, Local = emerald. Status badges with color-coded backgrounds.
+  - Daily Budget: Token bar with color thresholds (green <60%, yellow 60-80%, red >80%). Shows tokens used/ceiling and cost used/ceiling.
+  - Halt Button: Red button at bottom with confirmation dialog. Calls `POST /api/overlord/halt`. Shows result toast for 5 seconds.
+  - Mobile: Uses `max-md:absolute` positioning for overlay on small screens.
+- **NotificationBlock.tsx** (`frontend/src/components/NotificationBlock.tsx`): Renders 5 event types inline in chat:
+  - `thinking`: Collapsed gray block with expand toggle and pulse indicator
+  - `status`: Blue-gray info block with info icon
+  - `result`: Card with worker/tokens/status metadata badges
+  - `approval_request`: Yellow block with Approve/Deny buttons that call `overlordApi.approveProposal()`/`denyProposal()`
+  - `error`: Red alert block with error icon
+- **dispatchStore.ts** (`frontend/src/stores/dispatchStore.ts`): Zustand store managing `activeDispatches`, `budget`, `events`, `sidebarOpen`. Sidebar state persists in `localStorage('gantry-situation-map-open')`. Actions: `fetchActiveDispatches`, `fetchBudget`, `addEvent`, `clearEvents`, `toggleSidebar`, `haltAll`.
+- **Chat.tsx Integration**: Imports SituationMap and NotificationBlock. Non-content events routed to `dispatchStore.addEvent()`. Events cleared on conversation change and before each new message. Sidebar toggle button in chat header (double chevron icon). Notification blocks rendered between header and message list.
+- **Backend Endpoints (3 new)**:
+  - `GET /api/overlord/budget` → `BudgetResponse` (tokens_used_today, token_ceiling, cost_usd_today, cost_ceiling_usd, usage_pct)
+  - `GET /api/overlord/dispatch/active` → `ActiveDispatchListResponse` (list of dispatch cards)
+  - `POST /api/overlord/halt` → halt result (message, tasks_cancelled, daemon_stopped)
+  - All require admin auth via `Depends(require_admin)` + `Depends(_get_service)` with 503 graceful degradation.
+- **OverlordService.get_budget_status()**: Queries `WorkQueue.get_daily_usage()` for token/cost data. Returns zeros when WorkQueue is unavailable.
+- **Test Count**: 407 tests after Phase B (10 new: 4 budget, 3 active dispatches, 3 halt).
+
+### Phase C: Provider Management UI — BACKLOG
+
+Not scheduled. See design doc Section 5 for details. Adds pluggable LLM provider management with encrypted API keys, role assignment, fallback chains, and hot-reload.
+
+### Phase D: Full Plant Manager Mode — BACKLOG
+
+Not scheduled. Intent-driven task intake, plan decomposition, multi-agent execution with live progress, intervention controls (redirect, pause, kill, inspect).
+
+### Patterns Established
+
+- **Dispatch Event Consumption**: `for await (const event of dispatchApi.sendMessage({...}))` with type-based routing: `content` → message update, `error` → error state + dispatch store, everything else → dispatch store for sidebar + inline rendering.
+- **Sidebar Polling Pattern**: `useEffect` with `setInterval(5000)` for active dispatches and budget. Cleanup on unmount via returned function.
+- **Confirmation Dialog Pattern**: `showHaltConfirm` state toggles between single button and confirm/cancel pair. No external dialog library — inline Tailwind-styled buttons.
+- **Admin-Only Situation Map Endpoints**: Follow same `Depends(require_admin) + Depends(_get_service)` pattern as all other overlord endpoints. Service method returns dict, router wraps in Pydantic response model.
