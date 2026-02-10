@@ -262,23 +262,27 @@ class TestConversationRouterHalt:
 
 class TestConversationRouterDispatch:
     @pytest.mark.asyncio
-    async def test_dispatch_command_parses_and_executes(self):
-        """Dispatch commands should parse task and execute."""
+    async def test_dispatch_command_runs_governance_and_dispatches(self):
+        """Dispatch commands should run governance then call dispatch_from_chat."""
         router = ConversationRouter()
         request = DispatchRequest(
             user_message="build auth feature for nebulus-core"
         )
 
         mock_svc = MagicMock()
-        mock_svc.parse_task.return_value = {
-            "task": "build auth",
-            "steps": [{"id": "1", "action": "code"}],
-            "requires_approval": False,
+        mock_svc.run_governance_check.return_value = {
+            "approved": True,
+            "violations": [],
         }
-        mock_svc.execute_task.return_value = {
-            "status": "success",
-            "steps": [],
-            "reason": "Completed",
+        mock_svc.dispatch_from_chat.return_value = {
+            "status": "completed",
+            "task_id": "abc12345-0000-0000-0000-000000000000",
+            "worker": "claude",
+            "model": "opus",
+            "tokens_used": 1500,
+            "review_status": "passed",
+            "output": "Done",
+            "reason": "",
         }
 
         with patch(
@@ -289,22 +293,31 @@ class TestConversationRouterDispatch:
             async for event in router.route_message(request):
                 events.append(event)
 
+        # Should have called governance and dispatch_from_chat
+        mock_svc.run_governance_check.assert_called_once()
+        mock_svc.dispatch_from_chat.assert_called_once_with(request)
+
         result_events = [e for e in events if e.type == "result"]
         assert len(result_events) >= 1
 
     @pytest.mark.asyncio
-    async def test_dispatch_requires_approval(self):
-        """Tasks requiring approval should yield an approval_request event."""
+    async def test_dispatch_governance_rejection(self):
+        """When governance rejects, should yield error event and NOT dispatch."""
         router = ConversationRouter()
         request = DispatchRequest(
             user_message="deploy feature to production"
         )
 
         mock_svc = MagicMock()
-        mock_svc.parse_task.return_value = {
-            "task": "deploy",
-            "steps": [{"id": "1", "action": "deploy"}],
-            "requires_approval": True,
+        mock_svc.run_governance_check.return_value = {
+            "approved": False,
+            "violations": [
+                {
+                    "rule": "root-workspace",
+                    "severity": "hard-block",
+                    "message": "Cannot dispatch to workspace root",
+                }
+            ],
         }
 
         with patch(
@@ -315,8 +328,12 @@ class TestConversationRouterDispatch:
             async for event in router.route_message(request):
                 events.append(event)
 
-        approval_events = [e for e in events if e.type == "approval_request"]
-        assert len(approval_events) >= 1
+        error_events = [e for e in events if e.type == "error"]
+        assert len(error_events) >= 1
+        assert "Governance" in error_events[0].content
+
+        # dispatch_from_chat should NOT have been called
+        mock_svc.dispatch_from_chat.assert_not_called()
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
