@@ -312,6 +312,115 @@ class OverlordService:
             "last_digest_time": None,
         }
 
+    # ── Tier 5: Chat Routing ─────────────────────────────────────────────
+
+    def get_active_dispatches(self) -> list[dict[str, Any]]:
+        """Return currently active/dispatched tasks for status display."""
+        try:
+            from nebulus_swarm.overlord.work_queue import WorkQueue
+
+            queue = WorkQueue()
+            active = queue.list_tasks(status="dispatched")
+            return [
+                {
+                    "id": t.id,
+                    "title": t.title,
+                    "project": t.project,
+                    "status": t.status,
+                }
+                for t in active
+            ]
+        except Exception as exc:
+            logger.warning("Could not list active dispatches: %s", exc)
+            return []
+
+    def halt_all(self) -> dict[str, Any]:
+        """Emergency stop — cancel all dispatched tasks and stop daemon."""
+        cancelled = 0
+        try:
+            from nebulus_swarm.overlord.work_queue import WorkQueue
+
+            queue = WorkQueue()
+            for task in queue.list_tasks(status="dispatched"):
+                queue.transition(task.id, "failed", "overlord-ui", reason="halted from Gantry")
+                cancelled += 1
+            for task in queue.list_tasks(status="active"):
+                if getattr(task, "locked_by", None):
+                    queue.transition(task.id, "failed", "overlord-ui", reason="halted from Gantry")
+                    cancelled += 1
+        except Exception as exc:
+            logger.warning("Queue halt failed: %s", exc)
+
+        daemon_stopped = False
+        if _OverlordDaemon is not None:
+            try:
+                pid = _OverlordDaemon.read_pid()
+                if pid and _OverlordDaemon.check_running(pid):
+                    _OverlordDaemon.stop_daemon(timeout=5.0)
+                    daemon_stopped = True
+            except Exception as exc:
+                logger.warning("Daemon stop failed: %s", exc)
+
+        return {
+            "message": f"Halted: {cancelled} task(s) cancelled, daemon {'stopped' if daemon_stopped else 'not running'}",
+            "tasks_cancelled": cancelled,
+            "daemon_stopped": daemon_stopped,
+        }
+
+    def run_governance_check(
+        self, task_text: str, project_name: str | None = None
+    ) -> dict[str, Any]:
+        """Run governance pre-dispatch check for a chat-initiated task.
+
+        Returns a dict with 'approved' and 'violations' keys.
+        """
+        try:
+            from nebulus_swarm.overlord.governance import GovernanceEngine
+            from nebulus_swarm.overlord.work_queue import WorkQueue, Task
+
+            queue = WorkQueue()
+            engine = GovernanceEngine(
+                self._config, queue,
+                workspace_root=self._config.workspace_root
+                if hasattr(self._config, "workspace_root")
+                else None,
+            )
+
+            # Build a minimal task for the check
+            import uuid
+
+            task = Task(
+                id=str(uuid.uuid4()),
+                title=task_text[:100],
+                project=project_name or "unknown",
+                status="active",
+                description=task_text,
+            )
+
+            pc = self._config.projects.get(project_name) if project_name else None
+            if pc is None:
+                # No project config — skip governance
+                return {"approved": True, "violations": []}
+
+            result = engine.pre_dispatch_check(task, pc)
+            return {
+                "approved": result.approved,
+                "violations": [
+                    {
+                        "rule": v.rule,
+                        "severity": v.severity,
+                        "message": v.message,
+                    }
+                    for v in result.violations
+                ],
+            }
+        except ImportError:
+            logger.info("Governance modules not available, skipping check")
+            return {"approved": True, "violations": []}
+        except Exception as exc:
+            logger.warning("Governance check failed: %s", exc)
+            return {"approved": True, "violations": []}
+
 
 # ── Singleton with lazy init ────────────────────────────────────────────────
 

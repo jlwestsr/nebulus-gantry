@@ -7,6 +7,7 @@ from fastapi.responses import StreamingResponse, JSONResponse, Response
 from pydantic import BaseModel
 from sqlalchemy.orm import Session as DBSession
 
+from backend.config import settings
 from backend.dependencies import get_db
 from backend.routers.auth import get_current_user
 from backend.services.chat_service import ChatService
@@ -19,6 +20,7 @@ from backend.schemas.chat import (
     SearchResult,
     SearchResponse,
 )
+from backend.schemas.dispatch import DispatchRequest
 from backend.schemas.persona import SetConversationPersonaRequest
 
 logger = logging.getLogger(__name__)
@@ -464,3 +466,52 @@ def set_conversation_document_scope(
     chat.db.commit()
     chat.db.refresh(conversation)
     return conversation
+
+
+# ── Overlord Dispatch Endpoint ───────────────────────────────────────────────
+
+
+@router.post("/dispatch")
+async def dispatch_message(
+    request: DispatchRequest,
+    user=Depends(get_current_user),
+):
+    """Route a message through Overlord's dispatch layer.
+
+    Returns a Server-Sent Events stream of DispatchEvent objects.
+    Falls back to direct LLM if Overlord routing is disabled.
+    """
+    if not settings.overlord_routing_enabled:
+        # Fallback: route directly to LLM without Overlord
+        from backend.schemas.dispatch import content_event, error_event, result_event
+
+        llm = LLMService()
+        messages = [
+            {"role": "system", "content": "You are Nebulus Gantry, a helpful AI assistant."},
+        ]
+        for msg in request.conversation_history:
+            messages.append({"role": msg.get("role", "user"), "content": msg.get("content", "")})
+        messages.append({"role": "user", "content": request.user_message})
+
+        async def fallback_generate():
+            try:
+                async for chunk in llm.stream_chat(messages):
+                    yield content_event(chunk, source="local").to_sse()
+                yield result_event("", source="local").to_sse()
+            except Exception as e:
+                yield error_event(str(e)).to_sse()
+            yield "data: [DONE]\n\n"
+
+        return StreamingResponse(fallback_generate(), media_type="text/event-stream")
+
+    # Overlord routing enabled — use conversation router
+    from backend.services.conversation_router import get_conversation_router
+
+    router_svc = get_conversation_router()
+
+    async def generate():
+        async for event in router_svc.route_message(request):
+            yield event.to_sse()
+        yield "data: [DONE]\n\n"
+
+    return StreamingResponse(generate(), media_type="text/event-stream")

@@ -292,3 +292,25 @@ export interface OverlordNotificationStats {
   buffered_count: number;
   last_digest_time: string | null;
 }
+
+// ── Dispatch Protocol types ──────────────────────────────────────────────
+
+export interface DispatchContext {
+  active_project?: string | null;
+  trust_level?: string;
+  token_budget?: number;
+}
+
+export interface DispatchRequest {
+  user_message: string;
+  conversation_history?: Array<{ role: string; content: string }>;
+  context?: DispatchContext;
+  role?: string;
+}
+
+export interface DispatchEvent {
+  type: 'thinking' | 'content' | 'action' | 'result' | 'status' | 'approval_request' | 'error';
+  source: string;
+  content: string;
+  metadata: Record<string, unknown>;
+}
