@@ -27,6 +27,8 @@ import type {
   OverlordProposal,
   OverlordDetection,
   OverlordNotificationStats,
+  ActiveDispatch,
+  BudgetStatus,
   DispatchRequest,
   DispatchEvent,
 } from '../types/api';
@@ -428,6 +430,19 @@ export const overlordApi = {
 
   getNotificationStats: () =>
     fetchApi<OverlordNotificationStats>('/api/overlord/audit/notifications'),
+
+  // Tier 5: Situation Map
+  getActiveDispatches: () =>
+    fetchApi<{ dispatches: ActiveDispatch[] }>('/api/overlord/dispatch/active'),
+
+  getBudget: () =>
+    fetchApi<BudgetStatus>('/api/overlord/budget'),
+
+  haltAll: () =>
+    fetchApi<{ message: string; tasks_cancelled: number; daemon_stopped: boolean }>(
+      '/api/overlord/halt',
+      { method: 'POST' }
+    ),
 };
 
 // ─── Dispatch ─────────────────────────────────────────────────────────────

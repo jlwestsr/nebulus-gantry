@@ -3,7 +3,10 @@ import { Sidebar } from '../components/Sidebar';
 import { MessageList } from '../components/MessageList';
 import { MessageInput } from '../components/MessageInput';
 import { PersonaSelector } from '../components/PersonaSelector';
+import { SituationMap } from '../components/SituationMap';
+import { NotificationBlock } from '../components/NotificationBlock';
 import { useChatStore } from '../stores/chatStore';
+import { useDispatchStore } from '../stores/dispatchStore';
 import { chatApi, dispatchApi } from '../services/api';
 import type { Message, MessageMeta, Conversation, Persona, DispatchEvent } from '../types/api';
 
@@ -26,12 +29,18 @@ function extractMeta(text: string): { content: string; meta?: MessageMeta } {
 
 export function Chat() {
   const { currentConversationId, updateConversationTitle, createConversation } = useChatStore();
+  const { sidebarOpen, toggleSidebar, addEvent, clearEvents, events } = useDispatchStore();
   const [messages, setMessages] = useState<Message[]>([]);
   const [currentConversation, setCurrentConversation] = useState<Conversation | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const pendingMessageRef = useRef<{ content: string; model?: string } | null>(null);
+
+  // Clear dispatch events when conversation changes
+  useEffect(() => {
+    clearEvents();
+  }, [currentConversationId, clearEvents]);
 
   // Fetch messages when conversation changes
   useEffect(() => {
@@ -80,6 +89,7 @@ export function Chat() {
 
       setIsSending(true);
       setError(null);
+      clearEvents();
 
       // Create a temporary ID for the user message (will be replaced after refresh)
       const tempUserMessageId = Date.now();
@@ -127,9 +137,11 @@ export function Chat() {
               );
             } else if (event.type === 'error') {
               setError(event.content);
+              addEvent(event);
+            } else {
+              // Route non-content events to dispatch store for sidebar + inline rendering
+              addEvent(event);
             }
-            // thinking/status/result events are silently consumed for now
-            // Phase B will render them in the situation map sidebar
           }
         } else {
           // Legacy mode: direct LLM streaming
@@ -201,7 +213,7 @@ export function Chat() {
         setIsSending(false);
       }
     },
-    [currentConversationId, isSending, messages.length, updateConversationTitle]
+    [currentConversationId, isSending, messages.length, updateConversationTitle, clearEvents, addEvent]
   );
 
   // Auto-send pending message when a conversation is created from the welcome screen
@@ -226,6 +238,11 @@ export function Chat() {
     [createConversation]
   );
 
+  // Filter non-content events for inline rendering
+  const notificationEvents = events.filter(
+    (e) => e.type !== 'content'
+  );
+
   return (
     <div className="flex h-[calc(100vh-57px)]">
       {/* Sidebar with conversations */}
@@ -235,23 +252,46 @@ export function Chat() {
       <div className="flex-1 flex flex-col bg-gray-800 min-w-0">
         {currentConversationId ? (
           <>
-            {/* Chat Header with Persona Selector */}
+            {/* Chat Header with Persona Selector and Situation Map toggle */}
             <div className="flex items-center justify-between px-4 py-2 border-b border-gray-700/50">
               <div className="text-sm text-gray-400 truncate">
                 {currentConversation?.title || 'New Thread'}
               </div>
-              <PersonaSelector
-                conversationId={currentConversationId}
-                currentPersonaId={currentConversation?.persona_id ?? null}
-                currentPersonaName={currentConversation?.persona_name ?? null}
-                onPersonaChange={handlePersonaChange}
-              />
+              <div className="flex items-center gap-2">
+                <PersonaSelector
+                  conversationId={currentConversationId}
+                  currentPersonaId={currentConversation?.persona_id ?? null}
+                  currentPersonaName={currentConversation?.persona_name ?? null}
+                  onPersonaChange={handlePersonaChange}
+                />
+                {!sidebarOpen && (
+                  <button
+                    onClick={toggleSidebar}
+                    className="p-1.5 text-gray-500 hover:text-gray-300 transition-colors rounded"
+                    aria-label="Open situation map"
+                    title="Situation Map"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+                    </svg>
+                  </button>
+                )}
+              </div>
             </div>
 
             {/* Error display */}
             {error && (
               <div className="px-4 py-2 bg-red-900/50 text-red-200 text-sm text-center border-b border-red-800/30">
                 {error}
+              </div>
+            )}
+
+            {/* Inline notification blocks */}
+            {notificationEvents.length > 0 && (
+              <div className="border-b border-gray-700/30">
+                {notificationEvents.map((event, idx) => (
+                  <NotificationBlock key={idx} event={event} />
+                ))}
               </div>
             )}
 
@@ -306,6 +346,9 @@ export function Chat() {
           </div>
         )}
       </div>
+
+      {/* Situation Map sidebar */}
+      {sidebarOpen && <SituationMap />}
     </div>
   );
 }

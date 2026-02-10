@@ -461,6 +461,39 @@ class OverlordService:
             "reason": "",
         }
 
+    def get_budget_status(self) -> dict[str, Any]:
+        """Return daily budget/cost status for the situation map.
+
+        Queries WorkQueue for daily token usage and cost ledger data.
+        Returns zeros with a flag when data is unavailable.
+        """
+        try:
+            from nebulus_swarm.overlord.work_queue import WorkQueue
+
+            queue = WorkQueue()
+            usage = queue.get_daily_usage() if hasattr(queue, "get_daily_usage") else {}
+            tokens_used = usage.get("tokens_used", 0)
+            token_ceiling = usage.get("token_ceiling", 200000)
+            cost_used = usage.get("cost_usd", 0.0)
+            cost_ceiling = usage.get("cost_ceiling_usd", 10.0)
+            pct = (tokens_used / token_ceiling * 100) if token_ceiling > 0 else 0.0
+            return {
+                "tokens_used_today": tokens_used,
+                "token_ceiling": token_ceiling,
+                "cost_usd_today": round(cost_used, 2),
+                "cost_ceiling_usd": round(cost_ceiling, 2),
+                "usage_pct": round(pct, 1),
+            }
+        except Exception as exc:
+            logger.warning("Could not get budget status: %s", exc)
+            return {
+                "tokens_used_today": 0,
+                "token_ceiling": 200000,
+                "cost_usd_today": 0.0,
+                "cost_ceiling_usd": 10.0,
+                "usage_pct": 0.0,
+            }
+
     def get_active_dispatches(self) -> list[dict[str, Any]]:
         """Return currently active/dispatched tasks for status display."""
         try:
