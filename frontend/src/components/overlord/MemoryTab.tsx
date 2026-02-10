@@ -13,7 +13,7 @@ export function MemoryTab() {
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCategory, setFilterCategory] = useState<string>('');
-  const [filterProject, setFilterProject] = useState<string>('');
+  const [filterProject] = useState<string>('');
 
   // Add modal
   const [showAddModal, setShowAddModal] = useState(false);

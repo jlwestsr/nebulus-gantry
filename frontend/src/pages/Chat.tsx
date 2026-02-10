@@ -4,7 +4,6 @@ import { MessageList } from '../components/MessageList';
 import { MessageInput } from '../components/MessageInput';
 import { PersonaSelector } from '../components/PersonaSelector';
 import { useChatStore } from '../stores/chatStore';
-import { useAuthStore } from '../stores/authStore';
 import { chatApi } from '../services/api';
 import type { Message, MessageMeta, Conversation, Persona } from '../types/api';
 
@@ -25,7 +24,6 @@ function extractMeta(text: string): { content: string; meta?: MessageMeta } {
 
 export function Chat() {
   const { currentConversationId, updateConversationTitle, createConversation } = useChatStore();
-  const { user } = useAuthStore();
   const [messages, setMessages] = useState<Message[]>([]);
   const [currentConversation, setCurrentConversation] = useState<Conversation | null>(null);
   const [isLoading, setIsLoading] = useState(false);

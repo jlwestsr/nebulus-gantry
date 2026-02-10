@@ -22,7 +22,6 @@ import type {
   OverlordProjectStatus,
   OverlordGraph,
   OverlordMemoryList,
-  OverlordMemoryEntry,
   OverlordPlan,
   OverlordDispatchResult,
   OverlordProposal,

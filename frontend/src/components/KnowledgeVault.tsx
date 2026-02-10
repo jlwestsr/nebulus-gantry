@@ -1,19 +1,17 @@
 import { useState, useEffect, useRef } from 'react';
 import { useDocumentStore } from '../stores/documentStore';
-import type { Collection, Document } from '../types/api';
 
 interface KnowledgeVaultProps {
   onClose?: () => void;
 }
 
-export function KnowledgeVault({ onClose }: KnowledgeVaultProps) {
+export function KnowledgeVault(_props: KnowledgeVaultProps) {
   const {
     collections,
     documents,
     selectedCollectionId,
     isLoading,
     fetchCollections,
-    fetchDocuments,
     createCollection,
     deleteCollection,
     selectCollection,
