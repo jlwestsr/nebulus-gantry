@@ -38,7 +38,7 @@ All services communicate over the external Docker network `nebulus_ai-network`.
 ## Critical Directives
 
 1. **Docker-First Development**: The canonical way to run Gantry is via Docker Compose. All services must work within the container network.
-2. **Git Workflow**: Feature branches off `main`. Conventional commits (`feat:`, `fix:`, `docs:`, `chore:`). Never commit directly to `main`.
+2. **Git Workflow**: Feature branches off `develop`. Conventional commits (`feat:`, `fix:`, `docs:`, `chore:`). Never commit directly to `main`. **Temporary branches are LOCAL ONLY** — do NOT push them to origin. Merge locally into `develop`, then push `develop`.
 3. **Testing Requirements**: `pytest` for all backend changes. Pre-commit hooks enforce linting. Run `bin/gantry validate` before declaring work complete.
 4. **Discovery-Driven Development**: Check existing architecture before proposing changes. Reference `CONTEXT.md` for patterns.
 
@@ -90,8 +90,8 @@ docker compose exec backend pytest backend/tests/ -v
 
 1. **Discovery**: Read `docs/AI_INSIGHTS.md`, check existing code in `backend/` and `frontend/src/`
 2. **Proposal**: Create implementation plan and feature spec in `docs/features/`
-3. **Implementation**: Branch from `main`, write code + tests
-4. **Delivery**: Verify with `pytest` and `bin/gantry validate`, merge to `main`, update `docs/AI_INSIGHTS.md`
+3. **Implementation**: Branch from `develop`, write code + tests
+4. **Delivery**: Verify with `pytest` and `bin/gantry validate`, merge to `develop`, update `docs/AI_INSIGHTS.md`
 
 ## Long-Term Memory
 
