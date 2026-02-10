@@ -197,11 +197,9 @@ class TestCollectionCRUD:
 class TestDocumentUpload:
     """Test document upload and processing."""
 
-    @patch.object(DocumentService, "_get_chroma_collection")
-    def test_upload_txt_document(self, mock_chroma, db):
+    @patch("backend.services.document_service.get_vector_client", return_value=None)
+    def test_upload_txt_document(self, mock_vc, db):
         """Uploads a TXT document and creates chunks."""
-        mock_chroma.return_value = None  # Disable ChromaDB
-
         user = _make_user(db)
         service = DocumentService(db)
 
@@ -219,11 +217,9 @@ class TestDocumentUpload:
         assert document.status == "ready"
         assert document.chunk_count >= 1
 
-    @patch.object(DocumentService, "_get_chroma_collection")
-    def test_upload_with_collection(self, mock_chroma, db):
+    @patch("backend.services.document_service.get_vector_client", return_value=None)
+    def test_upload_with_collection(self, mock_vc, db):
         """Associates document with a collection."""
-        mock_chroma.return_value = None
-
         user = _make_user(db)
         service = DocumentService(db)
 
@@ -238,11 +234,9 @@ class TestDocumentUpload:
 
         assert document.collection_id == collection.id
 
-    @patch.object(DocumentService, "_get_chroma_collection")
-    def test_upload_invalid_collection(self, mock_chroma, db):
+    @patch("backend.services.document_service.get_vector_client", return_value=None)
+    def test_upload_invalid_collection(self, mock_vc, db):
         """Raises error for invalid collection ID."""
-        mock_chroma.return_value = None
-
         user = _make_user(db)
         service = DocumentService(db)
 
@@ -255,11 +249,9 @@ class TestDocumentUpload:
                 collection_id=99999,
             )
 
-    @patch.object(DocumentService, "_get_chroma_collection")
-    def test_list_documents(self, mock_chroma, db):
+    @patch("backend.services.document_service.get_vector_client", return_value=None)
+    def test_list_documents(self, mock_vc, db):
         """Lists documents for a user."""
-        mock_chroma.return_value = None
-
         user = _make_user(db)
         service = DocumentService(db)
 
@@ -269,11 +261,9 @@ class TestDocumentUpload:
         documents = service.list_documents(user.id)
         assert len(documents) == 2
 
-    @patch.object(DocumentService, "_get_chroma_collection")
-    def test_list_documents_by_collection(self, mock_chroma, db):
+    @patch("backend.services.document_service.get_vector_client", return_value=None)
+    def test_list_documents_by_collection(self, mock_vc, db):
         """Filters documents by collection."""
-        mock_chroma.return_value = None
-
         user = _make_user(db)
         service = DocumentService(db)
 
@@ -285,11 +275,9 @@ class TestDocumentUpload:
         assert len(filtered) == 1
         assert filtered[0].filename == "doc1.txt"
 
-    @patch.object(DocumentService, "_get_chroma_collection")
-    def test_delete_document(self, mock_chroma, db):
+    @patch("backend.services.document_service.get_vector_client", return_value=None)
+    def test_delete_document(self, mock_vc, db):
         """Deletes a document."""
-        mock_chroma.return_value = None
-
         user = _make_user(db)
         service = DocumentService(db)
 
@@ -306,11 +294,9 @@ class TestDocumentUpload:
 class TestDocumentAccessControl:
     """Test document access control between users."""
 
-    @patch.object(DocumentService, "_get_chroma_collection")
-    def test_cannot_access_other_users_documents(self, mock_chroma, db):
+    @patch("backend.services.document_service.get_vector_client", return_value=None)
+    def test_cannot_access_other_users_documents(self, mock_vc, db):
         """Users cannot see other users' documents."""
-        mock_chroma.return_value = None
-
         user_a = _make_user(db, "a@example.com")
         user_b = _make_user(db, "b@example.com")
         service = DocumentService(db)
@@ -330,11 +316,9 @@ class TestDocumentAccessControl:
 class TestCascadeDelete:
     """Test cascade deletion behavior."""
 
-    @patch.object(DocumentService, "_get_chroma_collection")
-    def test_collection_delete_cascades_to_documents(self, mock_chroma, db):
+    @patch("backend.services.document_service.get_vector_client", return_value=None)
+    def test_collection_delete_cascades_to_documents(self, mock_vc, db):
         """Deleting a collection deletes its documents."""
-        mock_chroma.return_value = None
-
         user = _make_user(db)
         service = DocumentService(db)
 
@@ -356,25 +340,25 @@ class TestCascadeDelete:
 class TestDocumentSearch:
     """Test document search functionality."""
 
-    @patch.object(DocumentService, "_get_chroma_collection", return_value=None)
-    def test_search_returns_empty_when_chroma_unavailable(self, mock_chroma, db):
-        """Returns empty results when ChromaDB is unavailable."""
+    @patch("backend.services.document_service.get_vector_client", return_value=None)
+    def test_search_returns_empty_when_chroma_unavailable(self, mock_vc, db):
+        """Returns empty results when VectorClient is unavailable."""
         user = _make_user(db)
         service = DocumentService(db)
 
         results = service.search_documents(user.id, "test query")
         assert results == []
 
-    @patch.object(DocumentService, "_get_chroma_collection")
-    def test_search_with_mock_chroma(self, mock_get_collection, db):
-        """Tests search with mocked ChromaDB results."""
-        mock_collection = MagicMock()
-        mock_collection.query.return_value = {
+    @patch("backend.services.document_service.get_vector_client")
+    def test_search_with_mock_chroma(self, mock_get_vc, db):
+        """Tests search with mocked VectorClient results."""
+        mock_vc = MagicMock()
+        mock_vc.search.return_value = {
             "documents": [["Test document content"]],
             "distances": [[0.5]],
             "metadatas": [[{"document_id": 1, "filename": "test.txt", "chunk_index": 0}]],
         }
-        mock_get_collection.return_value = mock_collection
+        mock_get_vc.return_value = mock_vc
 
         user = _make_user(db)
         service = DocumentService(db)

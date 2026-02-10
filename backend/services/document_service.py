@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session as DBSession
 
 from backend.models.collection import Collection
 from backend.models.document import Document
-from backend.services.chroma_pool import get_chroma_client
+from backend.services.chroma_pool import get_vector_client
 
 logger = logging.getLogger(__name__)
 
@@ -107,8 +107,8 @@ class DocumentService:
 
     def __init__(self, db: DBSession):
         self.db = db
-        self._chroma_client = get_chroma_client()
-        self._chroma_available = self._chroma_client is not None
+        self._vector_client = get_vector_client()
+        self._chroma_available = self._vector_client is not None
         if self._chroma_available:
             logger.info("DocumentService: ChromaDB connected")
         else:
@@ -117,18 +117,6 @@ class DocumentService:
     def _get_collection_name(self, user_id: int) -> str:
         """Get the ChromaDB collection name for a user's documents."""
         return f"user_{user_id}_documents"
-
-    def _get_chroma_collection(self, user_id: int):
-        """Get or create the ChromaDB collection for a user."""
-        if not self._chroma_available or not self._chroma_client:
-            return None
-        try:
-            return self._chroma_client.get_or_create_collection(
-                name=self._get_collection_name(user_id)
-            )
-        except Exception as e:
-            logger.error(f"Failed to get ChromaDB collection: {e}")
-            return None
 
     # ========== Collection CRUD ==========
 
@@ -191,16 +179,17 @@ class DocumentService:
             return False
 
         # Delete document chunks from ChromaDB
-        chroma_collection = self._get_chroma_collection(user_id)
-        if chroma_collection:
+        if self._chroma_available and self._vector_client:
+            collection_name = self._get_collection_name(user_id)
             for doc in collection.documents:
                 try:
-                    # Delete all chunks for this document
                     ids_to_delete = [
                         f"doc_{doc.id}_chunk_{i}" for i in range(doc.chunk_count)
                     ]
                     if ids_to_delete:
-                        chroma_collection.delete(ids=ids_to_delete)
+                        self._vector_client.delete_documents(
+                            collection_name, ids=ids_to_delete
+                        )
                 except Exception as e:
                     logger.warning(f"Failed to delete document chunks from ChromaDB: {e}")
 
@@ -257,8 +246,8 @@ class DocumentService:
             document.chunk_count = len(chunks)
 
             # Index chunks in ChromaDB
-            chroma_collection = self._get_chroma_collection(user_id)
-            if chroma_collection and chunks:
+            if self._chroma_available and self._vector_client and chunks:
+                collection_name = self._get_collection_name(user_id)
                 ids = [f"doc_{document.id}_chunk_{i}" for i in range(len(chunks))]
                 metadatas = [
                     {
@@ -269,7 +258,9 @@ class DocumentService:
                     }
                     for i in range(len(chunks))
                 ]
-                chroma_collection.add(ids=ids, documents=chunks, metadatas=metadatas)
+                self._vector_client.add_documents(
+                    collection_name, ids=ids, documents=chunks, metadatas=metadatas
+                )
 
             document.status = "ready"
             self.db.commit()
@@ -308,14 +299,16 @@ class DocumentService:
             return False
 
         # Delete chunks from ChromaDB
-        chroma_collection = self._get_chroma_collection(user_id)
-        if chroma_collection and document.chunk_count > 0:
+        if self._chroma_available and self._vector_client and document.chunk_count > 0:
             try:
+                collection_name = self._get_collection_name(user_id)
                 ids_to_delete = [
                     f"doc_{document_id}_chunk_{i}"
                     for i in range(document.chunk_count)
                 ]
-                chroma_collection.delete(ids=ids_to_delete)
+                self._vector_client.delete_documents(
+                    collection_name, ids=ids_to_delete
+                )
             except Exception as e:
                 logger.warning(f"Failed to delete chunks from ChromaDB: {e}")
 
@@ -333,21 +326,19 @@ class DocumentService:
         top_k: int = 5,
     ) -> list[dict]:
         """Search documents using semantic search."""
-        chroma_collection = self._get_chroma_collection(user_id)
-        if not chroma_collection:
+        if not self._chroma_available or not self._vector_client:
             return []
 
         try:
+            collection_name = self._get_collection_name(user_id)
+
             # Build filter for collection_ids if provided
             where_filter = None
             if collection_ids:
-                # ChromaDB uses $in for list matching
                 where_filter = {"collection_id": {"$in": collection_ids}}
 
-            results = chroma_collection.query(
-                query_texts=[query],
-                n_results=top_k,
-                where=where_filter,
+            results = self._vector_client.search(
+                collection_name, query, n_results=top_k, where=where_filter
             )
 
             formatted_results = []
