@@ -216,3 +216,11 @@ This document serves as the **long-term memory** for AI agents working on **Nebu
 
 - nebulus-core's `LLMClient` is **sync-only** with no streaming support. Gantry's async `httpx.AsyncClient` SSE streaming in `llm_service.py` must be preserved.
 - The integration is a **configuration bridge only** — source URLs from the adapter, keep Gantry's async implementation. Do not attempt to replace `LLMService` with `LLMClient`.
+
+### Known Issue: ProposalStore.list_all
+
+- **Pre-existing bug**: `GET /api/overlord/audit/proposals` throws `AttributeError: 'ProposalStore' object has no attribute 'list_all'` in `overlord_service.py:227`. The `list_proposals()` method calls `self._proposal_store.list_all()` but the upstream `ProposalStore` in nebulus-atom doesn't expose that method. This predates the platform bridge work and needs an upstream fix in nebulus-atom.
+
+### Release
+
+- Tagged `v2.2.0` on `main`. Previous release was `v2.1.0`.
