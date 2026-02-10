@@ -314,6 +314,153 @@ class OverlordService:
 
     # ── Tier 5: Chat Routing ─────────────────────────────────────────────
 
+    def dispatch_from_chat(  # noqa: C901
+        self, request: Any
+    ) -> dict[str, Any]:
+        """Bridge Gantry chat dispatch to the real Dispatcher.
+
+        Creates a work queue task, runs governance checks, and dispatches
+        through the full Analyze → Brief → Provision → Execute → Review
+        lifecycle.
+
+        Args:
+            request: DispatchRequest from the chat endpoint.
+
+        Returns:
+            Dict with dispatch result suitable for JSON serialisation.
+        """
+        try:
+            from nebulus_swarm.overlord.dispatcher import Dispatcher
+            from nebulus_swarm.overlord.work_queue import WorkQueue
+            from nebulus_swarm.overlord.mirrors import MirrorManager
+            from nebulus_swarm.overlord.governance import GovernanceEngine
+        except ImportError:
+            logger.warning(
+                "Dispatcher modules not available, falling back to legacy dispatch"
+            )
+            return self.execute_task(request.user_message, auto_approve=False)
+
+        # Infer project from context or task parser
+        project = None
+        if hasattr(request, "context") and request.context:
+            project = getattr(request.context, "active_project", None)
+
+        if not project:
+            try:
+                plan = self._task_parser.parse(request.user_message)
+                if plan.scope and hasattr(plan.scope, "projects"):
+                    projects = plan.scope.projects
+                    if projects:
+                        project = projects[0]
+            except Exception:
+                logger.debug("TaskParser could not extract project")
+
+        if not project:
+            project = "unknown"
+
+        # Extract token budget
+        token_budget = 50000
+        if hasattr(request, "context") and request.context:
+            token_budget = getattr(request.context, "token_budget", 50000) or 50000
+
+        # Create work queue task
+        queue = WorkQueue()
+        task_id = queue.add_task(
+            title=request.user_message[:100],
+            project=project,
+            description=request.user_message,
+            token_budget=token_budget,
+        )
+
+        # Transition backlog → active (required before dispatch)
+        queue.transition(task_id, "active", changed_by="gantry-chat")
+
+        # Run governance check
+        gov_result = self.run_governance_check(request.user_message, project)
+        if not gov_result.get("approved", True):
+            violations = gov_result.get("violations", [])
+            reason = violations[0]["message"] if violations else "Governance rejected"
+            queue.transition(
+                task_id, "failed", changed_by="gantry-chat",
+                reason=f"Governance: {reason}",
+            )
+            return {
+                "status": "failed",
+                "task_id": task_id,
+                "reason": f"Governance: {reason}",
+                "violations": violations,
+            }
+
+        # Build Dispatcher dependencies
+        workspace_root = (
+            self._config.workspace_root
+            if hasattr(self._config, "workspace_root")
+            else None
+        )
+        mirrors = MirrorManager(workspace_root) if workspace_root else MirrorManager()
+        gov_engine = GovernanceEngine(
+            self._config, queue, workspace_root=workspace_root,
+        )
+
+        # Build workers dict from available worker types
+        workers: dict[str, Any] = {}
+        try:
+            from nebulus_swarm.overlord.workers.claude import ClaudeWorker
+            from nebulus_swarm.overlord.workers.gemini import GeminiWorker
+            from nebulus_swarm.overlord.workers.local import LocalWorker
+
+            for WorkerClass in (ClaudeWorker, GeminiWorker, LocalWorker):
+                try:
+                    w = WorkerClass()
+                    workers[w.worker_type] = w
+                except Exception:
+                    logger.debug("Worker %s not available", WorkerClass.__name__)
+        except ImportError:
+            logger.warning("Worker modules not available")
+
+        if not workers:
+            queue.transition(
+                task_id, "failed", changed_by="gantry-chat",
+                reason="No workers available",
+            )
+            return {
+                "status": "failed",
+                "task_id": task_id,
+                "reason": "No workers available",
+            }
+
+        # Instantiate and call Dispatcher
+        role = getattr(request, "role", "default") or "default"
+        dispatcher = Dispatcher(
+            queue=queue,
+            config=self._config,
+            mirrors=mirrors,
+            workers=workers,
+            governance=gov_engine,
+        )
+
+        try:
+            result = dispatcher.dispatch_task(task_id, role=role)
+        except Exception as exc:
+            logger.warning("Dispatcher failed: %s", exc)
+            return {
+                "status": "failed",
+                "task_id": task_id,
+                "reason": str(exc),
+            }
+
+        # Translate DispatchResultRecord to dict
+        return {
+            "status": "completed",
+            "task_id": result.task_id,
+            "worker": result.worker_id,
+            "model": result.model_id,
+            "tokens_used": result.tokens_used,
+            "review_status": result.review_status,
+            "output": (result.output_log or "")[:500],
+            "reason": "",
+        }
+
     def get_active_dispatches(self) -> list[dict[str, Any]]:
         """Return currently active/dispatched tasks for status display."""
         try:

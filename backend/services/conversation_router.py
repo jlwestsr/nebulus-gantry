@@ -309,45 +309,42 @@ class ConversationRouter:
     async def _handle_dispatch(
         self, request: DispatchRequest
     ) -> AsyncGenerator[DispatchEvent, None]:
-        """Handle a dispatch command — parse and execute via Overlord."""
+        """Handle a dispatch command via the real Dispatcher with governance."""
         try:
             from backend.services.overlord_service import get_overlord_service
 
             svc = get_overlord_service()
 
-            # Governance is enforced inside overlord_service.execute_task
-            yield thinking_event("Parsing task and checking governance...")
-
-            plan = svc.parse_task(request.user_message)
-            steps = plan.get("steps", [])
-            requires_approval = plan.get("requires_approval", False)
-
-            plan_summary = f"Plan: {len(steps)} step(s)"
-            if requires_approval:
-                plan_summary += " (requires approval)"
-            yield status_event(plan_summary, plan=plan)
-
-            if requires_approval:
-                yield DispatchEvent(
-                    type="approval_request",
-                    source="overlord",
-                    content="This task requires approval before execution.",
-                    metadata={"plan": plan},
-                )
+            # Run governance check before dispatch
+            yield thinking_event("Running governance checks...")
+            project = (
+                request.context.active_project if request.context else None
+            )
+            gov = svc.run_governance_check(request.user_message, project)
+            if not gov.get("approved", True):
+                violations = gov.get("violations", [])
+                msg = violations[0]["message"] if violations else "Blocked by governance"
+                yield error_event(f"Governance: {msg}")
                 return
 
-            # Execute
-            yield thinking_event("Executing dispatch plan...")
-            result = svc.execute_task(
-                request.user_message, auto_approve=False
-            )
+            yield thinking_event("Dispatching through work queue...")
+
+            # Route through the real Dispatcher via dispatch_from_chat
+            result = svc.dispatch_from_chat(request)
 
             status = result.get("status", "unknown")
             reason = result.get("reason", "")
+            task_id = result.get("task_id", "")
+
+            if status == "failed":
+                yield error_event(reason or "Dispatch failed")
+                return
+
             yield result_event(
-                reason or f"Dispatch {status}",
+                reason or f"Dispatch {status} (task {task_id[:8]})",
                 source="overlord",
                 status=status,
+                task_id=task_id,
                 intent=Intent.DISPATCH_COMMAND,
             )
 
