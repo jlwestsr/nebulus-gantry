@@ -184,3 +184,35 @@ This document serves as the **long-term memory** for AI agents working on **Nebu
 - **"Conversation" → "Thread" everywhere in UI**: All user-facing copy uses "thread(s)". Internal code (variable names, API routes, database models) still uses "conversation" — only the display strings changed.
 - **Backend default title**: `chat_service.py` uses `"New Thread"` as the default title. Frontend checks `data.conversation.title !== 'New Thread'` for auto-title detection. These strings must match exactly.
 - **Conversation title in AI_INSIGHTS.md Section 2**: The pitfall note about "Conversation Title Matching" still references the old string. The actual default is now `"New Thread"`.
+
+## 11. Session Notes (2026-02-09) — Platform-Agnostic Refactoring (v2.2.0)
+
+### Platform Bridge Architecture (`backend/platform.py`)
+
+- **Single source of truth**: `get_llm_base_url()`, `get_chroma_settings()`, and `get_default_model()` replace the old `Settings.tabby_host` and `Settings.chroma_host` fields.
+- **Cascading priority**: Environment variables → nebulus-core `PlatformAdapter` → hardcoded defaults. This means Docker env vars (e.g., `TABBY_HOST`, `CHROMA_HOST`) still work identically, but bare-metal deployments can rely on the adapter.
+- **Lazy adapter loading**: `_load_adapter()` is called once on first use and cached. If nebulus-core is unavailable (import fails, no adapter registered), it silently falls back — never crashes.
+- **Import path**: `from backend.platform import get_llm_base_url, get_chroma_settings, get_default_model`
+
+### Config.py Slimmed
+
+- `backend/config.py` now only contains Gantry-local settings: `database_url`, `secret_key`, `session_expire_hours`. Service endpoint configuration moved to `platform.py`.
+- Other consumers of `Settings` (`auth_service.py`, `dependencies.py`) are unaffected — they only use the remaining fields.
+
+### ChromaDB Dual-Mode Support
+
+- `chroma_pool.py` now attempts nebulus-core's `VectorClient` first, which handles both HTTP mode (Prime/Docker) and embedded mode (Edge/bare-metal) automatically.
+- Falls back to direct `chromadb.HttpClient` or `chromadb.PersistentClient` if nebulus-core is unavailable.
+- `get_chroma_client()` return type widened from `chromadb.HttpClient` to `chromadb.ClientAPI` — all consumers (`memory_service.py`, `document_service.py`) use the `ClientAPI` interface and are unaffected.
+- New `get_vector_client()` function exposes the higher-level `VectorClient` for future code.
+
+### nebulus-core in Docker
+
+- Volume mount: `../nebulus-core/src:/core:ro` (read-only).
+- `PYTHONPATH=/app:/atom:/core` — allows `from nebulus_core.platform import ...` inside the container.
+- No pip install needed — volume mount + PYTHONPATH is simpler and avoids build-step complexity.
+
+### Key Constraint: Async Streaming Preserved
+
+- nebulus-core's `LLMClient` is **sync-only** with no streaming support. Gantry's async `httpx.AsyncClient` SSE streaming in `llm_service.py` must be preserved.
+- The integration is a **configuration bridge only** — source URLs from the adapter, keep Gantry's async implementation. Do not attempt to replace `LLMService` with `LLMClient`.
