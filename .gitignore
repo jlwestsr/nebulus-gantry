@@ -60,3 +60,9 @@ _corrupted_backup/
 
 # Playwright
 .playwright-mcp/
+
+# Serena
+.serena/
+
+# Screenshots
+*.png
