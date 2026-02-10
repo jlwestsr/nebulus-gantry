@@ -16,8 +16,8 @@ class LLMService:
         model: str = "default",
         temperature: float | None = None,
     ) -> AsyncGenerator[str, None]:
-        """
-        Stream chat completion from TabbyAPI (OpenAI-compatible).
+        """Stream chat completion from the LLM inference server (OpenAI-compatible).
+
         Yields chunks of the assistant's response.
 
         Args:
@@ -63,7 +63,7 @@ class LLMService:
             except httpx.HTTPStatusError as e:
                 yield f"[Error: LLM service returned {e.response.status_code}]"
             except httpx.ConnectError:
-                yield "[Error: Could not connect to LLM service. Is TabbyAPI running?]"
+                yield "[Error: Could not connect to LLM service. Is the LLM service running?]"
             except Exception as e:
                 yield f"[Error: {str(e)}]"
 

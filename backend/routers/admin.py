@@ -27,23 +27,23 @@ from backend.schemas.admin import (
     UserListResponse,
 )
 from backend.services.auth_service import AuthService, hash_password
-from backend.services.docker_service import DockerService
 from backend.services.model_service import ModelService
 from backend.services.persona_service import PersonaService
+from backend.services.service_manager import ServiceManager
 from backend.schemas.persona import PersonaCreate, PersonaUpdate, PersonaResponse
 
 logger = logging.getLogger(__name__)
 
 # Singleton service instances (gracefully handle unavailable backends)
-_docker_service = DockerService()
+_service_manager = ServiceManager()
 _model_service = ModelService()
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
 
 def shutdown_docker_service() -> None:
-    """Close the Docker client on application shutdown."""
-    _docker_service.close()
+    """Close service management clients on application shutdown."""
+    _service_manager.close()
 
 
 def require_admin(user=Depends(get_current_user)):
@@ -136,8 +136,8 @@ def delete_user(
 
 @router.get("/services", response_model=ServiceListResponse)
 def list_services(admin=Depends(require_admin)):
-    """List Nebulus service statuses via Docker API."""
-    services = _docker_service.list_services()
+    """List Nebulus service statuses."""
+    services = _service_manager.list_services()
     return ServiceListResponse(
         services=[
             ServiceStatus(
@@ -152,10 +152,12 @@ def list_services(admin=Depends(require_admin)):
 
 @router.post("/services/{service_name}/restart", response_model=RestartServiceResponse)
 def restart_service(service_name: str, admin=Depends(require_admin)):
-    """Restart a service by name via Docker API."""
-    if not _docker_service.available:
-        raise HTTPException(status_code=503, detail="Docker is not available")
-    success = _docker_service.restart_service(service_name)
+    """Restart a service by name."""
+    if not _service_manager.available:
+        raise HTTPException(
+            status_code=503, detail="Service management is not available"
+        )
+    success = _service_manager.restart_service(service_name)
     if not success:
         raise HTTPException(
             status_code=404, detail=f"Service '{service_name}' not found"
@@ -171,9 +173,9 @@ def restart_service(service_name: str, admin=Depends(require_admin)):
 
 @router.get("/models", response_model=ModelListResponse)
 async def list_models(admin=Depends(require_admin)):
-    """List available LLM models from TabbyAPI.
+    """List available LLM models.
 
-    Returns an empty list if TabbyAPI is unreachable (graceful degradation).
+    Returns an empty list if the LLM server is unreachable (graceful degradation).
     """
     models = await _model_service.list_models()
     return ModelListResponse(
@@ -186,15 +188,16 @@ async def list_models(admin=Depends(require_admin)):
 
 @router.post("/models/switch", response_model=SwitchModelResponse)
 async def switch_model(request: SwitchModelRequest, admin=Depends(require_admin)):
-    """Switch the active LLM model in TabbyAPI.
+    """Switch the active LLM model.
 
-    Returns 503 if the model switch fails (e.g., TabbyAPI unreachable).
+    Returns 503 if the model switch fails (e.g., LLM server unreachable
+    or model switching not supported).
     """
     success = await _model_service.switch_model(request.model_id)
     if not success:
         raise HTTPException(
             status_code=503,
-            detail="Failed to switch model. Is TabbyAPI available?",
+            detail="Failed to switch model. Is the LLM server available?",
         )
     return SwitchModelResponse(
         message=f"Model switched to {request.model_id}",
@@ -204,12 +207,12 @@ async def switch_model(request: SwitchModelRequest, admin=Depends(require_admin)
 
 @router.post("/models/unload", response_model=UnloadModelResponse)
 async def unload_model(admin=Depends(require_admin)):
-    """Unload the currently loaded model from TabbyAPI."""
+    """Unload the currently loaded model from the LLM server."""
     success = await _model_service.unload_model()
     if not success:
         raise HTTPException(
             status_code=503,
-            detail="Failed to unload model. Is TabbyAPI available?",
+            detail="Failed to unload model. Is the LLM server available?",
         )
     return UnloadModelResponse(message="Model unloaded successfully")
 
@@ -224,19 +227,21 @@ async def stream_logs(
 ):
     """Stream service logs via SSE.
 
-    Returns real-time log output from the named Docker container.
-    Returns 503 if Docker is not available.
+    Returns real-time log output from the named service.
+    Returns 503 if service management is not available.
     """
-    if not _docker_service.available:
-        raise HTTPException(status_code=503, detail="Docker is not available")
+    if not _service_manager.available:
+        raise HTTPException(
+            status_code=503, detail="Service management is not available"
+        )
 
     def generate() -> Generator[str, None, None]:
         yielded = False
-        for line in _docker_service.stream_logs(service_name):
+        for line in _service_manager.stream_logs(service_name):
             yielded = True
             yield f"data: {line}\n\n"
         if not yielded:
-            yield f"data: [No container found matching '{service_name}']\n\n"
+            yield f"data: [No service found matching '{service_name}']\n\n"
 
     return StreamingResponse(generate(), media_type="text/event-stream")
 

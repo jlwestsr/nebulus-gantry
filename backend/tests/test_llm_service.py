@@ -106,7 +106,7 @@ class TestStreamChat:
                 chunks.append(chunk)
 
         assert len(chunks) == 1
-        assert chunks[0] == "[Error: Could not connect to LLM service. Is TabbyAPI running?]"
+        assert chunks[0] == "[Error: Could not connect to LLM service. Is the LLM service running?]"
 
 
 # -- TestChat -----------------------------------------------------------------
