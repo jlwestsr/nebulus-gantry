@@ -293,6 +293,26 @@ export interface OverlordNotificationStats {
   last_digest_time: string | null;
 }
 
+// ── Situation Map types ──────────────────────────────────────────────────
+
+export interface ActiveDispatch {
+  id: string;
+  title: string;
+  project: string;
+  status: string;
+  worker?: string;
+  tokens_used?: number;
+  token_budget?: number;
+}
+
+export interface BudgetStatus {
+  tokens_used_today: number;
+  token_ceiling: number;
+  cost_usd_today: number;
+  cost_ceiling_usd: number;
+  usage_pct: number;
+}
+
 // ── Dispatch Protocol types ──────────────────────────────────────────────
 
 export interface DispatchContext {
