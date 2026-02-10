@@ -27,6 +27,8 @@ import type {
   OverlordProposal,
   OverlordDetection,
   OverlordNotificationStats,
+  DispatchRequest,
+  DispatchEvent,
 } from '../types/api';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
@@ -426,4 +428,59 @@ export const overlordApi = {
 
   getNotificationStats: () =>
     fetchApi<OverlordNotificationStats>('/api/overlord/audit/notifications'),
+};
+
+// ─── Dispatch ─────────────────────────────────────────────────────────────
+
+export const dispatchApi = {
+  /**
+   * Send a message through Overlord's dispatch layer.
+   * Returns an async generator of DispatchEvent objects via SSE.
+   */
+  sendMessage: async function* (request: DispatchRequest): AsyncGenerator<DispatchEvent> {
+    const response = await fetch(`${API_URL}/api/chat/dispatch`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to dispatch message');
+    }
+
+    const reader = response.body?.getReader();
+    if (!reader) throw new Error('No response body');
+
+    const decoder = new TextDecoder('utf-8');
+    let buffer = '';
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+
+        // Parse SSE events from the buffer
+        const lines = buffer.split('\n\n');
+        buffer = lines.pop() || '';
+
+        for (const block of lines) {
+          const line = block.trim();
+          if (line.startsWith('data: ')) {
+            const data = line.slice(6);
+            if (data === '[DONE]') return;
+            try {
+              yield JSON.parse(data) as DispatchEvent;
+            } catch {
+              // Skip malformed events
+            }
+          }
+        }
+      }
+    } finally {
+      reader.releaseLock();
+    }
+  },
 };

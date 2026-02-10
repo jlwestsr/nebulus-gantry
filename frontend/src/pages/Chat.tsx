@@ -4,8 +4,10 @@ import { MessageList } from '../components/MessageList';
 import { MessageInput } from '../components/MessageInput';
 import { PersonaSelector } from '../components/PersonaSelector';
 import { useChatStore } from '../stores/chatStore';
-import { chatApi } from '../services/api';
-import type { Message, MessageMeta, Conversation, Persona } from '../types/api';
+import { chatApi, dispatchApi } from '../services/api';
+import type { Message, MessageMeta, Conversation, Persona, DispatchEvent } from '../types/api';
+
+const OVERLORD_ROUTING_ENABLED = true; // Toggle to false to use direct LLM
 
 const META_MARKER = '\n\n__META__';
 
@@ -104,29 +106,53 @@ export function Chat() {
       setMessages((prev) => [...prev, userMessage, assistantMessage]);
 
       try {
-        // Stream the response
         let fullContent = '';
-        for await (const chunk of chatApi.sendMessage(
-          currentConversationId,
-          content,
-          model
-        )) {
-          fullContent += chunk;
-          // Strip metadata marker from display during streaming
-          const displayContent = fullContent.includes(META_MARKER)
-            ? fullContent.substring(0, fullContent.indexOf(META_MARKER))
-            : fullContent;
-          // Update the assistant message content as chunks arrive
-          setMessages((prev) =>
-            prev.map((msg) =>
-              msg.id === tempAssistantMessageId
-                ? { ...msg, content: displayContent }
-                : msg
-            )
-          );
+
+        if (OVERLORD_ROUTING_ENABLED) {
+          // Dispatch mode: route through Overlord
+          const history = messages.map((m) => ({ role: m.role, content: m.content }));
+          for await (const event of dispatchApi.sendMessage({
+            user_message: content,
+            conversation_history: history,
+            role: 'default',
+          })) {
+            if (event.type === 'content') {
+              fullContent += event.content;
+              setMessages((prev) =>
+                prev.map((msg) =>
+                  msg.id === tempAssistantMessageId
+                    ? { ...msg, content: fullContent }
+                    : msg
+                )
+              );
+            } else if (event.type === 'error') {
+              setError(event.content);
+            }
+            // thinking/status/result events are silently consumed for now
+            // Phase B will render them in the situation map sidebar
+          }
+        } else {
+          // Legacy mode: direct LLM streaming
+          for await (const chunk of chatApi.sendMessage(
+            currentConversationId,
+            content,
+            model
+          )) {
+            fullContent += chunk;
+            const displayContent = fullContent.includes(META_MARKER)
+              ? fullContent.substring(0, fullContent.indexOf(META_MARKER))
+              : fullContent;
+            setMessages((prev) =>
+              prev.map((msg) =>
+                msg.id === tempAssistantMessageId
+                  ? { ...msg, content: displayContent }
+                  : msg
+              )
+            );
+          }
         }
 
-        // Parse metadata from the final content
+        // Parse metadata from the final content (legacy mode only)
         const { content: cleanContent, meta } = extractMeta(fullContent);
         setMessages((prev) =>
           prev.map((msg) =>
