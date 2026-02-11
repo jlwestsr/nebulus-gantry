@@ -17,8 +17,14 @@ export const useUIStore = create<UIState>((set) => ({
   closeSidebar: () => set({ isSidebarOpen: false }),
   checkOverlord: async () => {
     try {
-      const res = await fetch('/api/overlord/dashboard', { credentials: 'include' });
-      set({ overlordAvailable: res.status !== 503 });
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+      const res = await fetch(`${apiUrl}/api/overlord/available`);
+      if (res.ok) {
+        const data = await res.json();
+        set({ overlordAvailable: data.available === true });
+      } else {
+        set({ overlordAvailable: false });
+      }
     } catch {
       set({ overlordAvailable: false });
     }

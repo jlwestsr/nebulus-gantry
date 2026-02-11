@@ -46,6 +46,16 @@ def _get_service() -> OverlordService:
         raise HTTPException(status_code=503, detail=str(exc))
 
 
+@router.get("/available")
+def check_available():
+    """Unauthenticated probe — returns whether Overlord modules are installed."""
+    try:
+        get_overlord_service()
+        return {"available": True}
+    except RuntimeError:
+        return {"available": False}
+
+
 # ── Tier 1: Ecosystem Dashboard ─────────────────────────────────────────────
 
 

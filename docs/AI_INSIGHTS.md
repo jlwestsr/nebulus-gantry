@@ -283,3 +283,53 @@ Not scheduled. Intent-driven task intake, plan decomposition, multi-agent execut
 - **Sidebar Polling Pattern**: `useEffect` with `setInterval(5000)` for active dispatches and budget. Cleanup on unmount via returned function.
 - **Confirmation Dialog Pattern**: `showHaltConfirm` state toggles between single button and confirm/cancel pair. No external dialog library — inline Tailwind-styled buttons.
 - **Admin-Only Situation Map Endpoints**: Follow same `Depends(require_admin) + Depends(_get_service)` pattern as all other overlord endpoints. Service method returns dict, router wraps in Pydantic response model.
+
+## 13. Session Notes (2026-02-10) — Edge Deployment & LLM Connectivity Fixes
+
+### Port Reassignment
+
+- **Open WebUI moved from port 3000 → 3001** (`nebulus-edge/body/docker-compose.yml`). Gantry frontend now owns port 3000.
+- **Gantry frontend moved from port 3001 → 3000** (`docker-compose.yml`). When running bare-metal (not Docker), start with `npm run dev -- --host 0.0.0.0 --port 3000`.
+- **Port mapping summary (Mac Mini)**: Gantry frontend = 3000, Open WebUI = 3001, Gantry backend = 8000, Brain (MLX) = 8080, Intelligence = 8081.
+
+### macOS Firewall
+
+- **Application Firewall blocks unlisted binaries**: The macOS Application Firewall (`socketfilterfw`) must explicitly allow each binary that listens on a network port. Homebrew Python (`/opt/homebrew/Cellar/python@3.12/.../Python.app`) and Node.js (`/opt/homebrew/Cellar/node/25.4.0/bin/node`) both needed to be added manually via `sudo socketfilterfw --add` + `--unblockapp`.
+- **Docker.app is pre-allowed**: Docker containers (Open WebUI) are reachable by default.
+
+### CORS Configuration
+
+- **LAN IP required in CORS origins**: When accessing Gantry from a remote dev machine, the browser sends `Origin: http://192.168.4.30:3000`. This must be in `allow_origins` or the backend rejects preflight requests with `400 Disallowed CORS origin`.
+- **Current approach**: Origins list opened to `["*"]` for lab/dev access (commit `7a784ed` from dev machine).
+- **Cookie SameSite**: Session cookies use `samesite="lax"`. This works for same-site cross-port requests (e.g., `192.168.4.30:3000` → `192.168.4.30:8000`) but NOT for cross-site (e.g., `localhost:3000` → `192.168.4.30:8000`).
+
+### Frontend API URL
+
+- **`VITE_API_URL` env var**: Frontend uses `import.meta.env.VITE_API_URL || 'http://localhost:8000'` for all API calls. When serving to remote clients, this must point to the Mac Mini's LAN IP. Set via `frontend/.env` (gitignored): `VITE_API_URL=http://192.168.4.30:8000`.
+- **Vite restart required**: `.env` changes require a Vite restart — they are not hot-reloaded.
+
+### LLM Base URL Double-Path Bug
+
+- **Root cause**: Edge adapter's `llm_base_url` returns `http://localhost:8080/v1` (with `/v1` suffix, per nebulus-core convention). Gantry services (`llm_service.py`, `conversation_router.py`, `model_service.py`) append `/v1/...` themselves, resulting in `http://localhost:8080/v1/v1/models` (404).
+- **Fix**: `get_llm_base_url()` in `backend/platform.py` now strips `/v1` suffix from whatever the adapter returns via `.removesuffix("/v1")`. This keeps the core adapter convention intact while preventing Gantry from doubling the path.
+
+### Model Name Mismatch
+
+- **Root cause**: Edge adapter's `default_model` was `mlx-community/Meta-Llama-3.1-8B-Instruct` but the brain serves `mlx-community/Meta-Llama-3.1-8B-Instruct-4bit`. The brain returns 404 for unknown model names (tries to fetch from HuggingFace).
+- **Fix (edge)**: Updated `EdgeAdapter.default_model` to `mlx-community/Meta-Llama-3.1-8B-Instruct-4bit`.
+- **Fix (gantry)**: `conversation_router.py` and `llm_service.py` now use `get_default_model()` instead of hardcoded `"default"` string.
+
+### Overlord Conditional UI
+
+- **Problem**: Overlord nav link showed even when `nebulus_swarm` isn't installed. The check hit `/api/overlord/dashboard` which requires auth — returning 401, not 503, so the UI thought Overlord was available.
+- **Fix**: Added unauthenticated `GET /api/overlord/available` endpoint that returns `{"available": true/false}`. Frontend `uiStore.checkOverlord()` calls this via the proper `VITE_API_URL` base.
+
+### Bare-Metal Backend on Mac Mini
+
+- **Process supervisor**: Uvicorn runs as a bare-metal process (not Docker, not PM2) with auto-restart. Killing the process spawns a new one automatically. PID changes on restart.
+- **Log locations**: Access log at `/private/var/log/nebulus/gantry-backend.log`, error log at `/private/var/log/nebulus/gantry-backend-error.log`.
+- **`__pycache__` stale bytecode**: After editing Python files, the auto-restarted process may load cached `.pyc` files. Clear with `find backend -name __pycache__ -exec rm -rf {} +` before restart for reliable code updates.
+
+### Git Remote URLs
+
+- **HTTPS → SSH**: Both `nebulus-edge` and `nebulus-gantry` remotes were switched from HTTPS to SSH (`git@github.com:jlwestsr/...`) because the Mac Mini doesn't have HTTPS credentials configured. The remote URL can revert to HTTPS after `set-url`, so verify with `git remote -v` before pushing.
