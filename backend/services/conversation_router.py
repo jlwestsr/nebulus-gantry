@@ -13,7 +13,7 @@ from typing import AsyncGenerator
 
 import httpx
 
-from backend.platform import get_llm_base_url
+from backend.platform import get_llm_base_url, get_default_model
 from backend.schemas.dispatch import (
     DispatchEvent,
     DispatchRequest,
@@ -205,7 +205,7 @@ class ConversationRouter:
                     "POST",
                     f"{self._llm_base_url}/v1/chat/completions",
                     json={
-                        "model": "default",
+                        "model": get_default_model(),
                         "messages": messages,
                         "stream": True,
                     },
