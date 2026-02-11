@@ -1,0 +1,28 @@
+# Docker Compose override for Mac Mini (Edge) deployment.
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.edge.yml up --build
+#
+# Differences from default (Prime) config:
+#   - Backend on port 8001 to avoid conflict with Open WebUI on 8000
+#   - LLM pointed at native MLX server on host port 8080
+#   - ChromaDB pointed at host-network ChromaDB (adjust port if needed)
+#   - No nebulus-atom volume mount (not installed on Edge)
+#   - Uses host network bridge for local services
+
+services:
+  backend:
+    ports:
+      - "8001:8000"
+    environment:
+      - NEBULUS_LLM_URL=http://host.docker.internal:8080
+      - NEBULUS_CHROMA_URL=http://host.docker.internal:8001
+      - PYTHONPATH=/app:/core
+    volumes:
+      - ./data:/app/data
+      - ./backend:/app/backend
+      - ../nebulus-core/src:/core:ro
+
+  frontend:
+    environment:
+      - VITE_API_URL=http://localhost:8001
