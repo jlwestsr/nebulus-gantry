@@ -3,13 +3,14 @@ import { Sidebar } from '../components/Sidebar';
 import { MessageList } from '../components/MessageList';
 import { MessageInput } from '../components/MessageInput';
 import { PersonaSelector } from '../components/PersonaSelector';
+import { DocumentScopeSelector } from '../components/DocumentScopeSelector';
 import { SituationMap } from '../components/SituationMap';
 import { NotificationBlock } from '../components/NotificationBlock';
 import { useChatStore } from '../stores/chatStore';
 import { useAuthStore } from '../stores/authStore';
 import { useDispatchStore } from '../stores/dispatchStore';
 import { chatApi, dispatchApi } from '../services/api';
-import type { Message, MessageMeta, Conversation, Persona } from '../types/api';
+import type { Message, MessageMeta, Conversation, Persona, DocumentScope } from '../types/api';
 
 const OVERLORD_ROUTING_ENABLED = false; // Direct LLM mode for appliance
 
@@ -69,6 +70,11 @@ export function Chat() {
 
     fetchMessages();
   }, [currentConversationId]);
+
+  // Handle document scope change
+  const handleScopeChange = useCallback((_scope: DocumentScope[] | null) => {
+    // Scope is persisted server-side; no local state needed
+  }, []);
 
   // Handle persona change
   const handlePersonaChange = useCallback((persona: Persona | null) => {
@@ -259,6 +265,10 @@ export function Chat() {
                 {currentConversation?.title || 'New Thread'}
               </div>
               <div className="flex items-center gap-2">
+                <DocumentScopeSelector
+                  conversationId={currentConversationId}
+                  onScopeChange={handleScopeChange}
+                />
                 <PersonaSelector
                   conversationId={currentConversationId}
                   currentPersonaId={currentConversation?.persona_id ?? null}
