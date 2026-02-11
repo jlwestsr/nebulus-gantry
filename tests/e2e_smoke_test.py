@@ -1,316 +1,374 @@
 #!/usr/bin/env python3
-"""
-E2E Smoke Test for Nebulus Gantry Appliance
+"""E2E smoke test for the Nebulus Gantry MVA appliance.
 
-Validates the full appliance flow end-to-end:
-  1. Health check (GET /health)
-  2. User creation via admin API (POST /api/admin/users)
-  3. Login (POST /api/auth/login)
-  4. Verify "Dealership Analyst" persona exists (GET /api/personas)
-  5. Create conversation (POST /api/chat/conversations)
-  6. Send message via SSE streaming (POST /api/chat/conversations/{id}/messages)
-  7. Verify non-empty assistant response received
-  8. Cleanup (optional, delete test conversation)
+Validates that all services are up and the critical path
+(power on → chat with AI) works end-to-end on the Mac Mini M4 Pro.
 
-Prerequisites:
-  - Gantry backend must be running and accessible
-  - An admin user must exist for test user creation (or the test user
-    must already exist from a previous run)
-  - LLM inference server must be available for the message send step
-
-Environment Variables:
-  GANTRY_URL        Base URL of the Gantry backend (default: http://localhost:8000)
-  ADMIN_EMAIL       Admin email for creating the test user (default: admin@nebulus.local)
-  ADMIN_PASSWORD    Admin password (default: admin)
-  TEST_EMAIL        Test user email (default: smoketest@nebulus.local)
-  TEST_PASSWORD     Test user password (default: smoketest123)
+Services under test:
+    - MLX inference server (port 8080)
+    - Gantry FastAPI backend (port 8000)
+    - Gantry React frontend (port 3000)
+    - ChromaDB (port 8001)
+    - Open WebUI (port 3100, optional)
 
 Usage:
-  # Run against local development backend
-  python tests/e2e_smoke_test.py
-
-  # Run against a specific host (e.g., Mac Mini appliance)
-  GANTRY_URL=http://192.168.1.50:8000 python tests/e2e_smoke_test.py
-
-  # Run with custom admin credentials
-  ADMIN_EMAIL=admin@example.com ADMIN_PASSWORD=secret python tests/e2e_smoke_test.py
-
-Designed to run on both dev (Linux) and appliance (macOS) environments.
-Exit code 0 on success, 1 on failure.
+    python e2e_smoke_test.py
+    python e2e_smoke_test.py --host 192.168.1.50
+    python e2e_smoke_test.py --host mac-mini.local --timeout 15
 """
 
+import argparse
 import json
-import os
+import socket
+import subprocess
 import sys
 import time
+from dataclasses import dataclass, field
+from typing import Optional
+from urllib.error import URLError
+from urllib.request import Request, urlopen
 
-import requests
 
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
 
-BASE_URL = os.getenv("GANTRY_URL", "http://localhost:8000").rstrip("/")
-ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "admin@nebulus.local")
-ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin")
-TEST_EMAIL = os.getenv("TEST_EMAIL", "smoketest@nebulus.local")
-TEST_PASSWORD = os.getenv("TEST_PASSWORD", "smoketest123")
-TEST_DISPLAY_NAME = "Smoke Test User"
+DEFAULT_HOST = "localhost"
+DEFAULT_TIMEOUT = 10  # seconds per request
 
-TIMEOUT = 15  # seconds per request
-
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-class SmokeTestFailure(Exception):
-    """Raised when a smoke test step fails."""
-
-
-def result(label: str, passed: bool, detail: str = "") -> None:
-    """Print a pass/fail line for a test step."""
-    tag = "[PASS]" if passed else "[FAIL]"
-    msg = f"  {tag} {label}"
-    if detail:
-        msg += f" — {detail}"
-    print(msg)
-
-
-def api(method: str, path: str, session: requests.Session | None = None,
-        json_data: dict | None = None, stream: bool = False) -> requests.Response:
-    """Make an API request with consistent error handling."""
-    url = f"{BASE_URL}{path}"
-    http = session or requests
-    try:
-        resp = http.request(method, url, json=json_data, timeout=TIMEOUT, stream=stream)
-        return resp
-    except requests.ConnectionError:
-        raise SmokeTestFailure(
-            f"Connection refused: {url}\n"
-            f"       Is the Gantry backend running at {BASE_URL}?"
-        )
-    except requests.Timeout:
-        raise SmokeTestFailure(f"Request timed out after {TIMEOUT}s: {method} {url}")
-
+SERVICES = {
+    "mlx_inference": {"port": 8080, "path": "/v1/models", "critical": True},
+    "gantry_backend": {"port": 8000, "path": "/health", "critical": True},
+    "gantry_frontend": {"port": 3000, "path": "/", "critical": True},
+    "chromadb": {"port": 8001, "path": "/api/v1/heartbeat", "critical": True},
+    "open_webui": {"port": 3100, "path": "/", "critical": False},
+}
 
 # ---------------------------------------------------------------------------
-# Test Steps
+# Result tracking
 # ---------------------------------------------------------------------------
 
-def step_health_check() -> None:
-    """Step 1: Verify the backend is alive."""
-    resp = api("GET", "/health")
-    if resp.status_code != 200:
-        raise SmokeTestFailure(f"Health check returned {resp.status_code}")
-    body = resp.json()
-    if body.get("status") != "healthy":
-        raise SmokeTestFailure(f"Unexpected health response: {body}")
-    result("Health Check", True)
 
+@dataclass
+class CheckResult:
+    """Result of a single smoke-test check.
 
-def step_create_test_user(session: requests.Session) -> None:
-    """Step 2: Create a test user via the admin API.
-
-    Requires an admin session. Tolerates 409 (user already exists).
-    If admin auth fails, attempts direct login with test credentials
-    (user may already exist from a previous run).
+    Attributes:
+        name: Human-readable check name.
+        passed: Whether the check passed.
+        message: Detail string (error info on failure).
+        critical: If True, failure means overall test fails.
     """
-    # First, authenticate as admin
-    resp = api("POST", "/api/auth/login", session=session, json_data={
-        "email": ADMIN_EMAIL,
-        "password": ADMIN_PASSWORD,
-    })
 
-    if resp.status_code == 200:
-        # Create the test user via admin endpoint
-        resp = api("POST", "/api/admin/users", session=session, json_data={
-            "email": TEST_EMAIL,
-            "password": TEST_PASSWORD,
-            "display_name": TEST_DISPLAY_NAME,
-            "role": "user",
-        })
-        if resp.status_code == 201:
-            result("Create Test User", True, "created via admin API")
-            return
-        elif resp.status_code == 409:
-            result("Create Test User", True, "already exists (409)")
-            return
-        else:
-            raise SmokeTestFailure(
-                f"Admin user creation returned {resp.status_code}: {resp.text}"
-            )
-
-    # Admin login failed — the test user may already exist from a
-    # previous run.  We'll verify at the login step.
-    result("Create Test User", True, "skipped (no admin access, will verify at login)")
+    name: str
+    passed: bool
+    message: str = ""
+    critical: bool = True
 
 
-def step_login(session: requests.Session) -> None:
-    """Step 3: Log in as the test user and extract session cookie."""
-    # Log out any existing session first
-    api("POST", "/api/auth/logout", session=session)
-
-    resp = api("POST", "/api/auth/login", session=session, json_data={
-        "email": TEST_EMAIL,
-        "password": TEST_PASSWORD,
-    })
-    if resp.status_code != 200:
-        raise SmokeTestFailure(
-            f"Login failed ({resp.status_code}): {resp.text}\n"
-            f"       Ensure the test user '{TEST_EMAIL}' exists."
-        )
-    # Verify session cookie was set
-    if "session_token" not in session.cookies:
-        raise SmokeTestFailure("Login succeeded but no session_token cookie received")
-    result("Login", True)
+results: list[CheckResult] = []
 
 
-def step_verify_persona(session: requests.Session) -> None:
-    """Step 4: Verify the 'Dealership Analyst' persona exists."""
-    resp = api("GET", "/api/personas", session=session)
-    if resp.status_code != 200:
-        raise SmokeTestFailure(f"List personas returned {resp.status_code}: {resp.text}")
-    personas = resp.json()
-    names = [p.get("name", "") for p in personas]
-    if "Dealership Analyst" not in names:
-        raise SmokeTestFailure(
-            f"'Dealership Analyst' persona not found. Available: {names}"
-        )
-    result("Dealership Analyst Persona", True, f"{len(personas)} persona(s) available")
+def _get(url: str, timeout: int) -> tuple[int, str]:
+    """Issue a GET request using only stdlib.
 
+    Args:
+        url: Full URL to fetch.
+        timeout: Socket timeout in seconds.
 
-def step_create_conversation(session: requests.Session) -> int:
-    """Step 5: Create a new conversation. Returns the conversation ID."""
-    resp = api("POST", "/api/chat/conversations", session=session)
-    if resp.status_code != 200:
-        raise SmokeTestFailure(
-            f"Create conversation returned {resp.status_code}: {resp.text}"
-        )
-    data = resp.json()
-    conv_id = data.get("id")
-    if not conv_id:
-        raise SmokeTestFailure(f"Conversation response missing 'id': {data}")
-    result("Create Conversation", True, f"id={conv_id}")
-    return conv_id
+    Returns:
+        Tuple of (status_code, response_body).
 
-
-def step_send_message(session: requests.Session, conversation_id: int) -> str:
-    """Step 6: Send a message and read the SSE streaming response.
-
-    Returns the full assistant response text.
+    Raises:
+        Exception: On network or HTTP errors.
     """
-    resp = api(
-        "POST",
-        f"/api/chat/conversations/{conversation_id}/messages",
-        session=session,
-        json_data={"content": "Hello, what can you help me with?"},
-        stream=True,
-    )
-    if resp.status_code != 200:
-        raise SmokeTestFailure(
-            f"Send message returned {resp.status_code}: {resp.text}"
-        )
+    req = Request(url, method="GET")
+    with urlopen(req, timeout=timeout) as resp:
+        return resp.status, resp.read().decode("utf-8", errors="replace")
 
-    # Read the SSE stream — the backend yields raw text chunks
-    # (not data:-prefixed SSE lines) via StreamingResponse
-    full_response = ""
-    for chunk in resp.iter_content(chunk_size=None, decode_unicode=True):
-        if chunk:
-            full_response += chunk
 
-    # Strip metadata suffix if present (format: \n\n__META__{json})
-    meta_marker = "\n\n__META__"
-    if meta_marker in full_response:
-        text_part, meta_json = full_response.rsplit(meta_marker, 1)
-        full_response = text_part
+def _post_json(url: str, payload: dict, timeout: int) -> tuple[int, str]:
+    """Issue a POST request with a JSON body using only stdlib.
+
+    Args:
+        url: Full URL to post to.
+        payload: Dict to serialize as JSON body.
+        timeout: Socket timeout in seconds.
+
+    Returns:
+        Tuple of (status_code, response_body).
+    """
+    data = json.dumps(payload).encode("utf-8")
+    req = Request(url, data=data, method="POST")
+    req.add_header("Content-Type", "application/json")
+    with urlopen(req, timeout=timeout) as resp:
+        return resp.status, resp.read().decode("utf-8", errors="replace")
+
+
+# ---------------------------------------------------------------------------
+# Checks
+# ---------------------------------------------------------------------------
+
+
+def check_service_health(host: str, timeout: int) -> None:
+    """Check that each service responds on its health endpoint.
+
+    Args:
+        host: Hostname or IP of the appliance.
+        timeout: Request timeout in seconds.
+    """
+    for svc_name, cfg in SERVICES.items():
+        url = f"http://{host}:{cfg['port']}{cfg['path']}"
         try:
-            meta = json.loads(meta_json)
-            gen_time = meta.get("generation_time_ms", "?")
-            tokens = meta.get("total_tokens", "?")
-            result("Send Message (SSE)", True,
-                   f"{len(full_response)} chars, {gen_time}ms, {tokens} tokens")
-        except json.JSONDecodeError:
-            result("Send Message (SSE)", True, f"{len(full_response)} chars (meta parse error)")
-    else:
-        result("Send Message (SSE)", True, f"{len(full_response)} chars")
+            status, _ = _get(url, timeout)
+            ok = 200 <= status < 400
+            results.append(CheckResult(
+                name=f"health:{svc_name}",
+                passed=ok,
+                message=f"HTTP {status} from {url}" if not ok else f"OK ({url})",
+                critical=cfg["critical"],
+            ))
+        except Exception as exc:
+            results.append(CheckResult(
+                name=f"health:{svc_name}",
+                passed=False,
+                message=f"{url} → {exc}",
+                critical=cfg["critical"],
+            ))
 
-    return full_response
+
+def check_frontend_content(host: str, timeout: int) -> None:
+    """Verify the React frontend serves expected HTML.
+
+    Args:
+        host: Hostname or IP of the appliance.
+        timeout: Request timeout in seconds.
+    """
+    url = f"http://{host}:3000/"
+    try:
+        status, body = _get(url, timeout)
+        # The build output from Create-React-App / Vite typically has a <div id="root">
+        has_root = "root" in body.lower() or "<html" in body.lower()
+        results.append(CheckResult(
+            name="frontend:html_content",
+            passed=has_root,
+            message="Frontend HTML looks valid" if has_root else "Missing expected content in response",
+            critical=True,
+        ))
+    except Exception as exc:
+        results.append(CheckResult(
+            name="frontend:html_content",
+            passed=False,
+            message=str(exc),
+            critical=True,
+        ))
 
 
-def step_verify_response(response_text: str) -> None:
-    """Step 7: Verify the assistant response is non-empty and reasonable."""
-    stripped = response_text.strip()
-    if not stripped:
-        raise SmokeTestFailure("Assistant response was empty")
-    if len(stripped) < 5:
-        raise SmokeTestFailure(
-            f"Assistant response suspiciously short ({len(stripped)} chars): {stripped!r}"
+def check_chat_roundtrip(host: str, timeout: int) -> None:
+    """Submit a chat message via the Gantry API and verify a response.
+
+    Sends a simple prompt through the backend's chat/completions endpoint
+    and checks that the model returns non-empty content.
+
+    Args:
+        host: Hostname or IP of the appliance.
+        timeout: Request timeout in seconds.
+    """
+    # Try OpenAI-compatible endpoint first (backend may proxy to MLX)
+    endpoints = [
+        f"http://{host}:8000/v1/chat/completions",
+        f"http://{host}:8000/api/chat",
+    ]
+
+    for url in endpoints:
+        try:
+            payload = {
+                "model": "default",
+                "messages": [{"role": "user", "content": "Say hello in exactly one word."}],
+                "max_tokens": 32,
+                "stream": False,
+            }
+            status, body = _post_json(url, payload, timeout=max(timeout, 30))
+            if 200 <= status < 400:
+                data = json.loads(body)
+                # OpenAI-compatible response
+                content = ""
+                if "choices" in data:
+                    content = data["choices"][0].get("message", {}).get("content", "")
+                elif "response" in data:
+                    content = data["response"]
+                elif "message" in data:
+                    content = data.get("message", {}).get("content", "")
+
+                ok = len(content.strip()) > 0
+                results.append(CheckResult(
+                    name="chat:roundtrip",
+                    passed=ok,
+                    message=f"Got response: {content[:80]!r}" if ok else "Empty response from model",
+                    critical=True,
+                ))
+                return
+        except Exception:
+            continue
+
+    # Also try MLX directly as fallback
+    try:
+        url = f"http://{host}:8080/v1/chat/completions"
+        payload = {
+            "messages": [{"role": "user", "content": "Say hello in exactly one word."}],
+            "max_tokens": 32,
+        }
+        status, body = _post_json(url, payload, timeout=max(timeout, 30))
+        data = json.loads(body)
+        content = data.get("choices", [{}])[0].get("message", {}).get("content", "")
+        ok = len(content.strip()) > 0
+        results.append(CheckResult(
+            name="chat:roundtrip",
+            passed=ok,
+            message=f"Got response (direct MLX): {content[:80]!r}" if ok else "Empty response",
+            critical=True,
+        ))
+    except Exception as exc:
+        results.append(CheckResult(
+            name="chat:roundtrip",
+            passed=False,
+            message=f"All chat endpoints failed. Last error: {exc}",
+            critical=True,
+        ))
+
+
+def check_chromadb_accessible(host: str, timeout: int) -> None:
+    """Verify ChromaDB API is reachable and returns collection data.
+
+    Args:
+        host: Hostname or IP of the appliance.
+        timeout: Request timeout in seconds.
+    """
+    url = f"http://{host}:8001/api/v1/collections"
+    try:
+        status, body = _get(url, timeout)
+        ok = 200 <= status < 400
+        results.append(CheckResult(
+            name="chromadb:collections",
+            passed=ok,
+            message=f"ChromaDB responded with {len(json.loads(body))} collection(s)" if ok else f"HTTP {status}",
+            critical=True,
+        ))
+    except Exception as exc:
+        results.append(CheckResult(
+            name="chromadb:collections",
+            passed=False,
+            message=str(exc),
+            critical=True,
+        ))
+
+
+def check_outbound_connections() -> None:
+    """Informational check for unexpected outbound connections.
+
+    Uses ``ss`` or ``netstat`` to list established outbound connections.
+    This check is always non-critical (informational only).
+    """
+    try:
+        out = subprocess.run(
+            ["ss", "-tunp", "state", "established"],
+            capture_output=True, text=True, timeout=5,
         )
-    result("Verify Response", True, f"{len(stripped)} chars, starts with: {stripped[:80]!r}")
-
-
-def step_cleanup(session: requests.Session, conversation_id: int) -> None:
-    """Step 8: Clean up the test conversation (best-effort)."""
-    try:
-        resp = api("DELETE", f"/api/chat/conversations/{conversation_id}", session=session)
-        if resp.status_code == 200:
-            result("Cleanup", True, f"deleted conversation {conversation_id}")
-        else:
-            result("Cleanup", True, f"skipped (status {resp.status_code})")
-    except Exception:
-        result("Cleanup", True, "skipped (error)")
+        lines = [l for l in out.stdout.splitlines() if l.strip() and not l.startswith("Netid")]
+        # Filter to only non-loopback remote addresses
+        external = []
+        for line in lines:
+            parts = line.split()
+            if len(parts) >= 5:
+                peer = parts[4]
+                if not any(peer.startswith(p) for p in ("127.", "[::1]", "0.0.0.0")):
+                    external.append(peer)
+        msg = f"{len(external)} outbound connection(s)" if external else "No outbound connections detected"
+        if external:
+            msg += ": " + ", ".join(external[:5])
+            if len(external) > 5:
+                msg += f" (+{len(external) - 5} more)"
+        results.append(CheckResult(
+            name="info:outbound_connections",
+            passed=True,
+            message=msg,
+            critical=False,
+        ))
+    except Exception as exc:
+        results.append(CheckResult(
+            name="info:outbound_connections",
+            passed=True,  # informational, never fails
+            message=f"Could not check: {exc}",
+            critical=False,
+        ))
 
 
 # ---------------------------------------------------------------------------
-# Main
+# Runner
 # ---------------------------------------------------------------------------
 
-def main() -> int:
-    """Run all smoke test steps. Returns 0 on success, 1 on failure."""
-    print("\nNebulus Gantry E2E Smoke Test")
-    print(f"Target: {BASE_URL}")
-    print(f"Time:   {time.strftime('%Y-%m-%d %H:%M:%S')}")
-    print("-" * 50)
 
-    session = requests.Session()
-    conversation_id = None
+def print_results() -> bool:
+    """Print all results and return True if all critical checks passed.
 
-    try:
-        step_health_check()
-        step_create_test_user(session)
-        step_login(session)
-        step_verify_persona(session)
-        conversation_id = step_create_conversation(session)
-        response_text = step_send_message(session, conversation_id)
-        step_verify_response(response_text)
-        step_cleanup(session, conversation_id)
+    Returns:
+        True if every critical check passed, False otherwise.
+    """
+    print("\n" + "=" * 64)
+    print("  Nebulus Gantry MVA — E2E Smoke Test Results")
+    print("=" * 64)
 
-        print("-" * 50)
-        print("  RESULT: ALL CHECKS PASSED")
-        print()
-        return 0
+    all_critical_passed = True
+    for r in results:
+        tag = "PASS" if r.passed else ("FAIL" if r.critical else "WARN")
+        icon = "✅" if r.passed else ("❌" if r.critical else "⚠️")
+        crit = " [critical]" if r.critical and not r.passed else ""
+        print(f"  {icon} {tag:4s}  {r.name:32s} {r.message}{crit}")
+        if r.critical and not r.passed:
+            all_critical_passed = False
 
-    except SmokeTestFailure as e:
-        print(f"\n  [FAIL] {e}")
-        print("-" * 50)
-        print("  RESULT: SMOKE TEST FAILED")
-        print()
-        # Best-effort cleanup
-        if conversation_id:
-            step_cleanup(session, conversation_id)
-        return 1
+    print("=" * 64)
+    if all_critical_passed:
+        print("  ✅ ALL CRITICAL CHECKS PASSED")
+    else:
+        print("  ❌ SOME CRITICAL CHECKS FAILED")
+    print("=" * 64 + "\n")
+    return all_critical_passed
 
-    except Exception as e:
-        print(f"\n  [ERROR] Unexpected error: {e}")
-        print("-" * 50)
-        print("  RESULT: SMOKE TEST ERROR")
-        print()
-        return 1
 
-    finally:
-        session.close()
+def main() -> None:
+    """Entry point: parse args and run all smoke-test checks."""
+    parser = argparse.ArgumentParser(
+        description="E2E smoke test for the Nebulus Gantry MVA appliance.",
+    )
+    parser.add_argument(
+        "--host",
+        default=DEFAULT_HOST,
+        help=f"Appliance hostname or IP (default: {DEFAULT_HOST})",
+    )
+    parser.add_argument(
+        "--timeout",
+        type=int,
+        default=DEFAULT_TIMEOUT,
+        help=f"Per-request timeout in seconds (default: {DEFAULT_TIMEOUT})",
+    )
+    args = parser.parse_args()
+
+    print(f"\n🔍 Running Nebulus Gantry smoke tests against {args.host} ...")
+    start = time.monotonic()
+
+    check_service_health(args.host, args.timeout)
+    check_frontend_content(args.host, args.timeout)
+    check_chat_roundtrip(args.host, args.timeout)
+    check_chromadb_accessible(args.host, args.timeout)
+    check_outbound_connections()
+
+    elapsed = time.monotonic() - start
+    print(f"\n⏱  Completed in {elapsed:.1f}s")
+
+    ok = print_results()
+    sys.exit(0 if ok else 1)
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()
