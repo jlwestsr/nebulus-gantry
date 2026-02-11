@@ -6,11 +6,12 @@ import { PersonaSelector } from '../components/PersonaSelector';
 import { SituationMap } from '../components/SituationMap';
 import { NotificationBlock } from '../components/NotificationBlock';
 import { useChatStore } from '../stores/chatStore';
+import { useAuthStore } from '../stores/authStore';
 import { useDispatchStore } from '../stores/dispatchStore';
 import { chatApi, dispatchApi } from '../services/api';
 import type { Message, MessageMeta, Conversation, Persona } from '../types/api';
 
-const OVERLORD_ROUTING_ENABLED = true; // Toggle to false to use direct LLM
+const OVERLORD_ROUTING_ENABLED = false; // Direct LLM mode for appliance
 
 const META_MARKER = '\n\n__META__';
 
@@ -309,46 +310,83 @@ export function Chat() {
             />
           </>
         ) : (
-          /* Empty state when no thread selected */
-          <div className="flex-1 flex flex-col">
-            <div className="flex-1 flex items-center justify-center px-4">
-              <div className="text-center max-w-lg">
-                <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-gray-700 flex items-center justify-center">
-                  <svg
-                    className="w-8 h-8 text-gray-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={1.5}
-                      d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
-                    />
-                  </svg>
-                </div>
-                <h2 className="text-xl sm:text-2xl font-semibold text-gray-200 mb-2">
-                  No threads yet.
-                </h2>
-                <p className="text-gray-400 text-sm sm:text-base max-w-md mx-auto">
-                  Start a new thread to work with Nebulus, or resume an existing one.
-                </p>
-              </div>
-            </div>
-
-            {/* Welcome screen input */}
-            <MessageInput
-              onSend={handleWelcomeSend}
-              disabled={isSending}
-              placeholder="Message Nebulus..."
-            />
-          </div>
+          /* Welcome screen with personalized greeting */
+          <WelcomeScreen onSend={handleWelcomeSend} isSending={isSending} />
         )}
       </div>
 
       {/* Situation Map sidebar */}
       {sidebarOpen && <SituationMap />}
+    </div>
+  );
+}
+
+function getGreeting(): string {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Good morning';
+  if (hour < 17) return 'Good afternoon';
+  return 'Good evening';
+}
+
+const QUICK_PROMPTS = [
+  { label: 'Analyze CSV data', prompt: 'I have a CSV file with sales data. Help me analyze it for trends and insights.' },
+  { label: 'Summarize a report', prompt: 'Summarize the key findings from the following data:' },
+  { label: 'Compare metrics', prompt: 'Compare these two datasets and highlight the most significant differences:' },
+  { label: 'Draft a response', prompt: 'Help me draft a professional response to the following:' },
+];
+
+function WelcomeScreen({ onSend, isSending }: { onSend: (content: string, model?: string) => void; isSending: boolean }) {
+  const user = useAuthStore((state) => state.user);
+  const firstName = user?.display_name?.split(' ')[0] || 'there';
+
+  return (
+    <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex items-center justify-center px-4">
+        <div className="text-center max-w-2xl w-full">
+          <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-gradient-to-br from-blue-500/20 to-purple-500/20 border border-blue-500/30 flex items-center justify-center">
+            <svg
+              className="w-8 h-8 text-blue-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={1.5}
+                d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
+              />
+            </svg>
+          </div>
+          <h2 className="text-xl sm:text-2xl font-semibold text-gray-200 mb-2">
+            {getGreeting()}, {firstName}.
+          </h2>
+          <p className="text-gray-400 text-sm sm:text-base max-w-md mx-auto mb-8">
+            Your data stays on this device. Ask me anything.
+          </p>
+
+          {/* Quick-start suggestions */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-lg mx-auto">
+            {QUICK_PROMPTS.map((item) => (
+              <button
+                key={item.label}
+                onClick={() => onSend(item.prompt)}
+                disabled={isSending}
+                className="text-left px-4 py-3 rounded-xl bg-gray-700/50 border border-gray-600/50 hover:border-blue-500/40 hover:bg-gray-700 text-sm text-gray-300 hover:text-gray-100 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Welcome screen input */}
+      <MessageInput
+        onSend={onSend}
+        disabled={isSending}
+        placeholder="Message Nebulus..."
+      />
     </div>
   );
 }
