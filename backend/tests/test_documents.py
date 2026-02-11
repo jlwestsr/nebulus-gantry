@@ -19,8 +19,11 @@ from backend.models.document import Document  # noqa: E402, F401
 from backend.models.persona import Persona  # noqa: E402, F401
 from backend.services.auth_service import AuthService  # noqa: E402
 from backend.services.document_service import (  # noqa: E402
+    CSV_ROW_LIMIT,
     DocumentService,
+    chunk_csv,
     chunk_text,
+    extract_text_from_csv,
     extract_text_from_txt,
 )
 
@@ -368,3 +371,125 @@ class TestDocumentSearch:
         assert len(results) == 1
         assert results[0]["filename"] == "test.txt"
         assert results[0]["chunk_text"] == "Test document content"
+
+
+# -- Test CSV Extraction -----------------------------------------------------
+
+
+class TestExtractTextFromCsv:
+    """Test CSV-specific text extraction."""
+
+    def test_basic_csv(self):
+        """Extracts headers and rows from valid CSV."""
+        content = b"Name,Age,City\nAlice,30,NYC\nBob,25,LA\n"
+        headers, rows = extract_text_from_csv(content)
+        assert headers == ["Name", "Age", "City"]
+        assert len(rows) == 2
+        assert rows[0] == ["Alice", "30", "NYC"]
+
+    def test_empty_csv_raises(self):
+        """Raises ValueError for empty CSV."""
+        with pytest.raises(ValueError, match="CSV file is empty"):
+            extract_text_from_csv(b"")
+
+    def test_headers_only(self):
+        """CSV with only headers returns empty rows."""
+        content = b"Name,Age\n"
+        headers, rows = extract_text_from_csv(content)
+        assert headers == ["Name", "Age"]
+        assert rows == []
+
+    def test_large_csv_capped(self):
+        """CSV with more than CSV_ROW_LIMIT rows is capped."""
+        header = "Col1,Col2\n"
+        data = "a,b\n" * (CSV_ROW_LIMIT + 500)
+        content = (header + data).encode("utf-8")
+        headers, rows = extract_text_from_csv(content)
+        assert len(rows) == CSV_ROW_LIMIT
+
+    def test_latin1_csv(self):
+        """Falls back to latin-1 for non-UTF-8 CSV."""
+        content = "Name,City\nAlice,Montr\xe9al\n".encode("latin-1")
+        headers, rows = extract_text_from_csv(content)
+        assert headers == ["Name", "City"]
+        assert "Montr" in rows[0][1]
+
+
+# -- Test chunk_csv ----------------------------------------------------------
+
+
+class TestChunkCsv:
+    """Test CSV chunking logic."""
+
+    def test_single_chunk(self):
+        """Small CSV fits in one chunk."""
+        headers = ["A", "B"]
+        rows = [["1", "2"], ["3", "4"]]
+        chunks = chunk_csv(headers, rows, rows_per_chunk=50)
+        assert len(chunks) == 1
+        assert chunks[0].startswith("A,B\n")
+
+    def test_multiple_chunks(self):
+        """Large CSV is split into multiple chunks."""
+        headers = ["X"]
+        rows = [[str(i)] for i in range(120)]
+        chunks = chunk_csv(headers, rows, rows_per_chunk=50)
+        assert len(chunks) == 3  # 50 + 50 + 20
+
+    def test_headers_in_every_chunk(self):
+        """Every chunk starts with the header row."""
+        headers = ["Col1", "Col2"]
+        rows = [["a", "b"]] * 100
+        chunks = chunk_csv(headers, rows, rows_per_chunk=50)
+        for chunk in chunks:
+            assert chunk.startswith("Col1,Col2")
+
+    def test_empty_rows(self):
+        """No data rows returns single header-only chunk."""
+        headers = ["H1", "H2"]
+        chunks = chunk_csv(headers, [], rows_per_chunk=50)
+        assert len(chunks) == 1
+        assert chunks[0] == "H1,H2"
+
+
+# -- Test CSV Upload ---------------------------------------------------------
+
+
+class TestCsvUpload:
+    """Test CSV document upload flow."""
+
+    @patch("backend.services.document_service.get_vector_client", return_value=None)
+    def test_upload_csv_document(self, mock_vc, db):
+        """Uploads a CSV document with structured chunking."""
+        user = _make_user(db)
+        service = DocumentService(db)
+
+        content = b"Name,Age\nAlice,30\nBob,25\n"
+        document = service.upload_document(
+            user_id=user.id,
+            filename="data.csv",
+            content=content,
+            content_type="csv",
+        )
+
+        assert document.status == "ready"
+        assert document.chunk_count >= 1
+
+    @patch("backend.services.document_service.get_vector_client", return_value=None)
+    def test_csv_preserves_headers(self, mock_vc, db):
+        """CSV chunks preserve header information."""
+        user = _make_user(db)
+        service = DocumentService(db)
+
+        rows = "Name,Score\n" + "\n".join(
+            f"User{i},{i}" for i in range(60)
+        )
+        document = service.upload_document(
+            user_id=user.id,
+            filename="scores.csv",
+            content=rows.encode("utf-8"),
+            content_type="csv",
+        )
+
+        assert document.status == "ready"
+        assert document.chunk_count == 2  # 50 + 10

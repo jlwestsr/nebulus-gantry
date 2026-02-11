@@ -8,6 +8,7 @@ Provides:
 - Chunking and embedding into ChromaDB
 - Semantic search across documents
 """
+import csv
 import io
 import logging
 
@@ -22,6 +23,8 @@ logger = logging.getLogger(__name__)
 # Chunk settings: ~500 tokens ≈ 2000 chars, with 100 char overlap
 CHUNK_SIZE = 2000
 CHUNK_OVERLAP = 100
+CSV_ROW_LIMIT = 10_000
+CSV_ROWS_PER_CHUNK = 50
 
 
 def extract_text_from_pdf(content: bytes) -> str:
@@ -67,6 +70,69 @@ def extract_text_from_txt(content: bytes) -> str:
         except Exception as e:
             logger.error(f"Failed to decode text file: {e}")
             raise ValueError(f"Failed to decode text file: {e}")
+
+
+def extract_text_from_csv(
+    content: bytes,
+) -> tuple[list[str], list[list[str]]]:
+    """Extract structured data from CSV content.
+
+    Args:
+        content: Raw CSV file bytes.
+
+    Returns:
+        Tuple of (headers, data_rows).
+    """
+    try:
+        text = content.decode("utf-8")
+    except UnicodeDecodeError:
+        text = content.decode("latin-1")
+
+    reader = csv.reader(io.StringIO(text))
+    rows = list(reader)
+    if not rows:
+        raise ValueError("CSV file is empty")
+
+    headers = rows[0]
+    data_rows = rows[1:]
+
+    if len(data_rows) > CSV_ROW_LIMIT:
+        logger.warning(
+            f"CSV has {len(data_rows)} rows, capping at {CSV_ROW_LIMIT}. "
+            "Remaining rows will be ignored."
+        )
+        data_rows = data_rows[:CSV_ROW_LIMIT]
+
+    return headers, data_rows
+
+
+def chunk_csv(
+    headers: list[str],
+    rows: list[list[str]],
+    rows_per_chunk: int = CSV_ROWS_PER_CHUNK,
+) -> list[str]:
+    """Chunk CSV data into text blocks with headers repeated in each chunk.
+
+    Args:
+        headers: Column header names.
+        rows: Data rows (list of lists).
+        rows_per_chunk: Number of data rows per chunk.
+
+    Returns:
+        List of text chunks, each starting with the header row.
+    """
+    if not rows:
+        return [",".join(headers)]
+
+    chunks = []
+    header_line = ",".join(headers)
+    for i in range(0, len(rows), rows_per_chunk):
+        batch = rows[i: i + rows_per_chunk]
+        lines = [header_line]
+        for row in batch:
+            lines.append(",".join(row))
+        chunks.append("\n".join(lines))
+    return chunks
 
 
 def chunk_text(text: str, chunk_size: int = CHUNK_SIZE, overlap: int = CHUNK_OVERLAP) -> list[str]:
@@ -228,21 +294,34 @@ class DocumentService:
         self.db.refresh(document)
 
         try:
-            # Extract text based on content type
-            if content_type == "pdf":
+            # Extract text and chunk based on content type
+            if content_type == "csv":
+                headers, data_rows = extract_text_from_csv(content)
+                chunks = chunk_csv(headers, data_rows)
+            elif content_type == "pdf":
                 text = extract_text_from_pdf(content)
+                if not text.strip():
+                    raise ValueError(
+                        "No text could be extracted from the document"
+                    )
+                chunks = chunk_text(text)
             elif content_type == "docx":
                 text = extract_text_from_docx(content)
-            elif content_type in ("txt", "csv"):
+                if not text.strip():
+                    raise ValueError(
+                        "No text could be extracted from the document"
+                    )
+                chunks = chunk_text(text)
+            elif content_type == "txt":
                 text = extract_text_from_txt(content)
+                if not text.strip():
+                    raise ValueError(
+                        "No text could be extracted from the document"
+                    )
+                chunks = chunk_text(text)
             else:
                 raise ValueError(f"Unsupported content type: {content_type}")
 
-            if not text.strip():
-                raise ValueError("No text could be extracted from the document")
-
-            # Chunk the text
-            chunks = chunk_text(text)
             document.chunk_count = len(chunks)
 
             # Index chunks in ChromaDB
