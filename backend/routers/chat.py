@@ -363,14 +363,32 @@ async def send_message(  # noqa: C901
             yield chunk
 
         generation_time_ms = int((time.monotonic() - start_time) * 1000)
+        generation_time_s = generation_time_ms / 1000.0
 
-        # Emit metadata as a special suffix for the frontend to parse
+        # Build token usage metadata
         meta: dict = {"generation_time_ms": generation_time_ms}
         if isinstance(llm.last_usage, dict):
             meta["prompt_tokens"] = llm.last_usage.get("prompt_tokens", 0)
             meta["completion_tokens"] = llm.last_usage.get("completion_tokens", 0)
             meta["total_tokens"] = llm.last_usage.get("total_tokens", 0)
-        yield f"\n\n__META__{json.dumps(meta)}"
+        else:
+            # Estimate tokens when API doesn't provide usage (~4 chars per token)
+            prompt_text = " ".join(m.get("content", "") for m in llm_messages)
+            meta["prompt_tokens"] = len(prompt_text) // 4
+            meta["completion_tokens"] = len(full_response) // 4
+            meta["total_tokens"] = meta["prompt_tokens"] + meta["completion_tokens"]
+            meta["tokens_estimated"] = True
+
+        # Calculate generation speed
+        if generation_time_s > 0 and meta.get("completion_tokens", 0) > 0:
+            meta["tokens_per_second"] = round(
+                meta["completion_tokens"] / generation_time_s, 2
+            )
+        else:
+            meta["tokens_per_second"] = 0
+
+        # Emit metadata as a distinct SSE event (not inline text)
+        yield f"\n\nevent: done\ndata: {json.dumps(meta)}\n\n"
 
         # Save assistant response after streaming completes
         assistant_msg = chat.add_message(conversation_id, "assistant", full_response)
@@ -495,13 +513,36 @@ async def dispatch_message(
         messages.append({"role": "user", "content": request.user_message})
 
         async def fallback_generate():
+            start_time = time.monotonic()
+            full_text = ""
             try:
                 async for chunk in llm.stream_chat(messages):
+                    full_text += chunk
                     yield content_event(chunk, source="local").to_sse()
                 yield result_event("", source="local").to_sse()
             except Exception as e:
                 yield error_event(str(e)).to_sse()
-            yield "data: [DONE]\n\n"
+
+            generation_time_ms = int((time.monotonic() - start_time) * 1000)
+            generation_time_s = generation_time_ms / 1000.0
+            meta: dict = {"generation_time_ms": generation_time_ms}
+            if isinstance(llm.last_usage, dict):
+                meta["prompt_tokens"] = llm.last_usage.get("prompt_tokens", 0)
+                meta["completion_tokens"] = llm.last_usage.get("completion_tokens", 0)
+                meta["total_tokens"] = llm.last_usage.get("total_tokens", 0)
+            else:
+                prompt_text = " ".join(m.get("content", "") for m in messages)
+                meta["prompt_tokens"] = len(prompt_text) // 4
+                meta["completion_tokens"] = len(full_text) // 4
+                meta["total_tokens"] = meta["prompt_tokens"] + meta["completion_tokens"]
+                meta["tokens_estimated"] = True
+            if generation_time_s > 0 and meta.get("completion_tokens", 0) > 0:
+                meta["tokens_per_second"] = round(
+                    meta["completion_tokens"] / generation_time_s, 2
+                )
+            else:
+                meta["tokens_per_second"] = 0
+            yield f"event: done\ndata: {json.dumps(meta)}\n\n"
 
         return StreamingResponse(fallback_generate(), media_type="text/event-stream")
 

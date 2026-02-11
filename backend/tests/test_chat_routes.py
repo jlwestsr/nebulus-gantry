@@ -1,4 +1,5 @@
 """Tests for chat routes (conversations CRUD, message streaming)."""
+import json
 import os
 from unittest.mock import patch, AsyncMock, MagicMock
 
@@ -259,6 +260,11 @@ class TestSendMessage:
             # Mock LLMService
             mock_llm = MagicMock()
             mock_llm.stream_chat = fake_stream
+            mock_llm.last_usage = {
+                "prompt_tokens": 10,
+                "completion_tokens": 5,
+                "total_tokens": 15,
+            }
             MockLLM.return_value = mock_llm
 
             response = client.post(
@@ -271,6 +277,65 @@ class TestSendMessage:
             body = response.text
             assert "Hello " in body
             assert "world" in body
+            # Verify metadata SSE event is present
+            assert "event: done" in body
+            # Extract the metadata JSON from the done event
+            for line in body.split("\n"):
+                if line.startswith("data: {"):
+                    meta = json.loads(line[6:])
+                    assert "generation_time_ms" in meta
+                    assert meta["prompt_tokens"] == 10
+                    assert meta["completion_tokens"] == 5
+                    assert meta["total_tokens"] == 15
+                    assert "tokens_per_second" in meta
+                    break
+
+    def test_send_message_estimates_tokens_when_no_usage(self, client, test_user):
+        """When LLM doesn't return usage, tokens are estimated from text length."""
+        _, token = test_user
+        create_resp = client.post(
+            "/api/chat/conversations",
+            cookies={"session_token": token},
+        )
+        conv_id = create_resp.json()["id"]
+
+        async def fake_stream(messages, model="default", temperature=None):
+            yield "Hello world"
+
+        with patch("backend.routers.chat.LLMService") as MockLLM, \
+             patch("backend.routers.chat._create_memory_service") as mock_mem_factory, \
+             patch("backend.routers.chat._create_graph_service") as mock_graph_factory:
+            mock_mem = MagicMock()
+            mock_mem.search_similar = AsyncMock(return_value=[])
+            mock_mem.embed_message = AsyncMock()
+            mock_mem_factory.return_value = mock_mem
+
+            mock_graph = MagicMock()
+            mock_graph.extract_entities.return_value = []
+            mock_graph.get_related.return_value = []
+            mock_graph_factory.return_value = mock_graph
+
+            mock_llm = MagicMock()
+            mock_llm.stream_chat = fake_stream
+            mock_llm.last_usage = None  # No usage from API
+            MockLLM.return_value = mock_llm
+
+            response = client.post(
+                f"/api/chat/conversations/{conv_id}/messages",
+                json={"content": "Hi there"},
+                cookies={"session_token": token},
+            )
+            body = response.text
+            assert "event: done" in body
+            for line in body.split("\n"):
+                if line.startswith("data: {"):
+                    meta = json.loads(line[6:])
+                    assert meta.get("tokens_estimated") is True
+                    assert meta["prompt_tokens"] > 0
+                    assert meta["completion_tokens"] > 0
+                    assert meta["total_tokens"] == meta["prompt_tokens"] + meta["completion_tokens"]
+                    assert "tokens_per_second" in meta
+                    break
 
     def test_send_message_to_nonexistent_conversation(self, client, test_user):
         """POST to nonexistent conversation returns 404."""
