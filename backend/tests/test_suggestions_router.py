@@ -17,8 +17,7 @@ from backend.models.session import Session  # noqa: E402, F401
 from backend.routers import suggestions as suggestions_router  # noqa: E402
 from backend.routers.suggestions import _DEFAULT_SUGGESTIONS, Suggestion  # noqa: E402
 
-# Register the router for testing (not yet added to main.py)
-app.include_router(suggestions_router.router)
+# Router is registered in main.py — no need to add here
 
 
 @pytest.fixture(autouse=True)

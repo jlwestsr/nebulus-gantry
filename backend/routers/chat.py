@@ -29,6 +29,47 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/chat", tags=["chat"])
 
 
+def _build_token_meta(
+    llm: "LLMService",
+    messages: list[dict],
+    full_response: str,
+    generation_time_ms: int,
+) -> dict:
+    """Build token usage and timing metadata for SSE stream.
+
+    Args:
+        llm: LLM service instance (may have last_usage from API).
+        messages: The prompt messages sent to the LLM.
+        full_response: The complete generated response text.
+        generation_time_ms: Wall-clock generation time in milliseconds.
+
+    Returns:
+        Metadata dict with token counts, timing, and generation speed.
+    """
+    generation_time_s = generation_time_ms / 1000.0
+    meta: dict = {"generation_time_ms": generation_time_ms}
+
+    if isinstance(llm.last_usage, dict):
+        meta["prompt_tokens"] = llm.last_usage.get("prompt_tokens", 0)
+        meta["completion_tokens"] = llm.last_usage.get("completion_tokens", 0)
+        meta["total_tokens"] = llm.last_usage.get("total_tokens", 0)
+    else:
+        prompt_text = " ".join(m.get("content", "") for m in messages)
+        meta["prompt_tokens"] = len(prompt_text) // 4
+        meta["completion_tokens"] = len(full_response) // 4
+        meta["total_tokens"] = meta["prompt_tokens"] + meta["completion_tokens"]
+        meta["tokens_estimated"] = True
+
+    if generation_time_s > 0 and meta.get("completion_tokens", 0) > 0:
+        meta["tokens_per_second"] = round(
+            meta["completion_tokens"] / generation_time_s, 2
+        )
+    else:
+        meta["tokens_per_second"] = 0
+
+    return meta
+
+
 def get_chat_service(db: DBSession = Depends(get_db)) -> ChatService:
     return ChatService(db)
 
@@ -363,31 +404,7 @@ async def send_message(  # noqa: C901
             yield chunk
 
         generation_time_ms = int((time.monotonic() - start_time) * 1000)
-        generation_time_s = generation_time_ms / 1000.0
-
-        # Build token usage metadata
-        meta: dict = {"generation_time_ms": generation_time_ms}
-        if isinstance(llm.last_usage, dict):
-            meta["prompt_tokens"] = llm.last_usage.get("prompt_tokens", 0)
-            meta["completion_tokens"] = llm.last_usage.get("completion_tokens", 0)
-            meta["total_tokens"] = llm.last_usage.get("total_tokens", 0)
-        else:
-            # Estimate tokens when API doesn't provide usage (~4 chars per token)
-            prompt_text = " ".join(m.get("content", "") for m in llm_messages)
-            meta["prompt_tokens"] = len(prompt_text) // 4
-            meta["completion_tokens"] = len(full_response) // 4
-            meta["total_tokens"] = meta["prompt_tokens"] + meta["completion_tokens"]
-            meta["tokens_estimated"] = True
-
-        # Calculate generation speed
-        if generation_time_s > 0 and meta.get("completion_tokens", 0) > 0:
-            meta["tokens_per_second"] = round(
-                meta["completion_tokens"] / generation_time_s, 2
-            )
-        else:
-            meta["tokens_per_second"] = 0
-
-        # Emit metadata as a distinct SSE event (not inline text)
+        meta = _build_token_meta(llm, llm_messages, full_response, generation_time_ms)
         yield f"\n\nevent: done\ndata: {json.dumps(meta)}\n\n"
 
         # Save assistant response after streaming completes
@@ -524,25 +541,8 @@ async def dispatch_message(
                 yield error_event(str(e)).to_sse()
 
             generation_time_ms = int((time.monotonic() - start_time) * 1000)
-            generation_time_s = generation_time_ms / 1000.0
-            meta: dict = {"generation_time_ms": generation_time_ms}
-            if isinstance(llm.last_usage, dict):
-                meta["prompt_tokens"] = llm.last_usage.get("prompt_tokens", 0)
-                meta["completion_tokens"] = llm.last_usage.get("completion_tokens", 0)
-                meta["total_tokens"] = llm.last_usage.get("total_tokens", 0)
-            else:
-                prompt_text = " ".join(m.get("content", "") for m in messages)
-                meta["prompt_tokens"] = len(prompt_text) // 4
-                meta["completion_tokens"] = len(full_text) // 4
-                meta["total_tokens"] = meta["prompt_tokens"] + meta["completion_tokens"]
-                meta["tokens_estimated"] = True
-            if generation_time_s > 0 and meta.get("completion_tokens", 0) > 0:
-                meta["tokens_per_second"] = round(
-                    meta["completion_tokens"] / generation_time_s, 2
-                )
-            else:
-                meta["tokens_per_second"] = 0
-            yield f"event: done\ndata: {json.dumps(meta)}\n\n"
+            meta = _build_token_meta(llm, messages, full_text, generation_time_ms)
+            yield f"\n\nevent: done\ndata: {json.dumps(meta)}\n\n"
 
         return StreamingResponse(fallback_generate(), media_type="text/event-stream")
 
