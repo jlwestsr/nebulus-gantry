@@ -33,8 +33,9 @@ def login(data: LoginRequest, response: Response, auth: AuthService = Depends(ge
         key="session_token",
         value=token,
         httponly=True,
-        samesite="lax",
+        samesite="strict",
         secure=settings.https_enabled,
+        path="/api",
         max_age=86400,  # 24 hours
     )
     return {"message": "Login successful"}
@@ -48,8 +49,9 @@ def logout(request: Request, response: Response, auth: AuthService = Depends(get
     response.delete_cookie(
         "session_token",
         httponly=True,
-        samesite="lax",
+        samesite="strict",
         secure=settings.https_enabled,
+        path="/api",
     )
     return {"message": "Logout successful"}
 
