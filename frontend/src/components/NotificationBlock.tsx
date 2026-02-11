@@ -66,24 +66,24 @@ function StatusBlock({ content }: { content: string }) {
 }
 
 function ResultBlock({ event }: { event: DispatchEvent }) {
-  const meta = event.metadata || {};
+  const meta = (event.metadata || {}) as Record<string, unknown>;
   return (
     <div className="my-1 mx-2 px-3 py-2 bg-gray-800 border border-gray-700/50 rounded text-xs">
       {event.content && (
         <p className="text-gray-300 mb-1">{event.content}</p>
       )}
       <div className="flex flex-wrap gap-2 text-[10px] text-gray-500">
-        {meta.worker && (
+        {meta.worker != null && (
           <span className="px-1.5 py-0.5 bg-gray-700/50 rounded">
             Worker: {String(meta.worker)}
           </span>
         )}
-        {meta.tokens_used && (
+        {meta.tokens_used != null && (
           <span className="px-1.5 py-0.5 bg-gray-700/50 rounded">
             Tokens: {Number(meta.tokens_used).toLocaleString()}
           </span>
         )}
-        {meta.status && (
+        {meta.status != null && (
           <span className="px-1.5 py-0.5 bg-gray-700/50 rounded">
             {String(meta.status)}
           </span>

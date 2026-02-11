@@ -8,7 +8,7 @@ import { NotificationBlock } from '../components/NotificationBlock';
 import { useChatStore } from '../stores/chatStore';
 import { useDispatchStore } from '../stores/dispatchStore';
 import { chatApi, dispatchApi } from '../services/api';
-import type { Message, MessageMeta, Conversation, Persona, DispatchEvent } from '../types/api';
+import type { Message, MessageMeta, Conversation, Persona } from '../types/api';
 
 const OVERLORD_ROUTING_ENABLED = true; // Toggle to false to use direct LLM
 
