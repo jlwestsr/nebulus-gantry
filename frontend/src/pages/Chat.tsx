@@ -329,10 +329,10 @@ function getGreeting(): string {
 }
 
 const QUICK_PROMPTS = [
-  { label: 'Analyze CSV data', prompt: 'I have a CSV file with sales data. Help me analyze it for trends and insights.' },
-  { label: 'Summarize a report', prompt: 'Summarize the key findings from the following data:' },
-  { label: 'Compare metrics', prompt: 'Compare these two datasets and highlight the most significant differences:' },
-  { label: 'Draft a response', prompt: 'Help me draft a professional response to the following:' },
+  { label: 'Analyze sales data', prompt: 'I have a CSV export from our DMS with this month\'s sales data. Help me analyze units sold, gross profit, and days to turn.' },
+  { label: 'Service dept metrics', prompt: 'Here are our service department numbers. Break down RO counts, effective labor rate, and hours per RO. Flag anything concerning.' },
+  { label: 'Inventory aging', prompt: 'Analyze our current inventory for aging issues. Show me units in 0-30, 31-60, 61-90, and 90+ day buckets with recommendations.' },
+  { label: 'F&I performance', prompt: 'Review our F&I numbers. What\'s our PVR, product penetration rates, and how do we compare to NADA benchmarks?' },
 ];
 
 function WelcomeScreen({ onSend, isSending }: { onSend: (content: string, model?: string) => void; isSending: boolean }) {
