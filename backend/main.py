@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.config import settings
-from backend.routers import admin, auth, chat, documents, models, overlord, personas
+from backend.routers import admin, auth, chat, csv, documents, models, overlord, personas
 from backend.services.chroma_pool import close_chroma_client
 
 
@@ -30,6 +30,7 @@ app.add_middleware(
 app.include_router(admin.router)
 app.include_router(auth.router)
 app.include_router(chat.router)
+app.include_router(csv.router)
 app.include_router(documents.router)
 app.include_router(models.router)
 app.include_router(overlord.router)
