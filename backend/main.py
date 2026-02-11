@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.config import settings
-from backend.routers import admin, auth, chat, csv, documents, models, overlord, personas, suggestions
+from backend.routers import admin, auth, chat, csv, documents, health, models, overlord, personas, suggestions
 from backend.services.chroma_pool import close_chroma_client
 
 
@@ -36,6 +36,7 @@ app.include_router(models.router)
 app.include_router(overlord.router)
 app.include_router(personas.router)
 app.include_router(suggestions.router)
+app.include_router(health.router)
 
 
 @app.get("/health")
