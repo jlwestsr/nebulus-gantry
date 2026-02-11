@@ -6,34 +6,27 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-SECRET_KEY_FILE = Path("data/.secret_key")
+DATA_DIR = Path(os.getenv("GANTRY_DATA_DIR", "data"))
 
 
 def _get_database_url() -> str:
-    return os.getenv("DATABASE_URL", "sqlite:///./data/gantry.db")
+    return os.getenv("DATABASE_URL", f"sqlite:///./{DATA_DIR}/gantry.db")
 
 
 def _get_secret_key() -> str:
     """Return the secret key for session signing.
 
-    Priority: SECRET_KEY env var > persisted file > generate new.
+    Priority: SECRET_KEY env var > secret_key_manager (file-backed).
+    Delegates to secret_key_manager for generation, persistence, and
+    atomic writes with proper file permissions (0o600).
     """
     env_key = os.getenv("SECRET_KEY")
     if env_key:
         return env_key
 
-    if SECRET_KEY_FILE.exists():
-        return SECRET_KEY_FILE.read_text().strip()
+    from backend.services.secret_key_manager import get_secret_key
 
-    logger.warning(
-        "SECRET_KEY not set — generating random key and persisting to %s",
-        SECRET_KEY_FILE,
-    )
-    key = secrets.token_hex(32)
-    SECRET_KEY_FILE.parent.mkdir(parents=True, exist_ok=True)
-    SECRET_KEY_FILE.write_text(key)
-    SECRET_KEY_FILE.chmod(0o600)
-    return key
+    return get_secret_key(DATA_DIR)
 
 
 def _get_session_expire_hours() -> int:
