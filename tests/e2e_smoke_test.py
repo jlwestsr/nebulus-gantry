@@ -9,8 +9,6 @@ Services under test:
     - Gantry FastAPI backend (port 8000)
     - Gantry React frontend (port 3000)
     - ChromaDB (port 8001)
-    - Open WebUI (port 3100, optional)
-
 Usage:
     python e2e_smoke_test.py
     python e2e_smoke_test.py --host 192.168.1.50
@@ -41,7 +39,6 @@ SERVICES = {
     "gantry_backend": {"port": 8000, "path": "/health", "critical": True},
     "gantry_frontend": {"port": 3000, "path": "/", "critical": True},
     "chromadb": {"port": 8001, "path": "/api/v1/heartbeat", "critical": True},
-    "open_webui": {"port": 3100, "path": "/", "critical": False},
 }
 
 # ---------------------------------------------------------------------------
