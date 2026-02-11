@@ -34,18 +34,22 @@ def _load_adapter() -> Optional[object]:
 
 
 def get_llm_base_url() -> str:
-    """Return the LLM endpoint URL.
+    """Return the LLM endpoint URL (without /v1 suffix).
+
+    Gantry services append /v1/... themselves, so this must return
+    only the scheme+host+port (e.g. http://localhost:8080).
 
     Priority: NEBULUS_LLM_URL → TABBY_HOST (backward compat) →
               adapter.llm_base_url → default.
     """
     env = os.getenv("NEBULUS_LLM_URL") or os.getenv("TABBY_HOST")
     if env:
-        return env
+        return env.rstrip("/").removesuffix("/v1")
     adapter = _load_adapter()
     if adapter is not None:
         try:
-            return adapter.llm_base_url  # type: ignore[union-attr]
+            url = adapter.llm_base_url  # type: ignore[union-attr]
+            return url.rstrip("/").removesuffix("/v1")
         except Exception:
             pass
     return "http://localhost:5000"
