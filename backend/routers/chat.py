@@ -13,6 +13,7 @@ from backend.routers.auth import get_current_user
 from backend.services.chat_service import ChatService
 from backend.services.llm_service import LLMService
 from backend.services.model_service import ModelService
+from backend.platform import get_default_model
 from backend.schemas.chat import (
     ConversationResponse,
     ConversationDetailResponse,
@@ -350,7 +351,7 @@ async def send_message(  # noqa: C901
 
     # Stream response from LLM — use requested model or default
     llm = LLMService()
-    llm_model = request.model or "default"
+    llm_model = request.model or get_default_model()
 
     async def generate():
         full_response = ""
