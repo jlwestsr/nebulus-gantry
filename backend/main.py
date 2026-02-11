@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from backend.config import settings
 from backend.routers import admin, auth, chat, documents, models, overlord, personas
 from backend.services.chroma_pool import close_chroma_client
 
@@ -19,7 +20,7 @@ app = FastAPI(title="Nebulus Gantry", version="2.0.0", lifespan=lifespan)
 # CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origin_regex=r".*",
+    allow_origins=settings.cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
