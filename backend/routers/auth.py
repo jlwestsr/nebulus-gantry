@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Response, Request
 from sqlalchemy.orm import Session as DBSession
 
+from backend.config import settings
 from backend.dependencies import get_db
 from backend.services.auth_service import AuthService, hash_password, verify_password
 from backend.schemas.auth import ChangePasswordRequest, LoginRequest, UserResponse
@@ -33,7 +34,8 @@ def login(data: LoginRequest, response: Response, auth: AuthService = Depends(ge
         value=token,
         httponly=True,
         samesite="lax",
-        max_age=86400  # 24 hours
+        secure=settings.https_enabled,
+        max_age=86400,  # 24 hours
     )
     return {"message": "Login successful"}
 
@@ -43,7 +45,12 @@ def logout(request: Request, response: Response, auth: AuthService = Depends(get
     token = request.cookies.get("session_token")
     if token:
         auth.delete_session(token)
-    response.delete_cookie("session_token")
+    response.delete_cookie(
+        "session_token",
+        httponly=True,
+        samesite="lax",
+        secure=settings.https_enabled,
+    )
     return {"message": "Logout successful"}
 
 
