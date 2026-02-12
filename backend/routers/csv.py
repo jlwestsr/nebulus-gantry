@@ -14,6 +14,10 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from pydantic import BaseModel, Field
 
 from backend.routers.auth import get_current_user
+from backend.utils.csv_rate_limit import (
+    check_csv_analyze_rate_limit,
+    check_csv_upload_rate_limit,
+)
 from backend.services.csv_parser import (
     CSVChunk,
     CSVParseError,
@@ -178,6 +182,7 @@ async def upload_csv(
     Returns:
         Parsed chunks and summary statistics.
     """
+    check_csv_upload_rate_limit(user.email)
     filename = _validate_extension(file.filename)
     content = await _read_and_validate_size(file)
 
@@ -212,6 +217,7 @@ async def analyze_csv(
     Returns:
         Parsed chunks, summary statistics, and the question for LLM integration.
     """
+    check_csv_analyze_rate_limit(user.email)
     filename = _validate_extension(file.filename)
     content = await _read_and_validate_size(file)
 
