@@ -1,4 +1,6 @@
-"""Tests for LLMService: streaming chat, non-streaming chat, error handling."""
+"""Tests for LLMService: streaming chat, non-streaming chat, error handling,
+and async concurrency safety."""
+import asyncio
 import os
 
 # Set test database URL before any backend imports to avoid the module-level
@@ -153,3 +155,70 @@ class TestChat:
 
         assert result.startswith("[Error:")
         assert "Something went wrong" in result
+
+
+# -- TestConcurrencySafety ---------------------------------------------------
+
+
+class TestConcurrencySafety:
+    """Verify that per-request LLMService instances isolate usage data.
+
+    LLMService stores last_usage on the instance.  This is safe because
+    each request creates its own instance (see chat.py).  This test
+    proves that concurrent async tasks using separate instances do not
+    bleed usage data between each other.
+    """
+
+    @pytest.mark.asyncio
+    async def test_concurrent_streams_do_not_share_usage(self):
+        """Two concurrent stream_chat calls on separate instances get independent usage."""
+
+        def _make_sse_lines(content: str, usage: dict):
+            return [
+                "data: " + json.dumps({"choices": [{"delta": {"content": content}}]}),
+                "data: " + json.dumps({"choices": [{"delta": {}}], "usage": usage}),
+                "data: [DONE]",
+            ]
+
+        usage_a = {"prompt_tokens": 100, "completion_tokens": 50, "total_tokens": 150}
+        usage_b = {"prompt_tokens": 200, "completion_tokens": 80, "total_tokens": 280}
+
+        def _mock_client(sse_lines):
+            mock_response = MagicMock()
+            mock_response.aiter_lines.return_value = AsyncIterator(sse_lines)
+            mock_response.raise_for_status = MagicMock()
+            mock_client = MagicMock()
+            mock_client.stream.return_value = AsyncContextManager(mock_response)
+            return AsyncContextManager(mock_client)
+
+        async def consume(service):
+            chunks = []
+            async for chunk in service.stream_chat([{"role": "user", "content": "Hi"}]):
+                chunks.append(chunk)
+            return chunks, service.last_usage
+
+        mock_a = _mock_client(_make_sse_lines("response_a", usage_a))
+        mock_b = _mock_client(_make_sse_lines("response_b", usage_b))
+
+        call_count = 0
+
+        def client_factory(*args, **kwargs):
+            nonlocal call_count
+            call_count += 1
+            return mock_a if call_count == 1 else mock_b
+
+        with patch("backend.services.llm_service.httpx.AsyncClient", side_effect=client_factory):
+            service_a = LLMService()
+            service_b = LLMService()
+
+            task_a = asyncio.create_task(consume(service_a))
+            task_b = asyncio.create_task(consume(service_b))
+
+            (chunks_a, last_a), (chunks_b, last_b) = await asyncio.gather(task_a, task_b)
+
+        # Each instance has its own usage — no cross-contamination
+        assert chunks_a == ["response_a"]
+        assert chunks_b == ["response_b"]
+        assert last_a == usage_a
+        assert last_b == usage_b
+        assert last_a != last_b

@@ -6,6 +6,15 @@ from backend.platform import get_llm_base_url, get_default_model
 
 
 class LLMService:
+    """OpenAI-compatible LLM client for streaming and non-streaming chat.
+
+    CONCURRENCY NOTE: This class stores per-call state in self.last_usage.
+    It is safe ONLY because callers instantiate a new LLMService() per
+    request (see chat.py send_message / dispatch_message).  Do NOT convert
+    this to a singleton or shared dependency without first removing the
+    mutable instance state.
+    """
+
     def __init__(self):
         self.base_url = get_llm_base_url()
         self.last_usage: dict | None = None
