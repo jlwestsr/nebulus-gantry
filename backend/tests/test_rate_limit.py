@@ -1,206 +1,243 @@
-"""Tests for the in-memory rate limiter."""
+"""Tests for the email-based rate limiter."""
 
 import threading
 import time
-from unittest.mock import MagicMock
+from unittest.mock import patch
 
 import pytest
+from fastapi import HTTPException
 
-from backend.middleware.rate_limit import (
-    MAX_ATTEMPTS,
+from backend.utils.rate_limit import (
     LOCKOUT_SECONDS,
+    MAX_ATTEMPTS,
+    MAX_ESCALATION,
     WINDOW_SECONDS,
+    CLEANUP_INTERVAL,
     _reset_store,
     _store,
-    check_rate_limit,
+    check_rate_limit_for_email,
     record_attempt,
     reset_attempts,
 )
-from fastapi import HTTPException
-
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-def _make_request(ip: str = "192.168.1.10") -> MagicMock:
-    """Create a mock FastAPI Request with the given client IP."""
-    req = MagicMock()
-    req.client.host = ip
-    return req
 
 
 @pytest.fixture(autouse=True)
-def _clean_state():
-    """Reset rate-limit state before each test."""
+def _clean_store():
+    """Reset rate-limit state before and after every test."""
     _reset_store()
     yield
     _reset_store()
 
 
-# ---------------------------------------------------------------------------
-# Tests
-# ---------------------------------------------------------------------------
+# ── Basic allow / block ─────────────────────────────────────────────
 
-class TestCheckRateLimit:
-    """Tests for the check_rate_limit dependency."""
+def test_allow_under_limit():
+    """Requests below MAX_ATTEMPTS should pass without error."""
+    email = "user@example.com"
+    for _ in range(MAX_ATTEMPTS - 1):
+        record_attempt(email)
+    # Should not raise
+    check_rate_limit_for_email(email)
 
-    def test_allows_first_request(self):
-        """First request from an IP should always pass."""
-        check_rate_limit(_make_request())  # no exception
 
-    def test_allows_up_to_max_attempts(self):
-        """Requests should be allowed up to MAX_ATTEMPTS - 1 recorded failures."""
-        ip = "10.0.0.1"
-        req = _make_request(ip)
+def test_block_after_max_attempts():
+    """Reaching MAX_ATTEMPTS within the window triggers a 429."""
+    email = "user@example.com"
+    for _ in range(MAX_ATTEMPTS):
+        record_attempt(email)
+    with pytest.raises(HTTPException) as exc_info:
+        check_rate_limit_for_email(email)
+    assert exc_info.value.status_code == 429
+    assert "Retry-After" in exc_info.value.headers
+
+
+def test_block_persists_during_lockout():
+    """Subsequent checks during lockout keep raising 429."""
+    email = "user@example.com"
+    for _ in range(MAX_ATTEMPTS):
+        record_attempt(email)
+    with pytest.raises(HTTPException):
+        check_rate_limit_for_email(email)
+    # Still locked on next call
+    with pytest.raises(HTTPException):
+        check_rate_limit_for_email(email)
+
+
+# ── Email isolation ─────────────────────────────────────────────────
+
+def test_email_isolation():
+    """Attempts on one email don't affect another."""
+    for _ in range(MAX_ATTEMPTS):
+        record_attempt("bad@example.com")
+    # Different email should be fine
+    check_rate_limit_for_email("good@example.com")
+
+
+# ── Reset ───────────────────────────────────────────────────────────
+
+def test_reset_clears_attempts():
+    """reset_attempts lets the email through again."""
+    email = "user@example.com"
+    for _ in range(MAX_ATTEMPTS):
+        record_attempt(email)
+    reset_attempts(email)
+    # Should pass now
+    check_rate_limit_for_email(email)
+
+
+# ── Lockout duration & expiry ───────────────────────────────────────
+
+def test_lockout_duration_matches_base():
+    """First lockout duration equals LOCKOUT_SECONDS."""
+    email = "user@example.com"
+    base = 1000.0
+    with patch("backend.utils.rate_limit.time.monotonic", return_value=base):
+        for _ in range(MAX_ATTEMPTS):
+            record_attempt(email)
+        with pytest.raises(HTTPException) as exc_info:
+            check_rate_limit_for_email(email)
+    retry = int(exc_info.value.headers["Retry-After"])
+    assert retry == LOCKOUT_SECONDS + 1
+
+
+def test_lockout_expiry():
+    """After the lockout window passes, the email is allowed again."""
+    email = "user@example.com"
+    t = 1000.0
+
+    with patch("backend.utils.rate_limit.time.monotonic", return_value=t):
+        for _ in range(MAX_ATTEMPTS):
+            record_attempt(email)
+        with pytest.raises(HTTPException):
+            check_rate_limit_for_email(email)
+
+    # Jump past lockout
+    t_after = t + LOCKOUT_SECONDS + 1
+    with patch("backend.utils.rate_limit.time.monotonic", return_value=t_after):
+        check_rate_limit_for_email(email)  # should not raise
+
+
+# ── Escalation with cap ─────────────────────────────────────────────
+
+def test_escalating_lockout():
+    """Each successive lockout doubles, up to the cap."""
+    email = "user@example.com"
+    t = 1000.0
+
+    for cycle in range(MAX_ESCALATION + 2):
+        with patch("backend.utils.rate_limit.time.monotonic", return_value=t):
+            for _ in range(MAX_ATTEMPTS):
+                record_attempt(email)
+            with pytest.raises(HTTPException) as exc_info:
+                check_rate_limit_for_email(email)
+
+        exp = min(cycle, MAX_ESCALATION)
+        expected_duration = LOCKOUT_SECONDS * (2 ** exp)
+        retry = int(exc_info.value.headers["Retry-After"])
+        assert retry == expected_duration + 1, f"cycle {cycle}: expected {expected_duration + 1}, got {retry}"
+
+        # Advance past lockout for next cycle
+        t += expected_duration + 1
+
+
+# ── Cleanup ─────────────────────────────────────────────────────────
+
+def test_cleanup_removes_expired_entries():
+    """Expired entries are purged after CLEANUP_INTERVAL."""
+    email = "stale@example.com"
+    t = 1000.0
+
+    with patch("backend.utils.rate_limit.time.monotonic", return_value=t):
+        record_attempt(email)
+
+    # Advance past window + cleanup interval
+    t_cleanup = t + WINDOW_SECONDS + CLEANUP_INTERVAL + 1
+    with patch("backend.utils.rate_limit.time.monotonic", return_value=t_cleanup):
+        check_rate_limit_for_email("trigger@example.com")  # triggers cleanup
+
+    assert email not in _store
+
+
+def test_cleanup_preserves_locked_entries():
+    """Locked-out entries survive cleanup."""
+    email = "locked@example.com"
+    t = 1000.0
+
+    with patch("backend.utils.rate_limit.time.monotonic", return_value=t):
+        for _ in range(MAX_ATTEMPTS):
+            record_attempt(email)
+        with pytest.raises(HTTPException):
+            check_rate_limit_for_email(email)
+
+    # Cleanup fires but entry is still locked
+    t_cleanup = t + CLEANUP_INTERVAL + 1
+    with patch("backend.utils.rate_limit.time.monotonic", return_value=t_cleanup):
+        check_rate_limit_for_email("other@example.com")
+
+    key = email.lower().strip()
+    assert key in _store
+
+
+# ── Thread safety ───────────────────────────────────────────────────
+
+def test_thread_safety():
+    """Concurrent attempts from many threads don't corrupt state."""
+    email = "race@example.com"
+    num_threads = 20
+    barrier = threading.Barrier(num_threads)
+
+    def worker():
+        barrier.wait()
+        record_attempt(email)
+
+    threads = [threading.Thread(target=worker) for _ in range(num_threads)]
+    for th in threads:
+        th.start()
+    for th in threads:
+        th.join()
+
+    key = email.lower().strip()
+    assert len(_store[key].timestamps) == num_threads
+
+
+# ── Case-insensitive email handling ─────────────────────────────────
+
+def test_case_insensitive_record():
+    """Attempts with different casings count together."""
+    variants = ["User@Example.COM", "user@example.com", "USER@EXAMPLE.COM"]
+    for v in variants[:MAX_ATTEMPTS]:
+        record_attempt(v)
+    # Pad remaining
+    for _ in range(MAX_ATTEMPTS - len(variants[:MAX_ATTEMPTS])):
+        record_attempt("user@example.com")
+
+    with pytest.raises(HTTPException):
+        check_rate_limit_for_email("USER@example.com")
+
+
+def test_case_insensitive_reset():
+    """Reset with different casing clears the entry."""
+    email = "User@Example.COM"
+    for _ in range(MAX_ATTEMPTS):
+        record_attempt(email)
+    reset_attempts("user@example.com")
+    check_rate_limit_for_email(email)  # should not raise
+
+
+# ── Window expiry (timestamps age out) ──────────────────────────────
+
+def test_old_attempts_expire_outside_window():
+    """Attempts older than WINDOW_SECONDS don't count."""
+    email = "user@example.com"
+    t = 1000.0
+
+    with patch("backend.utils.rate_limit.time.monotonic", return_value=t):
         for _ in range(MAX_ATTEMPTS - 1):
-            record_attempt(ip)
-            check_rate_limit(req)  # still allowed
+            record_attempt(email)
 
-    def test_blocks_after_max_attempts(self):
-        """After MAX_ATTEMPTS failures, the next check should raise 429."""
-        ip = "10.0.0.2"
-        req = _make_request(ip)
-        for _ in range(MAX_ATTEMPTS):
-            record_attempt(ip)
-
-        with pytest.raises(HTTPException) as exc_info:
-            check_rate_limit(req)
-        assert exc_info.value.status_code == 429
-        assert "Retry-After" in exc_info.value.headers
-
-    def test_different_ips_isolated(self):
-        """Rate-limit state for one IP should not affect another."""
-        ip_a = "10.0.0.10"
-        ip_b = "10.0.0.11"
-        for _ in range(MAX_ATTEMPTS):
-            record_attempt(ip_a)
-
-        # ip_a is blocked
-        with pytest.raises(HTTPException):
-            check_rate_limit(_make_request(ip_a))
-
-        # ip_b is fine
-        check_rate_limit(_make_request(ip_b))
-
-    def test_reset_clears_attempts(self):
-        """reset_attempts should allow the IP to pass again."""
-        ip = "10.0.0.3"
-        for _ in range(MAX_ATTEMPTS):
-            record_attempt(ip)
-
-        reset_attempts(ip)
-        check_rate_limit(_make_request(ip))  # no exception
-
-    def test_retry_after_header_value(self):
-        """Retry-After header should reflect the lockout duration."""
-        ip = "10.0.0.4"
-        for _ in range(MAX_ATTEMPTS):
-            record_attempt(ip)
-
-        with pytest.raises(HTTPException) as exc_info:
-            check_rate_limit(_make_request(ip))
-
-        retry_after = int(exc_info.value.headers["Retry-After"])
-        # Should be close to LOCKOUT_SECONDS (± a few seconds for timing)
-        assert LOCKOUT_SECONDS <= retry_after <= LOCKOUT_SECONDS + 2
-
-    def test_lockout_expires(self, monkeypatch):
-        """After lockout duration passes, requests should be allowed again."""
-        ip = "10.0.0.5"
-        for _ in range(MAX_ATTEMPTS):
-            record_attempt(ip)
-
-        # Trigger lockout
-        with pytest.raises(HTTPException):
-            check_rate_limit(_make_request(ip))
-
-        # Fast-forward past lockout by manipulating the record
-        from backend.middleware import rate_limit as rl_mod
-        with rl_mod._lock:
-            rec = rl_mod._store[ip]
-            rec.lockout_until = time.monotonic() - 1  # expired
-
-        check_rate_limit(_make_request(ip))  # should pass
-
-    def test_lockout_escalation(self):
-        """Successive lockouts should have increasing duration."""
-        ip = "10.0.0.6"
-        from backend.middleware import rate_limit as rl_mod
-
-        # First lockout
-        for _ in range(MAX_ATTEMPTS):
-            record_attempt(ip)
-        with pytest.raises(HTTPException) as exc1:
-            check_rate_limit(_make_request(ip))
-        retry1 = int(exc1.value.headers["Retry-After"])
-
-        # Expire the lockout
-        with rl_mod._lock:
-            rl_mod._store[ip].lockout_until = time.monotonic() - 1
-
-        # Second burst
-        for _ in range(MAX_ATTEMPTS):
-            record_attempt(ip)
-        with pytest.raises(HTTPException) as exc2:
-            check_rate_limit(_make_request(ip))
-        retry2 = int(exc2.value.headers["Retry-After"])
-
-        # Second lockout should be longer (2x)
-        assert retry2 > retry1
-
-    def test_cleanup_removes_expired_entries(self):
-        """Expired entries should be cleaned up to prevent memory leaks."""
-        from backend.middleware import rate_limit as rl_mod
-
-        ip = "10.0.0.7"
-        record_attempt(ip)
-
-        # Make the timestamp old and force cleanup
-        with rl_mod._lock:
-            rec = rl_mod._store[ip]
-            rec.timestamps = [time.monotonic() - WINDOW_SECONDS - 100]
-            rl_mod._last_cleanup = 0  # force cleanup on next check
-
-        check_rate_limit(_make_request(ip))
-
-        # After cleanup, the entry should be gone
-        with rl_mod._lock:
-            assert ip not in rl_mod._store
-
-    def test_thread_safety(self):
-        """Concurrent access from multiple threads should not corrupt state."""
-        ip = "10.0.0.8"
-        errors: list[Exception] = []
-
-        def _worker():
-            try:
-                for _ in range(20):
-                    record_attempt(ip)
-                    try:
-                        check_rate_limit(_make_request(ip))
-                    except HTTPException:
-                        pass  # expected after limit
-            except Exception as e:
-                errors.append(e)
-
-        threads = [threading.Thread(target=_worker) for _ in range(10)]
-        for t in threads:
-            t.start()
-        for t in threads:
-            t.join()
-
-        assert not errors, f"Thread safety violation: {errors}"
-
-    def test_no_client_ip(self):
-        """Request with no client info should not crash."""
-        req = MagicMock()
-        req.client = None
-        check_rate_limit(req)  # should handle gracefully
-
-    def test_record_without_check_does_not_crash(self):
-        """Recording attempts without checking should be safe."""
-        record_attempt("10.0.0.99")
-        record_attempt("10.0.0.99")
-        reset_attempts("10.0.0.99")
-        reset_attempts("nonexistent")  # no KeyError
+    # Advance past window, add one more attempt
+    t_later = t + WINDOW_SECONDS + 1
+    with patch("backend.utils.rate_limit.time.monotonic", return_value=t_later):
+        record_attempt(email)
+        # Only 1 recent attempt — should pass
+        check_rate_limit_for_email(email)
