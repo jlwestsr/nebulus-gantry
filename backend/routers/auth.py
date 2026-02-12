@@ -34,7 +34,7 @@ def login(data: LoginRequest, response: Response, auth: AuthService = Depends(ge
         value=token,
         httponly=True,
         samesite="strict",
-        secure=settings.https_enabled,
+        secure=False,
         path="/api",
         max_age=86400,  # 24 hours
     )
@@ -50,7 +50,7 @@ def logout(request: Request, response: Response, auth: AuthService = Depends(get
         "session_token",
         httponly=True,
         samesite="strict",
-        secure=settings.https_enabled,
+        secure=False,
         path="/api",
     )
     return {"message": "Logout successful"}
