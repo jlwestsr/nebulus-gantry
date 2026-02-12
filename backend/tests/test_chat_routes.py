@@ -280,9 +280,13 @@ class TestSendMessage:
             # Verify metadata SSE event is present
             assert "event: done" in body
             # Extract the metadata JSON from the done event
-            for line in body.split("\n"):
-                if line.startswith("data: {"):
-                    meta = json.loads(line[6:])
+            lines = body.split("\n")
+            for i, line in enumerate(lines):
+                if line.strip() == "event: done":
+                    # The data line follows the event line
+                    data_line = lines[i + 1]
+                    assert data_line.startswith("data: ")
+                    meta = json.loads(data_line[6:])
                     assert "generation_time_ms" in meta
                     assert meta["prompt_tokens"] == 10
                     assert meta["completion_tokens"] == 5
@@ -327,9 +331,12 @@ class TestSendMessage:
             )
             body = response.text
             assert "event: done" in body
-            for line in body.split("\n"):
-                if line.startswith("data: {"):
-                    meta = json.loads(line[6:])
+            lines = body.split("\n")
+            for i, line in enumerate(lines):
+                if line.strip() == "event: done":
+                    data_line = lines[i + 1]
+                    assert data_line.startswith("data: ")
+                    meta = json.loads(data_line[6:])
                     assert meta.get("tokens_estimated") is True
                     assert meta["prompt_tokens"] > 0
                     assert meta["completion_tokens"] > 0

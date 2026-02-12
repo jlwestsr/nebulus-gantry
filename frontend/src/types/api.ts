@@ -26,6 +26,8 @@ export interface MessageMeta {
   prompt_tokens?: number;
   completion_tokens?: number;
   total_tokens?: number;
+  tokens_per_second?: number;
+  tokens_estimated?: boolean;
 }
 
 export interface Message {
