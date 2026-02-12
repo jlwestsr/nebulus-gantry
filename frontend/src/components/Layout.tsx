@@ -11,7 +11,14 @@ interface LayoutProps {
 export function Layout({ children }: LayoutProps) {
   const { user, logout } = useAuthStore();
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const { isSidebarOpen, toggleSidebar, closeSidebar } = useUIStore();
+  const { isSidebarOpen, toggleSidebar, closeSidebar, overlordAvailable, checkOverlord } = useUIStore();
+
+  // Probe Overlord availability once on mount
+  useEffect(() => {
+    if (user?.role === 'admin' && overlordAvailable === null) {
+      checkOverlord();
+    }
+  }, [user, overlordAvailable, checkOverlord]);
 
   const openSearch = useCallback(() => setIsSearchOpen(true), []);
   const closeSearch = useCallback(() => setIsSearchOpen(false), []);
@@ -116,12 +123,14 @@ export function Layout({ children }: LayoutProps) {
               <>
                 {user.role === 'admin' && (
                   <>
-                    <Link
-                      to="/overlord"
-                      className="text-sm text-gray-400 hover:text-gray-200 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50 rounded px-2 py-1"
-                    >
-                      Overlord
-                    </Link>
+                    {overlordAvailable && (
+                      <Link
+                        to="/overlord"
+                        className="text-sm text-gray-400 hover:text-gray-200 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50 rounded px-2 py-1"
+                      >
+                        Overlord
+                      </Link>
+                    )}
                     <Link
                       to="/admin"
                       className="text-sm text-gray-400 hover:text-gray-200 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50 rounded px-2 py-1"

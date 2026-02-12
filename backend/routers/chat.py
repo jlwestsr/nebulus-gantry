@@ -7,11 +7,13 @@ from fastapi.responses import StreamingResponse, JSONResponse, Response
 from pydantic import BaseModel
 from sqlalchemy.orm import Session as DBSession
 
+from backend.config import settings
 from backend.dependencies import get_db
 from backend.routers.auth import get_current_user
 from backend.services.chat_service import ChatService
 from backend.services.llm_service import LLMService
 from backend.services.model_service import ModelService
+from backend.platform import get_default_model
 from backend.schemas.chat import (
     ConversationResponse,
     ConversationDetailResponse,
@@ -19,11 +21,53 @@ from backend.schemas.chat import (
     SearchResult,
     SearchResponse,
 )
+from backend.schemas.dispatch import DispatchRequest
 from backend.schemas.persona import SetConversationPersonaRequest
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/chat", tags=["chat"])
+
+
+def _build_token_meta(
+    llm: "LLMService",
+    messages: list[dict],
+    full_response: str,
+    generation_time_ms: int,
+) -> dict:
+    """Build token usage and timing metadata for SSE stream.
+
+    Args:
+        llm: LLM service instance (may have last_usage from API).
+        messages: The prompt messages sent to the LLM.
+        full_response: The complete generated response text.
+        generation_time_ms: Wall-clock generation time in milliseconds.
+
+    Returns:
+        Metadata dict with token counts, timing, and generation speed.
+    """
+    generation_time_s = generation_time_ms / 1000.0
+    meta: dict = {"generation_time_ms": generation_time_ms}
+
+    if isinstance(llm.last_usage, dict):
+        meta["prompt_tokens"] = llm.last_usage.get("prompt_tokens", 0)
+        meta["completion_tokens"] = llm.last_usage.get("completion_tokens", 0)
+        meta["total_tokens"] = llm.last_usage.get("total_tokens", 0)
+    else:
+        prompt_text = " ".join(m.get("content", "") for m in messages)
+        meta["prompt_tokens"] = len(prompt_text) // 4
+        meta["completion_tokens"] = len(full_response) // 4
+        meta["total_tokens"] = meta["prompt_tokens"] + meta["completion_tokens"]
+        meta["tokens_estimated"] = True
+
+    if generation_time_s > 0 and meta.get("completion_tokens", 0) > 0:
+        meta["tokens_per_second"] = round(
+            meta["completion_tokens"] / generation_time_s, 2
+        )
+    else:
+        meta["tokens_per_second"] = 0
+
+    return meta
 
 
 def get_chat_service(db: DBSession = Depends(get_db)) -> ChatService:
@@ -361,7 +405,7 @@ async def send_message(  # noqa: C901
 
     # Stream response from LLM — use requested model or default
     llm = LLMService()
-    llm_model = request.model or "default"
+    llm_model = request.model or get_default_model()
 
     async def generate():
         full_response = ""
@@ -370,17 +414,11 @@ async def send_message(  # noqa: C901
             llm_messages, model=llm_model, temperature=persona_temperature
         ):
             full_response += chunk
-            yield chunk
+            yield f"data: {json.dumps({'content': chunk})}\n\n"
 
         generation_time_ms = int((time.monotonic() - start_time) * 1000)
-
-        # Emit metadata as a special suffix for the frontend to parse
-        meta: dict = {"generation_time_ms": generation_time_ms}
-        if isinstance(llm.last_usage, dict):
-            meta["prompt_tokens"] = llm.last_usage.get("prompt_tokens", 0)
-            meta["completion_tokens"] = llm.last_usage.get("completion_tokens", 0)
-            meta["total_tokens"] = llm.last_usage.get("total_tokens", 0)
-        yield f"\n\n__META__{json.dumps(meta)}"
+        meta = _build_token_meta(llm, llm_messages, full_response, generation_time_ms)
+        yield f"event: done\ndata: {json.dumps(meta)}\n\n"
 
         # Save assistant response after streaming completes
         assistant_msg = chat.add_message(conversation_id, "assistant", full_response)
@@ -477,3 +515,58 @@ def set_conversation_document_scope(
     chat.db.commit()
     chat.db.refresh(conversation)
     return conversation
+
+
+# ── Overlord Dispatch Endpoint ───────────────────────────────────────────────
+
+
+@router.post("/dispatch")
+async def dispatch_message(
+    request: DispatchRequest,
+    user=Depends(get_current_user),
+):
+    """Route a message through Overlord's dispatch layer.
+
+    Returns a Server-Sent Events stream of DispatchEvent objects.
+    Falls back to direct LLM if Overlord routing is disabled.
+    """
+    if not settings.overlord_routing_enabled:
+        # Fallback: route directly to LLM without Overlord
+        from backend.schemas.dispatch import content_event, error_event, result_event
+
+        llm = LLMService()
+        messages = [
+            {"role": "system", "content": "You are Nebulus Gantry, a helpful AI assistant."},
+        ]
+        for msg in request.conversation_history:
+            messages.append({"role": msg.get("role", "user"), "content": msg.get("content", "")})
+        messages.append({"role": "user", "content": request.user_message})
+
+        async def fallback_generate():
+            start_time = time.monotonic()
+            full_text = ""
+            try:
+                async for chunk in llm.stream_chat(messages):
+                    full_text += chunk
+                    yield content_event(chunk, source="local").to_sse()
+                yield result_event("", source="local").to_sse()
+            except Exception as e:
+                yield error_event(str(e)).to_sse()
+
+            generation_time_ms = int((time.monotonic() - start_time) * 1000)
+            meta = _build_token_meta(llm, messages, full_text, generation_time_ms)
+            yield f"event: done\ndata: {json.dumps(meta)}\n\n"
+
+        return StreamingResponse(fallback_generate(), media_type="text/event-stream")
+
+    # Overlord routing enabled — use conversation router
+    from backend.services.conversation_router import get_conversation_router
+
+    router_svc = get_conversation_router()
+
+    async def generate():
+        async for event in router_svc.route_message(request):
+            yield event.to_sse()
+        yield "data: [DONE]\n\n"
+
+    return StreamingResponse(generate(), media_type="text/event-stream")

@@ -11,7 +11,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 
 from backend.routers.admin import require_admin
 from backend.schemas.overlord import (
+    ActiveDispatchListResponse,
     ApproveProposalResponse,
+    BudgetResponse,
     CreateMemoryRequest,
     CreateMemoryResponse,
     DashboardResponse,
@@ -42,6 +44,16 @@ def _get_service() -> OverlordService:
         return get_overlord_service()
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=str(exc))
+
+
+@router.get("/available")
+def check_available():
+    """Unauthenticated probe — returns whether Overlord modules are installed."""
+    try:
+        get_overlord_service()
+        return {"available": True}
+    except RuntimeError:
+        return {"available": False}
 
 
 # ── Tier 1: Ecosystem Dashboard ─────────────────────────────────────────────
@@ -208,6 +220,33 @@ def get_detections(
 ):
     """Run all detectors and return findings."""
     return {"detections": svc.get_detections()}
+
+
+@router.post("/halt")
+def halt_all(
+    admin=Depends(require_admin),
+    svc: OverlordService = Depends(_get_service),
+):
+    """Emergency stop — cancel all dispatched tasks and stop daemon."""
+    return svc.halt_all()
+
+
+@router.get("/dispatch/active", response_model=ActiveDispatchListResponse)
+def get_active_dispatches(
+    admin=Depends(require_admin),
+    svc: OverlordService = Depends(_get_service),
+):
+    """Return currently active/dispatched tasks for the situation map."""
+    return {"dispatches": svc.get_active_dispatches()}
+
+
+@router.get("/budget", response_model=BudgetResponse)
+def get_budget(
+    admin=Depends(require_admin),
+    svc: OverlordService = Depends(_get_service),
+):
+    """Return daily budget/cost status for the situation map."""
+    return svc.get_budget_status()
 
 
 @router.get("/audit/notifications", response_model=NotificationStatsSchema)

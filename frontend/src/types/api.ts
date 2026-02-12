@@ -26,6 +26,8 @@ export interface MessageMeta {
   prompt_tokens?: number;
   completion_tokens?: number;
   total_tokens?: number;
+  tokens_per_second?: number;
+  tokens_estimated?: boolean;
 }
 
 export interface Message {
@@ -291,4 +293,46 @@ export interface OverlordNotificationStats {
   urgent_count: number;
   buffered_count: number;
   last_digest_time: string | null;
+}
+
+// ── Situation Map types ──────────────────────────────────────────────────
+
+export interface ActiveDispatch {
+  id: string;
+  title: string;
+  project: string;
+  status: string;
+  worker?: string;
+  tokens_used?: number;
+  token_budget?: number;
+}
+
+export interface BudgetStatus {
+  tokens_used_today: number;
+  token_ceiling: number;
+  cost_usd_today: number;
+  cost_ceiling_usd: number;
+  usage_pct: number;
+}
+
+// ── Dispatch Protocol types ──────────────────────────────────────────────
+
+export interface DispatchContext {
+  active_project?: string | null;
+  trust_level?: string;
+  token_budget?: number;
+}
+
+export interface DispatchRequest {
+  user_message: string;
+  conversation_history?: Array<{ role: string; content: string }>;
+  context?: DispatchContext;
+  role?: string;
+}
+
+export interface DispatchEvent {
+  type: 'thinking' | 'content' | 'action' | 'result' | 'status' | 'approval_request' | 'error';
+  source: string;
+  content: string;
+  metadata: Record<string, unknown>;
 }

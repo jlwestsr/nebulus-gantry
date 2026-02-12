@@ -12,7 +12,7 @@ empty results without crashing the application.
 import logging
 from typing import Optional
 
-from backend.services.chroma_pool import get_chroma_client
+from backend.services.chroma_pool import get_vector_client
 
 logger = logging.getLogger(__name__)
 
@@ -22,32 +22,29 @@ class MemoryService:
     Service for managing semantic memory using ChromaDB.
 
     Each user has their own collection for message storage and retrieval.
-    Uses a shared ChromaDB client from the connection pool.
+    Uses a shared VectorClient from the connection pool.
     """
 
     def __init__(self, user_id: int):
         """
-        Initialize with user-specific collection.
+        Initialize with user-specific collection name.
 
         Args:
             user_id: The user ID for which to create/access the collection.
         """
         self.user_id = user_id
-        self.collection = None
+        self._collection_name = f"user_{user_id}_messages"
+        self._vector_client = None
         self._available = False
 
         try:
-            self.client = get_chroma_client()
-            if self.client is None:
-                raise ConnectionError("ChromaDB client unavailable")
-            self.collection = self.client.get_or_create_collection(
-                name=f"user_{user_id}_messages"
-            )
+            self._vector_client = get_vector_client()
+            if self._vector_client is None:
+                raise ConnectionError("VectorClient unavailable")
             self._available = True
             logger.info(f"ChromaDB connected for user {user_id}")
         except Exception as e:
             logger.warning(f"ChromaDB unavailable: {e}. Memory service will be disabled.")
-            self.client = None
 
     @property
     def available(self) -> bool:
@@ -71,14 +68,15 @@ class MemoryService:
         Returns:
             True if successful, None if unavailable or failed.
         """
-        if not self.available or self.collection is None:
+        if not self.available or self._vector_client is None:
             return None
 
         try:
-            self.collection.add(
+            self._vector_client.add_documents(
+                self._collection_name,
                 ids=[f"msg_{message_id}"],
                 documents=[content],
-                metadatas=[metadata or {}]
+                metadatas=[metadata or {}],
             )
             logger.debug(f"Embedded message {message_id} for user {self.user_id}")
             return True
@@ -100,13 +98,12 @@ class MemoryService:
                 - score: Similarity score (distance)
                 - metadata: Associated metadata
         """
-        if not self.available or self.collection is None:
+        if not self.available or self._vector_client is None:
             return []
 
         try:
-            results = self.collection.query(
-                query_texts=[query],
-                n_results=limit
+            results = self._vector_client.search(
+                self._collection_name, query, n_results=limit
             )
 
             # Format results

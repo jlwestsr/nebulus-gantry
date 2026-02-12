@@ -22,13 +22,21 @@ import type {
   OverlordProjectStatus,
   OverlordGraph,
   OverlordMemoryList,
-  OverlordMemoryEntry,
   OverlordPlan,
   OverlordDispatchResult,
   OverlordProposal,
   OverlordDetection,
   OverlordNotificationStats,
+  ActiveDispatch,
+  BudgetStatus,
+  DispatchRequest,
+  DispatchEvent,
+  MessageMeta,
 } from '../types/api';
+
+export type ChatStreamEvent =
+  | { type: 'content'; content: string }
+  | { type: 'done'; meta: MessageMeta };
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -106,7 +114,11 @@ export const chatApi = {
     window.location.href = `${API_URL}/api/chat/conversations/${id}/export?format=${format}`;
   },
 
-  sendMessage: async function* (conversationId: number, content: string, model?: string) {
+  sendMessage: async function* (
+    conversationId: number,
+    content: string,
+    model?: string
+  ): AsyncGenerator<ChatStreamEvent> {
     const body: Record<string, string> = { content };
     if (model) body.model = model;
 
@@ -128,11 +140,52 @@ export const chatApi = {
     if (!reader) throw new Error('No response body');
 
     const decoder = new TextDecoder('utf-8');
+    let buffer = '';
+
     try {
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-        yield decoder.decode(value, { stream: true });
+
+        buffer += decoder.decode(value, { stream: true });
+
+        // Parse SSE events from the buffer
+        const parts = buffer.split('\n\n');
+        buffer = parts.pop() || '';
+
+        for (const block of parts) {
+          const trimmed = block.trim();
+          if (!trimmed) continue;
+
+          // Check for named event (e.g. "event: done\ndata: {...}")
+          const eventMatch = trimmed.match(/^event:\s*(\S+)\ndata:\s*(.*)$/s);
+          if (eventMatch) {
+            const [, eventName, eventData] = eventMatch;
+            if (eventName === 'done') {
+              try {
+                const meta = JSON.parse(eventData) as MessageMeta;
+                yield { type: 'done', meta };
+              } catch {
+                // Ignore malformed done payload
+              }
+            }
+            continue;
+          }
+
+          // Standard data-only event
+          if (trimmed.startsWith('data: ')) {
+            const data = trimmed.slice(6);
+            try {
+              const parsed = JSON.parse(data);
+              if (parsed.content) {
+                yield { type: 'content', content: parsed.content as string };
+              }
+            } catch {
+              // Backwards compatibility: yield raw text for non-JSON streams
+              yield { type: 'content', content: data };
+            }
+          }
+        }
       }
     } finally {
       reader.releaseLock();
@@ -427,4 +480,72 @@ export const overlordApi = {
 
   getNotificationStats: () =>
     fetchApi<OverlordNotificationStats>('/api/overlord/audit/notifications'),
+
+  // Tier 5: Situation Map
+  getActiveDispatches: () =>
+    fetchApi<{ dispatches: ActiveDispatch[] }>('/api/overlord/dispatch/active'),
+
+  getBudget: () =>
+    fetchApi<BudgetStatus>('/api/overlord/budget'),
+
+  haltAll: () =>
+    fetchApi<{ message: string; tasks_cancelled: number; daemon_stopped: boolean }>(
+      '/api/overlord/halt',
+      { method: 'POST' }
+    ),
+};
+
+// ─── Dispatch ─────────────────────────────────────────────────────────────
+
+export const dispatchApi = {
+  /**
+   * Send a message through Overlord's dispatch layer.
+   * Returns an async generator of DispatchEvent objects via SSE.
+   */
+  sendMessage: async function* (request: DispatchRequest): AsyncGenerator<DispatchEvent> {
+    const response = await fetch(`${API_URL}/api/chat/dispatch`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to dispatch message');
+    }
+
+    const reader = response.body?.getReader();
+    if (!reader) throw new Error('No response body');
+
+    const decoder = new TextDecoder('utf-8');
+    let buffer = '';
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+
+        // Parse SSE events from the buffer
+        const lines = buffer.split('\n\n');
+        buffer = lines.pop() || '';
+
+        for (const block of lines) {
+          const line = block.trim();
+          if (line.startsWith('data: ')) {
+            const data = line.slice(6);
+            if (data === '[DONE]') return;
+            try {
+              yield JSON.parse(data) as DispatchEvent;
+            } catch {
+              // Skip malformed events
+            }
+          }
+        }
+      }
+    } finally {
+      reader.releaseLock();
+    }
+  },
 };

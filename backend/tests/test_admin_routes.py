@@ -275,7 +275,7 @@ class TestAdminAccess:
 
     def test_stream_logs_admin(self, client, admin_user):
         _, token = admin_user
-        with patch("backend.routers.admin._docker_service") as mock_ds:
+        with patch("backend.routers.admin._service_manager") as mock_ds:
             mock_ds.available = True
 
             def fake_stream(name, tail=100):
@@ -293,7 +293,7 @@ class TestAdminAccess:
     def test_stream_logs_returns_sse_data(self, client, admin_user):
         """GET /admin/logs/{name} streams SSE-formatted log lines."""
         _, token = admin_user
-        with patch("backend.routers.admin._docker_service") as mock_ds:
+        with patch("backend.routers.admin._service_manager") as mock_ds:
             mock_ds.available = True
 
             def fake_stream(name, tail=100):
@@ -315,7 +315,7 @@ class TestAdminAccess:
     def test_stream_logs_docker_unavailable(self, client, admin_user):
         """GET /admin/logs/{name} returns 503 when Docker is unavailable."""
         _, token = admin_user
-        with patch("backend.routers.admin._docker_service") as mock_ds:
+        with patch("backend.routers.admin._service_manager") as mock_ds:
             mock_ds.available = False
 
             response = client.get(

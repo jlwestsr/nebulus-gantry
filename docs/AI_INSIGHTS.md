@@ -422,3 +422,120 @@ knowledge-base, chatgpt-ui, llm-frontend, ai-assistant, enterprise-ai
 
 - nebulus-core's `LLMClient` is **sync-only** with no streaming support. Gantry's async `httpx.AsyncClient` SSE streaming in `llm_service.py` must be preserved.
 - The integration is a **configuration bridge only** — source URLs from the adapter, keep Gantry's async implementation. Do not attempt to replace `LLMService` with `LLMClient`.
+
+### Known Issue: ProposalStore.list_all
+
+- **Pre-existing bug**: `GET /api/overlord/audit/proposals` throws `AttributeError: 'ProposalStore' object has no attribute 'list_all'` in `overlord_service.py:227`. The `list_proposals()` method calls `self._proposal_store.list_all()` but the upstream `ProposalStore` in nebulus-atom doesn't expose that method. This predates the platform bridge work and needs an upstream fix in nebulus-atom.
+
+### Release
+
+- Tagged `v2.2.0` on `main`. Previous release was `v2.1.0`.
+
+## 12. Session Notes (2026-02-10) — Track 6: Gantry-Overlord Unification
+
+### Track 6 Overview
+
+Track 6 unifies Gantry's chat interface with the Overlord meta-orchestrator. The user talks to one AI; Overlord routes to the right backend (Claude, Gemini, Local LLM, or the dispatch engine). Design doc: `docs/plans/2026-02-10-gantry-overlord-unification.md`.
+
+### Phase A: Backend Plumbing — Complete
+
+- **Dispatch Protocol**: `DispatchRequest` → SSE stream of `DispatchEvent` objects (`thinking`, `content`, `action`, `result`, `status`, `approval_request`, `error`). Schema in `backend/schemas/dispatch.py`.
+- **Conversation Router** (`backend/services/conversation_router.py`): Pattern-based intent classification (halt > status > dispatch > question). Worker selection heuristics: code keywords → Claude, strategy keywords → Gemini, default → Local LLM.
+- **SSE Endpoint**: `POST /api/chat/dispatch` streams `DispatchEvent` objects. Frontend consumes via `dispatchApi.sendMessage()` async generator using `ReadableStream` reader.
+- **Dispatch Bridge** (`dispatch_from_chat()` in `overlord_service.py`): Bridges Gantry chat to the real Dispatcher (Analyze → Brief → Provision → Execute → Review). Creates WorkQueue task, runs governance, builds workers dict, calls `Dispatcher.dispatch_task()`. Falls back to `execute_task()` if Dispatcher modules unavailable.
+- **Governance Enforcement**: `run_governance_check()` in OverlordService runs pre-dispatch checks via `GovernanceEngine.pre_dispatch_check()`. Both the ConversationRouter and `dispatch_from_chat()` enforce governance.
+- **Test Count**: 398 tests after Phase A (49 new: 7 dispatch bridge, 16 conversation router, 26 existing overlord router).
+
+### Phase A: GAP Fixes
+
+- **GAP-1 (Wrong Dispatch Engine)**: `_handle_dispatch()` in ConversationRouter originally called `execute_task()` (Phase 2 DispatchEngine) instead of the real Dispatcher. Fixed by calling `dispatch_from_chat()` which routes through the full Dispatcher lifecycle.
+- **GAP-2 (Governance Bypass)**: ConversationRouter's dispatch path had no governance check. Fixed by adding `svc.run_governance_check()` before `svc.dispatch_from_chat()`.
+- **Test Isolation for nebulus_swarm**: Since `nebulus_swarm` isn't installed in Gantry's venv, tests use `sys.modules` injection via an `inject_modules` pytest fixture. Mock `ModuleType` objects are created for the entire `nebulus_swarm.overlord.*` hierarchy. Setting `sys.modules[key] = None` blocks imports even in environments where the package is installed (e.g., pre-commit venv at `/home/jlwestsr/.python3_venv`).
+
+### Phase B: Situation Map UI — Complete
+
+- **SituationMap.tsx** (`frontend/src/components/SituationMap.tsx`): Collapsible right-side panel with three sections:
+  - Active Agents: Polls `GET /api/overlord/dispatch/active` every 5s. Worker badges: Claude = purple/violet, Gemini = blue, Local = emerald. Status badges with color-coded backgrounds.
+  - Daily Budget: Token bar with color thresholds (green <60%, yellow 60-80%, red >80%). Shows tokens used/ceiling and cost used/ceiling.
+  - Halt Button: Red button at bottom with confirmation dialog. Calls `POST /api/overlord/halt`. Shows result toast for 5 seconds.
+  - Mobile: Uses `max-md:absolute` positioning for overlay on small screens.
+- **NotificationBlock.tsx** (`frontend/src/components/NotificationBlock.tsx`): Renders 5 event types inline in chat:
+  - `thinking`: Collapsed gray block with expand toggle and pulse indicator
+  - `status`: Blue-gray info block with info icon
+  - `result`: Card with worker/tokens/status metadata badges
+  - `approval_request`: Yellow block with Approve/Deny buttons that call `overlordApi.approveProposal()`/`denyProposal()`
+  - `error`: Red alert block with error icon
+- **dispatchStore.ts** (`frontend/src/stores/dispatchStore.ts`): Zustand store managing `activeDispatches`, `budget`, `events`, `sidebarOpen`. Sidebar state persists in `localStorage('gantry-situation-map-open')`. Actions: `fetchActiveDispatches`, `fetchBudget`, `addEvent`, `clearEvents`, `toggleSidebar`, `haltAll`.
+- **Chat.tsx Integration**: Imports SituationMap and NotificationBlock. Non-content events routed to `dispatchStore.addEvent()`. Events cleared on conversation change and before each new message. Sidebar toggle button in chat header (double chevron icon). Notification blocks rendered between header and message list.
+- **Backend Endpoints (3 new)**:
+  - `GET /api/overlord/budget` → `BudgetResponse` (tokens_used_today, token_ceiling, cost_usd_today, cost_ceiling_usd, usage_pct)
+  - `GET /api/overlord/dispatch/active` → `ActiveDispatchListResponse` (list of dispatch cards)
+  - `POST /api/overlord/halt` → halt result (message, tasks_cancelled, daemon_stopped)
+  - All require admin auth via `Depends(require_admin)` + `Depends(_get_service)` with 503 graceful degradation.
+- **OverlordService.get_budget_status()**: Queries `WorkQueue.get_daily_usage()` for token/cost data. Returns zeros when WorkQueue is unavailable.
+- **Test Count**: 407 tests after Phase B (10 new: 4 budget, 3 active dispatches, 3 halt).
+
+### Phase C: Provider Management UI — BACKLOG
+
+Not scheduled. See design doc Section 5 for details. Adds pluggable LLM provider management with encrypted API keys, role assignment, fallback chains, and hot-reload.
+
+### Phase D: Full Plant Manager Mode — BACKLOG
+
+Not scheduled. Intent-driven task intake, plan decomposition, multi-agent execution with live progress, intervention controls (redirect, pause, kill, inspect).
+
+### Patterns Established
+
+- **Dispatch Event Consumption**: `for await (const event of dispatchApi.sendMessage({...}))` with type-based routing: `content` → message update, `error` → error state + dispatch store, everything else → dispatch store for sidebar + inline rendering.
+- **Sidebar Polling Pattern**: `useEffect` with `setInterval(5000)` for active dispatches and budget. Cleanup on unmount via returned function.
+- **Confirmation Dialog Pattern**: `showHaltConfirm` state toggles between single button and confirm/cancel pair. No external dialog library — inline Tailwind-styled buttons.
+- **Admin-Only Situation Map Endpoints**: Follow same `Depends(require_admin) + Depends(_get_service)` pattern as all other overlord endpoints. Service method returns dict, router wraps in Pydantic response model.
+
+## 13. Session Notes (2026-02-10) — Edge Deployment & LLM Connectivity Fixes
+
+### Port Reassignment
+
+- **Open WebUI moved from port 3000 → 3001** (`nebulus-edge/body/docker-compose.yml`). Gantry frontend now owns port 3000.
+- **Gantry frontend moved from port 3001 → 3000** (`docker-compose.yml`). When running bare-metal (not Docker), start with `npm run dev -- --host 0.0.0.0 --port 3000`.
+- **Port mapping summary (Mac Mini)**: Gantry frontend = 3000, Open WebUI = 3001, Gantry backend = 8000, Brain (MLX) = 8080, Intelligence = 8081.
+
+### macOS Firewall
+
+- **Application Firewall blocks unlisted binaries**: The macOS Application Firewall (`socketfilterfw`) must explicitly allow each binary that listens on a network port. Homebrew Python (`/opt/homebrew/Cellar/python@3.12/.../Python.app`) and Node.js (`/opt/homebrew/Cellar/node/25.4.0/bin/node`) both needed to be added manually via `sudo socketfilterfw --add` + `--unblockapp`.
+- **Docker.app is pre-allowed**: Docker containers (Open WebUI) are reachable by default.
+
+### CORS Configuration
+
+- **LAN IP required in CORS origins**: When accessing Gantry from a remote dev machine, the browser sends `Origin: http://192.168.4.30:3000`. This must be in `allow_origins` or the backend rejects preflight requests with `400 Disallowed CORS origin`.
+- **Current approach**: Origins list opened to `["*"]` for lab/dev access (commit `7a784ed` from dev machine).
+- **Cookie SameSite**: Session cookies use `samesite="lax"`. This works for same-site cross-port requests (e.g., `192.168.4.30:3000` → `192.168.4.30:8000`) but NOT for cross-site (e.g., `localhost:3000` → `192.168.4.30:8000`).
+
+### Frontend API URL
+
+- **`VITE_API_URL` env var**: Frontend uses `import.meta.env.VITE_API_URL || 'http://localhost:8000'` for all API calls. When serving to remote clients, this must point to the Mac Mini's LAN IP. Set via `frontend/.env` (gitignored): `VITE_API_URL=http://192.168.4.30:8000`.
+- **Vite restart required**: `.env` changes require a Vite restart — they are not hot-reloaded.
+
+### LLM Base URL Double-Path Bug
+
+- **Root cause**: Edge adapter's `llm_base_url` returns `http://localhost:8080/v1` (with `/v1` suffix, per nebulus-core convention). Gantry services (`llm_service.py`, `conversation_router.py`, `model_service.py`) append `/v1/...` themselves, resulting in `http://localhost:8080/v1/v1/models` (404).
+- **Fix**: `get_llm_base_url()` in `backend/platform.py` now strips `/v1` suffix from whatever the adapter returns via `.removesuffix("/v1")`. This keeps the core adapter convention intact while preventing Gantry from doubling the path.
+
+### Model Name Mismatch
+
+- **Root cause**: Edge adapter's `default_model` was `mlx-community/Meta-Llama-3.1-8B-Instruct` but the brain serves `mlx-community/Meta-Llama-3.1-8B-Instruct-4bit`. The brain returns 404 for unknown model names (tries to fetch from HuggingFace).
+- **Fix (edge)**: Updated `EdgeAdapter.default_model` to `mlx-community/Meta-Llama-3.1-8B-Instruct-4bit`.
+- **Fix (gantry)**: `conversation_router.py` and `llm_service.py` now use `get_default_model()` instead of hardcoded `"default"` string.
+
+### Overlord Conditional UI
+
+- **Problem**: Overlord nav link showed even when `nebulus_swarm` isn't installed. The check hit `/api/overlord/dashboard` which requires auth — returning 401, not 503, so the UI thought Overlord was available.
+- **Fix**: Added unauthenticated `GET /api/overlord/available` endpoint that returns `{"available": true/false}`. Frontend `uiStore.checkOverlord()` calls this via the proper `VITE_API_URL` base.
+
+### Bare-Metal Backend on Mac Mini
+
+- **Process supervisor**: Uvicorn runs as a bare-metal process (not Docker, not PM2) with auto-restart. Killing the process spawns a new one automatically. PID changes on restart.
+- **Log locations**: Access log at `/private/var/log/nebulus/gantry-backend.log`, error log at `/private/var/log/nebulus/gantry-backend-error.log`.
+- **`__pycache__` stale bytecode**: After editing Python files, the auto-restarted process may load cached `.pyc` files. Clear with `find backend -name __pycache__ -exec rm -rf {} +` before restart for reliable code updates.
+
+### Git Remote URLs
+
+- **HTTPS → SSH**: Both `nebulus-edge` and `nebulus-gantry` remotes were switched from HTTPS to SSH (`git@github.com:jlwestsr/...`) because the Mac Mini doesn't have HTTPS credentials configured. The remote URL can revert to HTTPS after `set-url`, so verify with `git remote -v` before pushing.

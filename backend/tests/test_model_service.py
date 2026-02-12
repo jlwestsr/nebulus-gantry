@@ -30,31 +30,6 @@ def _make_mock_response(status_code=200, json_data=None, raise_for_status=None):
     return resp
 
 
-def _patch_async_client(get_responses=None, post_response=None, get_side_effect=None,
-                        post_side_effect=None):
-    """Create a context manager that patches httpx.AsyncClient with given responses.
-
-    get_responses: list of responses for successive GET calls.
-    post_response: single response for POST calls.
-    """
-    mock_client = AsyncMock()
-
-    if get_side_effect:
-        mock_client.get = AsyncMock(side_effect=get_side_effect)
-    elif get_responses:
-        mock_client.get = AsyncMock(side_effect=get_responses)
-    else:
-        mock_client.get = AsyncMock(return_value=MagicMock())
-
-    if post_side_effect:
-        mock_client.post = AsyncMock(side_effect=post_side_effect)
-    elif post_response:
-        mock_client.post = AsyncMock(return_value=post_response)
-
-    patcher = patch("backend.services.model_service.httpx.AsyncClient")
-    return patcher, mock_client
-
-
 class _AsyncClientPatch:
     """Context manager for patching httpx.AsyncClient."""
 
@@ -76,10 +51,14 @@ class _AsyncClientPatch:
 
 
 class TestGetActiveModel:
-    """Test ModelService.get_active_model."""
+    """Test ModelService.get_active_model.
 
-    def test_returns_active_model(self):
-        """get_active_model should return dict with id and name."""
+    The method now tries TabbyAPI-specific /v1/model first, then falls back
+    to the first model from /v1/models. Both use the same httpx client.
+    """
+
+    def test_returns_active_model_from_tabby_endpoint(self):
+        """get_active_model should return dict from /v1/model when available."""
         resp = _make_mock_response(json_data={"id": "llama-3-8b"})
         mock_client = AsyncMock()
         mock_client.get = AsyncMock(return_value=resp)
@@ -90,11 +69,32 @@ class TestGetActiveModel:
 
         assert result == {"id": "llama-3-8b", "name": "llama-3-8b"}
 
-    def test_returns_none_when_no_model_loaded(self):
-        """get_active_model should return None when no model is loaded."""
-        resp = _make_mock_response(json_data={"id": ""})
+    def test_falls_back_to_v1_models(self):
+        """get_active_model should fall back to /v1/models when /v1/model fails."""
+        tabby_error = httpx.HTTPStatusError(
+            "Not Found",
+            request=MagicMock(),
+            response=MagicMock(status_code=404),
+        )
+        models_resp = _make_mock_response(json_data={
+            "data": [{"id": "mlx-model"}]
+        })
         mock_client = AsyncMock()
-        mock_client.get = AsyncMock(return_value=resp)
+        mock_client.get = AsyncMock(side_effect=[tabby_error, models_resp])
+
+        with _AsyncClientPatch(mock_client):
+            svc = ModelService()
+            result = _run(svc.get_active_model())
+
+        assert result == {"id": "mlx-model", "name": "mlx-model"}
+
+    def test_returns_none_when_no_model_loaded(self):
+        """get_active_model should return None when /v1/model returns empty
+        id and /v1/models returns no models."""
+        tabby_resp = _make_mock_response(json_data={"id": ""})
+        models_resp = _make_mock_response(json_data={"data": []})
+        mock_client = AsyncMock()
+        mock_client.get = AsyncMock(side_effect=[tabby_resp, models_resp])
 
         with _AsyncClientPatch(mock_client):
             svc = ModelService()
@@ -103,7 +103,7 @@ class TestGetActiveModel:
         assert result is None
 
     def test_returns_none_on_connection_error(self):
-        """get_active_model should return None when TabbyAPI is unreachable."""
+        """get_active_model should return None when LLM server is unreachable."""
         mock_client = AsyncMock()
         mock_client.get = AsyncMock(side_effect=httpx.ConnectError("Connection refused"))
 
@@ -120,13 +120,14 @@ class TestGetActiveModel:
 class TestListModels:
     """Test ModelService.list_models with mocked HTTP responses.
 
-    Note: list_models() internally calls get_active_model() first (GET /v1/model),
-    then fetches the model list (GET /v1/models). Both use separate httpx clients,
-    so we need to mock both GET calls.
+    Note: list_models() internally calls get_active_model() first (which may
+    make 1-2 GET calls), then fetches the model list (GET /v1/models).
     """
 
     def test_returns_parsed_models_with_active_flag(self):
         """list_models should mark the active model correctly."""
+        # get_active_model: GET /v1/model → success (1 call)
+        # list_models: GET /v1/models → model list (1 call)
         active_resp = _make_mock_response(json_data={"id": "llama-3-8b"})
         list_resp = _make_mock_response(json_data={
             "data": [
@@ -146,7 +147,7 @@ class TestListModels:
         assert models[1] == {"id": "mistral-7b", "name": "mistral-7b", "active": False}
 
     def test_returns_empty_on_connection_error(self):
-        """list_models should return [] when TabbyAPI is unreachable."""
+        """list_models should return [] when LLM server is unreachable."""
         mock_client = AsyncMock()
         mock_client.get = AsyncMock(side_effect=httpx.ConnectError("Connection refused"))
 
@@ -157,7 +158,7 @@ class TestListModels:
         assert models == []
 
     def test_returns_empty_on_http_error(self):
-        """list_models should return [] when TabbyAPI returns an error status."""
+        """list_models should return [] when LLM server returns an error status."""
         error = httpx.HTTPStatusError(
             "Server Error",
             request=MagicMock(),
@@ -174,10 +175,12 @@ class TestListModels:
 
     def test_returns_empty_when_data_key_missing(self):
         """list_models should return [] when response has no 'data' key."""
-        active_resp = _make_mock_response(json_data={"id": ""})
+        # get_active_model: /v1/model → empty id, /v1/models fallback → no data
+        tabby_resp = _make_mock_response(json_data={"id": ""})
+        fallback_resp = _make_mock_response(json_data={"data": []})
         list_resp = _make_mock_response(json_data={})
         mock_client = AsyncMock()
-        mock_client.get = AsyncMock(side_effect=[active_resp, list_resp])
+        mock_client.get = AsyncMock(side_effect=[tabby_resp, fallback_resp, list_resp])
 
         with _AsyncClientPatch(mock_client):
             svc = ModelService()
@@ -187,12 +190,14 @@ class TestListModels:
 
     def test_defaults_active_to_false_when_no_active_model(self):
         """Models should default to active=False when no model is loaded."""
-        active_resp = _make_mock_response(json_data={"id": ""})
+        # get_active_model: /v1/model → empty id, /v1/models fallback → no models
+        tabby_resp = _make_mock_response(json_data={"id": ""})
+        fallback_resp = _make_mock_response(json_data={"data": []})
         list_resp = _make_mock_response(json_data={
             "data": [{"id": "some-model"}]
         })
         mock_client = AsyncMock()
-        mock_client.get = AsyncMock(side_effect=[active_resp, list_resp])
+        mock_client.get = AsyncMock(side_effect=[tabby_resp, fallback_resp, list_resp])
 
         with _AsyncClientPatch(mock_client):
             svc = ModelService()
@@ -225,7 +230,7 @@ class TestSwitchModel:
         )
 
     def test_switch_returns_false_on_connection_error(self):
-        """switch_model should return False when TabbyAPI is unreachable."""
+        """switch_model should return False when LLM server is unreachable."""
         mock_client = AsyncMock()
         mock_client.post = AsyncMock(side_effect=httpx.ConnectError("Connection refused"))
 
@@ -236,7 +241,7 @@ class TestSwitchModel:
         assert result is False
 
     def test_switch_returns_false_on_http_error(self):
-        """switch_model should return False when TabbyAPI returns an error."""
+        """switch_model should return False when LLM server returns an error."""
         error = httpx.HTTPStatusError(
             "Server Error",
             request=MagicMock(),
@@ -249,6 +254,22 @@ class TestSwitchModel:
         with _AsyncClientPatch(mock_client):
             svc = ModelService()
             result = _run(svc.switch_model("bad-model"))
+
+        assert result is False
+
+    def test_switch_returns_false_on_404_non_tabby(self):
+        """switch_model should return False with warning when endpoint not found."""
+        error = httpx.HTTPStatusError(
+            "Not Found",
+            request=MagicMock(),
+            response=MagicMock(status_code=404),
+        )
+        mock_client = AsyncMock()
+        mock_client.post = AsyncMock(side_effect=error)
+
+        with _AsyncClientPatch(mock_client):
+            svc = ModelService()
+            result = _run(svc.switch_model("some-model"))
 
         assert result is False
 
@@ -289,6 +310,22 @@ class TestUnloadModel:
         """unload_model should return False on connection error."""
         mock_client = AsyncMock()
         mock_client.post = AsyncMock(side_effect=httpx.ConnectError("Connection refused"))
+
+        with _AsyncClientPatch(mock_client):
+            svc = ModelService()
+            result = _run(svc.unload_model())
+
+        assert result is False
+
+    def test_unload_returns_false_on_404_non_tabby(self):
+        """unload_model should return False with warning when endpoint not found."""
+        error = httpx.HTTPStatusError(
+            "Not Found",
+            request=MagicMock(),
+            response=MagicMock(status_code=404),
+        )
+        mock_client = AsyncMock()
+        mock_client.post = AsyncMock(side_effect=error)
 
         with _AsyncClientPatch(mock_client):
             svc = ModelService()

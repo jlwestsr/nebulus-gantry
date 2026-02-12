@@ -189,6 +189,31 @@ class NotificationStatsSchema(BaseModel):
     last_digest_time: str | None = None
 
 
+# ── Tier 5: Situation Map ──────────────────────────────────────────────────
+
+
+class ActiveDispatchSchema(BaseModel):
+    id: str
+    title: str
+    project: str
+    status: str
+    worker: str | None = None
+    tokens_used: int | None = None
+    token_budget: int | None = None
+
+
+class ActiveDispatchListResponse(BaseModel):
+    dispatches: list[ActiveDispatchSchema] = Field(default_factory=list)
+
+
+class BudgetResponse(BaseModel):
+    tokens_used_today: int = 0
+    token_ceiling: int = 200000
+    cost_usd_today: float = 0.0
+    cost_ceiling_usd: float = 10.0
+    usage_pct: float = 0.0
+
+
 # ── Error ────────────────────────────────────────────────────────────────────
 
 

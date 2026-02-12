@@ -8,6 +8,7 @@ Provides:
 - Chunking and embedding into ChromaDB
 - Semantic search across documents
 """
+import csv
 import io
 import logging
 
@@ -15,13 +16,15 @@ from sqlalchemy.orm import Session as DBSession
 
 from backend.models.collection import Collection
 from backend.models.document import Document
-from backend.services.chroma_pool import get_chroma_client
+from backend.services.chroma_pool import get_vector_client
 
 logger = logging.getLogger(__name__)
 
 # Chunk settings: ~500 tokens ≈ 2000 chars, with 100 char overlap
 CHUNK_SIZE = 2000
 CHUNK_OVERLAP = 100
+CSV_ROW_LIMIT = 10_000
+CSV_ROWS_PER_CHUNK = 50
 
 
 def extract_text_from_pdf(content: bytes) -> str:
@@ -69,6 +72,69 @@ def extract_text_from_txt(content: bytes) -> str:
             raise ValueError(f"Failed to decode text file: {e}")
 
 
+def extract_text_from_csv(
+    content: bytes,
+) -> tuple[list[str], list[list[str]]]:
+    """Extract structured data from CSV content.
+
+    Args:
+        content: Raw CSV file bytes.
+
+    Returns:
+        Tuple of (headers, data_rows).
+    """
+    try:
+        text = content.decode("utf-8")
+    except UnicodeDecodeError:
+        text = content.decode("latin-1")
+
+    reader = csv.reader(io.StringIO(text))
+    rows = list(reader)
+    if not rows:
+        raise ValueError("CSV file is empty")
+
+    headers = rows[0]
+    data_rows = rows[1:]
+
+    if len(data_rows) > CSV_ROW_LIMIT:
+        logger.warning(
+            f"CSV has {len(data_rows)} rows, capping at {CSV_ROW_LIMIT}. "
+            "Remaining rows will be ignored."
+        )
+        data_rows = data_rows[:CSV_ROW_LIMIT]
+
+    return headers, data_rows
+
+
+def chunk_csv(
+    headers: list[str],
+    rows: list[list[str]],
+    rows_per_chunk: int = CSV_ROWS_PER_CHUNK,
+) -> list[str]:
+    """Chunk CSV data into text blocks with headers repeated in each chunk.
+
+    Args:
+        headers: Column header names.
+        rows: Data rows (list of lists).
+        rows_per_chunk: Number of data rows per chunk.
+
+    Returns:
+        List of text chunks, each starting with the header row.
+    """
+    if not rows:
+        return [",".join(headers)]
+
+    chunks = []
+    header_line = ",".join(headers)
+    for i in range(0, len(rows), rows_per_chunk):
+        batch = rows[i: i + rows_per_chunk]
+        lines = [header_line]
+        for row in batch:
+            lines.append(",".join(row))
+        chunks.append("\n".join(lines))
+    return chunks
+
+
 def chunk_text(text: str, chunk_size: int = CHUNK_SIZE, overlap: int = CHUNK_OVERLAP) -> list[str]:
     """Split text into overlapping chunks."""
     if not text:
@@ -107,8 +173,8 @@ class DocumentService:
 
     def __init__(self, db: DBSession):
         self.db = db
-        self._chroma_client = get_chroma_client()
-        self._chroma_available = self._chroma_client is not None
+        self._vector_client = get_vector_client()
+        self._chroma_available = self._vector_client is not None
         if self._chroma_available:
             logger.info("DocumentService: ChromaDB connected")
         else:
@@ -117,18 +183,6 @@ class DocumentService:
     def _get_collection_name(self, user_id: int) -> str:
         """Get the ChromaDB collection name for a user's documents."""
         return f"user_{user_id}_documents"
-
-    def _get_chroma_collection(self, user_id: int):
-        """Get or create the ChromaDB collection for a user."""
-        if not self._chroma_available or not self._chroma_client:
-            return None
-        try:
-            return self._chroma_client.get_or_create_collection(
-                name=self._get_collection_name(user_id)
-            )
-        except Exception as e:
-            logger.error(f"Failed to get ChromaDB collection: {e}")
-            return None
 
     # ========== Collection CRUD ==========
 
@@ -191,16 +245,17 @@ class DocumentService:
             return False
 
         # Delete document chunks from ChromaDB
-        chroma_collection = self._get_chroma_collection(user_id)
-        if chroma_collection:
+        if self._chroma_available and self._vector_client:
+            collection_name = self._get_collection_name(user_id)
             for doc in collection.documents:
                 try:
-                    # Delete all chunks for this document
                     ids_to_delete = [
                         f"doc_{doc.id}_chunk_{i}" for i in range(doc.chunk_count)
                     ]
                     if ids_to_delete:
-                        chroma_collection.delete(ids=ids_to_delete)
+                        self._vector_client.delete_documents(
+                            collection_name, ids=ids_to_delete
+                        )
                 except Exception as e:
                     logger.warning(f"Failed to delete document chunks from ChromaDB: {e}")
 
@@ -239,26 +294,39 @@ class DocumentService:
         self.db.refresh(document)
 
         try:
-            # Extract text based on content type
-            if content_type == "pdf":
+            # Extract text and chunk based on content type
+            if content_type == "csv":
+                headers, data_rows = extract_text_from_csv(content)
+                chunks = chunk_csv(headers, data_rows)
+            elif content_type == "pdf":
                 text = extract_text_from_pdf(content)
+                if not text.strip():
+                    raise ValueError(
+                        "No text could be extracted from the document"
+                    )
+                chunks = chunk_text(text)
             elif content_type == "docx":
                 text = extract_text_from_docx(content)
-            elif content_type in ("txt", "csv"):
+                if not text.strip():
+                    raise ValueError(
+                        "No text could be extracted from the document"
+                    )
+                chunks = chunk_text(text)
+            elif content_type == "txt":
                 text = extract_text_from_txt(content)
+                if not text.strip():
+                    raise ValueError(
+                        "No text could be extracted from the document"
+                    )
+                chunks = chunk_text(text)
             else:
                 raise ValueError(f"Unsupported content type: {content_type}")
 
-            if not text.strip():
-                raise ValueError("No text could be extracted from the document")
-
-            # Chunk the text
-            chunks = chunk_text(text)
             document.chunk_count = len(chunks)
 
             # Index chunks in ChromaDB
-            chroma_collection = self._get_chroma_collection(user_id)
-            if chroma_collection and chunks:
+            if self._chroma_available and self._vector_client and chunks:
+                collection_name = self._get_collection_name(user_id)
                 ids = [f"doc_{document.id}_chunk_{i}" for i in range(len(chunks))]
                 metadatas = [
                     {
@@ -269,7 +337,9 @@ class DocumentService:
                     }
                     for i in range(len(chunks))
                 ]
-                chroma_collection.add(ids=ids, documents=chunks, metadatas=metadatas)
+                self._vector_client.add_documents(
+                    collection_name, ids=ids, documents=chunks, metadatas=metadatas
+                )
 
             document.status = "ready"
             self.db.commit()
@@ -308,14 +378,16 @@ class DocumentService:
             return False
 
         # Delete chunks from ChromaDB
-        chroma_collection = self._get_chroma_collection(user_id)
-        if chroma_collection and document.chunk_count > 0:
+        if self._chroma_available and self._vector_client and document.chunk_count > 0:
             try:
+                collection_name = self._get_collection_name(user_id)
                 ids_to_delete = [
                     f"doc_{document_id}_chunk_{i}"
                     for i in range(document.chunk_count)
                 ]
-                chroma_collection.delete(ids=ids_to_delete)
+                self._vector_client.delete_documents(
+                    collection_name, ids=ids_to_delete
+                )
             except Exception as e:
                 logger.warning(f"Failed to delete chunks from ChromaDB: {e}")
 
@@ -333,21 +405,19 @@ class DocumentService:
         top_k: int = 5,
     ) -> list[dict]:
         """Search documents using semantic search."""
-        chroma_collection = self._get_chroma_collection(user_id)
-        if not chroma_collection:
+        if not self._chroma_available or not self._vector_client:
             return []
 
         try:
+            collection_name = self._get_collection_name(user_id)
+
             # Build filter for collection_ids if provided
             where_filter = None
             if collection_ids:
-                # ChromaDB uses $in for list matching
                 where_filter = {"collection_id": {"$in": collection_ids}}
 
-            results = chroma_collection.query(
-                query_texts=[query],
-                n_results=top_k,
-                where=where_filter,
+            results = self._vector_client.search(
+                collection_name, query, n_results=top_k, where=where_filter
             )
 
             formatted_results = []

@@ -3,35 +3,33 @@ import { Sidebar } from '../components/Sidebar';
 import { MessageList } from '../components/MessageList';
 import { MessageInput } from '../components/MessageInput';
 import { PersonaSelector } from '../components/PersonaSelector';
+import { DocumentScopeSelector } from '../components/DocumentScopeSelector';
+import { SituationMap } from '../components/SituationMap';
+import { NotificationBlock } from '../components/NotificationBlock';
 import { useChatStore } from '../stores/chatStore';
 import { useAuthStore } from '../stores/authStore';
-import { chatApi } from '../services/api';
-import type { Message, MessageMeta, Conversation, Persona } from '../types/api';
+import { useDispatchStore } from '../stores/dispatchStore';
+import { chatApi, dispatchApi } from '../services/api';
+import type { Message, MessageMeta, Conversation, Persona, DocumentScope } from '../types/api';
 
-const META_MARKER = '\n\n__META__';
-
-function extractMeta(text: string): { content: string; meta?: MessageMeta } {
-  const idx = text.indexOf(META_MARKER);
-  if (idx === -1) return { content: text };
-  const content = text.substring(0, idx);
-  try {
-    const meta = JSON.parse(text.substring(idx + META_MARKER.length)) as MessageMeta;
-    return { content, meta };
-  } catch {
-    return { content };
-  }
-}
+const OVERLORD_ROUTING_ENABLED = false; // Direct LLM mode for appliance
 
 
 export function Chat() {
   const { currentConversationId, updateConversationTitle, createConversation, setModelSwitching } = useChatStore();
   const { user } = useAuthStore();
+  const { sidebarOpen, toggleSidebar, addEvent, clearEvents, events } = useDispatchStore();
   const [messages, setMessages] = useState<Message[]>([]);
   const [currentConversation, setCurrentConversation] = useState<Conversation | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const pendingMessageRef = useRef<{ content: string; model?: string } | null>(null);
+
+  // Clear dispatch events when conversation changes
+  useEffect(() => {
+    clearEvents();
+  }, [currentConversationId, clearEvents]);
 
   // Fetch messages when conversation changes
   useEffect(() => {
@@ -60,6 +58,11 @@ export function Chat() {
     fetchMessages();
   }, [currentConversationId]);
 
+  // Handle document scope change
+  const handleScopeChange = useCallback((_scope: DocumentScope[] | null) => {
+    // Scope is persisted server-side; no local state needed
+  }, []);
+
   // Handle persona change
   const handlePersonaChange = useCallback((persona: Persona | null) => {
     setCurrentConversation((prev) =>
@@ -80,6 +83,7 @@ export function Chat() {
 
       setIsSending(true);
       setError(null);
+      clearEvents();
 
       // Create a temporary ID for the user message (will be replaced after refresh)
       const tempUserMessageId = Date.now();
@@ -106,34 +110,61 @@ export function Chat() {
       setMessages((prev) => [...prev, userMessage, assistantMessage]);
 
       try {
-        // Stream the response
         let fullContent = '';
-        for await (const chunk of chatApi.sendMessage(
-          currentConversationId,
-          content,
-          model
-        )) {
-          fullContent += chunk;
-          // Strip metadata marker from display during streaming
-          const displayContent = fullContent.includes(META_MARKER)
-            ? fullContent.substring(0, fullContent.indexOf(META_MARKER))
-            : fullContent;
-          // Update the assistant message content as chunks arrive
-          setMessages((prev) =>
-            prev.map((msg) =>
-              msg.id === tempAssistantMessageId
-                ? { ...msg, content: displayContent }
-                : msg
-            )
-          );
+        let streamMeta: MessageMeta | undefined;
+
+        if (OVERLORD_ROUTING_ENABLED) {
+          // Dispatch mode: route through Overlord
+          const history = messages.map((m) => ({ role: m.role, content: m.content }));
+          for await (const event of dispatchApi.sendMessage({
+            user_message: content,
+            conversation_history: history,
+            role: 'default',
+          })) {
+            if (event.type === 'content') {
+              fullContent += event.content;
+              setMessages((prev) =>
+                prev.map((msg) =>
+                  msg.id === tempAssistantMessageId
+                    ? { ...msg, content: fullContent }
+                    : msg
+                )
+              );
+            } else if (event.type === 'error') {
+              setError(event.content);
+              addEvent(event);
+            } else {
+              // Route non-content events to dispatch store for sidebar + inline rendering
+              addEvent(event);
+            }
+          }
+        } else {
+          // Direct LLM streaming via SSE
+          for await (const event of chatApi.sendMessage(
+            currentConversationId,
+            content,
+            model
+          )) {
+            if (event.type === 'content') {
+              fullContent += event.content;
+              setMessages((prev) =>
+                prev.map((msg) =>
+                  msg.id === tempAssistantMessageId
+                    ? { ...msg, content: fullContent }
+                    : msg
+                )
+              );
+            } else if (event.type === 'done') {
+              streamMeta = event.meta;
+            }
+          }
         }
 
-        // Parse metadata from the final content
-        const { content: cleanContent, meta } = extractMeta(fullContent);
+        // Apply final content and metadata from done event
         setMessages((prev) =>
           prev.map((msg) =>
             msg.id === tempAssistantMessageId
-              ? { ...msg, content: cleanContent, meta }
+              ? { ...msg, content: fullContent, meta: streamMeta }
               : msg
           )
         );
@@ -179,7 +210,7 @@ export function Chat() {
         setModelSwitching(false);
       }
     },
-    [currentConversationId, isSending, messages.length, updateConversationTitle, setModelSwitching]
+    [currentConversationId, isSending, messages.length, updateConversationTitle, setModelSwitching, clearEvents, addEvent]
   );
 
   // Auto-send pending message when a conversation is created from the welcome screen
@@ -204,6 +235,11 @@ export function Chat() {
     [createConversation]
   );
 
+  // Filter non-content events for inline rendering
+  const notificationEvents = events.filter(
+    (e) => e.type !== 'content'
+  );
+
   return (
     <div className="flex h-[calc(100vh-57px)]">
       {/* Sidebar with conversations */}
@@ -213,23 +249,50 @@ export function Chat() {
       <div className="flex-1 flex flex-col bg-gray-800 min-w-0">
         {currentConversationId ? (
           <>
-            {/* Chat Header with Persona Selector */}
+            {/* Chat Header with Persona Selector and Situation Map toggle */}
             <div className="flex items-center justify-between px-4 py-2 border-b border-gray-700/50">
               <div className="text-sm text-gray-400 truncate">
                 {currentConversation?.title || 'New Thread'}
               </div>
-              <PersonaSelector
-                conversationId={currentConversationId}
-                currentPersonaId={currentConversation?.persona_id ?? null}
-                currentPersonaName={currentConversation?.persona_name ?? null}
-                onPersonaChange={handlePersonaChange}
-              />
+              <div className="flex items-center gap-2">
+                <DocumentScopeSelector
+                  conversationId={currentConversationId}
+                  onScopeChange={handleScopeChange}
+                />
+                <PersonaSelector
+                  conversationId={currentConversationId}
+                  currentPersonaId={currentConversation?.persona_id ?? null}
+                  currentPersonaName={currentConversation?.persona_name ?? null}
+                  onPersonaChange={handlePersonaChange}
+                />
+                {!sidebarOpen && (
+                  <button
+                    onClick={toggleSidebar}
+                    className="p-1.5 text-gray-500 hover:text-gray-300 transition-colors rounded"
+                    aria-label="Open situation map"
+                    title="Situation Map"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+                    </svg>
+                  </button>
+                )}
+              </div>
             </div>
 
             {/* Error display */}
             {error && (
               <div className="px-4 py-2 bg-red-900/50 text-red-200 text-sm text-center border-b border-red-800/30">
                 {error}
+              </div>
+            )}
+
+            {/* Inline notification blocks */}
+            {notificationEvents.length > 0 && (
+              <div className="border-b border-gray-700/30">
+                {notificationEvents.map((event, idx) => (
+                  <NotificationBlock key={idx} event={event} />
+                ))}
               </div>
             )}
 
@@ -247,43 +310,83 @@ export function Chat() {
             />
           </>
         ) : (
-          /* Empty state when no thread selected */
-          <div className="flex-1 flex flex-col">
-            <div className="flex-1 flex items-center justify-center px-4">
-              <div className="text-center max-w-lg">
-                <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-gray-700 flex items-center justify-center">
-                  <svg
-                    className="w-8 h-8 text-gray-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={1.5}
-                      d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
-                    />
-                  </svg>
-                </div>
-                <h2 className="text-xl sm:text-2xl font-semibold text-gray-200 mb-2">
-                  No threads yet.
-                </h2>
-                <p className="text-gray-400 text-sm sm:text-base max-w-md mx-auto">
-                  Start a new thread to work with Nebulus, or resume an existing one.
-                </p>
-              </div>
-            </div>
-
-            {/* Welcome screen input */}
-            <MessageInput
-              onSend={handleWelcomeSend}
-              disabled={isSending}
-              placeholder="Message Nebulus..."
-            />
-          </div>
+          /* Welcome screen with personalized greeting */
+          <WelcomeScreen onSend={handleWelcomeSend} isSending={isSending} />
         )}
       </div>
+
+      {/* Situation Map sidebar */}
+      {sidebarOpen && <SituationMap />}
+    </div>
+  );
+}
+
+function getGreeting(): string {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Good morning';
+  if (hour < 17) return 'Good afternoon';
+  return 'Good evening';
+}
+
+const QUICK_PROMPTS = [
+  { label: 'Analyze sales data', prompt: 'I have a CSV export from our DMS with this month\'s sales data. Help me analyze units sold, gross profit, and days to turn.' },
+  { label: 'Service dept metrics', prompt: 'Here are our service department numbers. Break down RO counts, effective labor rate, and hours per RO. Flag anything concerning.' },
+  { label: 'Inventory aging', prompt: 'Analyze our current inventory for aging issues. Show me units in 0-30, 31-60, 61-90, and 90+ day buckets with recommendations.' },
+  { label: 'F&I performance', prompt: 'Review our F&I numbers. What\'s our PVR, product penetration rates, and how do we compare to NADA benchmarks?' },
+];
+
+function WelcomeScreen({ onSend, isSending }: { onSend: (content: string, model?: string) => void; isSending: boolean }) {
+  const user = useAuthStore((state) => state.user);
+  const firstName = user?.display_name?.split(' ')[0] || 'there';
+
+  return (
+    <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex items-center justify-center px-4">
+        <div className="text-center max-w-2xl w-full">
+          <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-gradient-to-br from-blue-500/20 to-purple-500/20 border border-blue-500/30 flex items-center justify-center">
+            <svg
+              className="w-8 h-8 text-blue-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={1.5}
+                d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
+              />
+            </svg>
+          </div>
+          <h2 className="text-xl sm:text-2xl font-semibold text-gray-200 mb-2">
+            {getGreeting()}, {firstName}.
+          </h2>
+          <p className="text-gray-400 text-sm sm:text-base max-w-md mx-auto mb-8">
+            Your data stays on this device. Ask me anything.
+          </p>
+
+          {/* Quick-start suggestions */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-lg mx-auto">
+            {QUICK_PROMPTS.map((item) => (
+              <button
+                key={item.label}
+                onClick={() => onSend(item.prompt)}
+                disabled={isSending}
+                className="text-left px-4 py-3 rounded-xl bg-gray-700/50 border border-gray-600/50 hover:border-blue-500/40 hover:bg-gray-700 text-sm text-gray-300 hover:text-gray-100 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Welcome screen input */}
+      <MessageInput
+        onSend={onSend}
+        disabled={isSending}
+        placeholder="Message Nebulus..."
+      />
     </div>
   );
 }

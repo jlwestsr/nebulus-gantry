@@ -34,17 +34,22 @@ def _load_adapter() -> Optional[object]:
 
 
 def get_llm_base_url() -> str:
-    """Return the LLM endpoint URL.
+    """Return the LLM endpoint URL (without /v1 suffix).
 
-    Priority: TABBY_HOST env var → adapter.llm_base_url → default.
+    Gantry services append /v1/... themselves, so this must return
+    only the scheme+host+port (e.g. http://localhost:8080).
+
+    Priority: NEBULUS_LLM_URL → TABBY_HOST (backward compat) →
+              adapter.llm_base_url → default.
     """
-    env = os.getenv("TABBY_HOST")
+    env = os.getenv("NEBULUS_LLM_URL") or os.getenv("TABBY_HOST")
     if env:
-        return env
+        return env.rstrip("/").removesuffix("/v1")
     adapter = _load_adapter()
     if adapter is not None:
         try:
-            return adapter.llm_base_url  # type: ignore[union-attr]
+            url = adapter.llm_base_url  # type: ignore[union-attr]
+            return url.rstrip("/").removesuffix("/v1")
         except Exception:
             pass
     return "http://localhost:5000"
@@ -53,13 +58,14 @@ def get_llm_base_url() -> str:
 def get_chroma_settings() -> dict:
     """Return ChromaDB connection config dict.
 
-    Priority: CHROMA_HOST env var → adapter.chroma_settings → default.
+    Priority: NEBULUS_CHROMA_URL → CHROMA_HOST (backward compat) →
+              adapter.chroma_settings → default.
 
     Returns:
         {"mode": "http", "host": str, "port": int} or
         {"mode": "embedded", "path": str}
     """
-    env = os.getenv("CHROMA_HOST")
+    env = os.getenv("NEBULUS_CHROMA_URL") or os.getenv("CHROMA_HOST")
     if env:
         url = env
         if url.startswith("http://"):
@@ -91,3 +97,46 @@ def get_default_model() -> str:
         except Exception:
             pass
     return "default"
+
+
+def get_platform_name() -> str:
+    """Return the platform adapter name (e.g. 'prime', 'edge') or 'unknown'."""
+    adapter = _load_adapter()
+    if adapter is not None:
+        try:
+            return adapter.platform_name  # type: ignore[union-attr]
+        except Exception:
+            pass
+    return "unknown"
+
+
+def get_service_manager_type() -> str:
+    """Return the service management backend type.
+
+    Returns 'docker' if Docker is available, 'pm2' if the adapter
+    indicates PM2 (e.g. Edge/macOS), or 'none'.
+    """
+    try:
+        import docker
+        docker.from_env()
+        return "docker"
+    except Exception:
+        pass
+    adapter = _load_adapter()
+    if adapter is not None:
+        try:
+            return adapter.service_manager_type  # type: ignore[union-attr]
+        except Exception:
+            pass
+    return "none"
+
+
+def get_mcp_settings() -> dict | None:
+    """Return MCP server config from adapter, or None if unavailable."""
+    adapter = _load_adapter()
+    if adapter is not None:
+        try:
+            return adapter.mcp_settings  # type: ignore[union-attr]
+        except Exception:
+            pass
+    return None

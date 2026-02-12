@@ -2,10 +2,19 @@ import json
 import httpx
 from typing import AsyncGenerator
 
-from backend.platform import get_llm_base_url
+from backend.platform import get_llm_base_url, get_default_model
 
 
 class LLMService:
+    """OpenAI-compatible LLM client for streaming and non-streaming chat.
+
+    CONCURRENCY NOTE: This class stores per-call state in self.last_usage.
+    It is safe ONLY because callers instantiate a new LLMService() per
+    request (see chat.py send_message / dispatch_message).  Do NOT convert
+    this to a singleton or shared dependency without first removing the
+    mutable instance state.
+    """
+
     def __init__(self):
         self.base_url = get_llm_base_url()
         self.last_usage: dict | None = None
@@ -13,11 +22,11 @@ class LLMService:
     async def stream_chat(
         self,
         messages: list[dict],
-        model: str = "default",
+        model: str | None = None,
         temperature: float | None = None,
     ) -> AsyncGenerator[str, None]:
-        """
-        Stream chat completion from TabbyAPI (OpenAI-compatible).
+        """Stream chat completion from the LLM inference server (OpenAI-compatible).
+
         Yields chunks of the assistant's response.
 
         Args:
@@ -31,7 +40,7 @@ class LLMService:
         """
         self.last_usage = None
         request_body = {
-            "model": model,
+            "model": model or get_default_model(),
             "messages": messages,
             "stream": True,
         }
@@ -63,11 +72,11 @@ class LLMService:
             except httpx.HTTPStatusError as e:
                 yield f"[Error: LLM service returned {e.response.status_code}]"
             except httpx.ConnectError:
-                yield "[Error: Could not connect to LLM service. Is TabbyAPI running?]"
+                yield "[Error: Could not connect to LLM service. Is the LLM service running?]"
             except Exception as e:
                 yield f"[Error: {str(e)}]"
 
-    async def chat(self, messages: list[dict], model: str = "default") -> str:
+    async def chat(self, messages: list[dict], model: str | None = None) -> str:
         """
         Non-streaming chat completion. Returns full response.
         """
@@ -76,7 +85,7 @@ class LLMService:
                 response = await client.post(
                     f"{self.base_url}/v1/chat/completions",
                     json={
-                        "model": model,
+                        "model": model or get_default_model(),
                         "messages": messages,
                         "stream": False,
                     },
