@@ -6,7 +6,8 @@ services:
     environment:
       - DATABASE_URL=sqlite:///./data/gantry.db
       - NEBULUS_CHROMA_URL=http://chromadb:8000
-      - NEBULUS_LLM_URL=http://tabby:5000
+      - NEBULUS_LLM_URL=${NEBULUS_LLM_URL:-http://tabby:5000}
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:5173,http://localhost:3000,http://localhost:3001}
       - SECRET_KEY=dev-secret-change-in-production
       - PYTHONPATH=/app:/atom:/core
     volumes:
@@ -24,7 +25,7 @@ services:
   frontend:
     build: ./frontend
     ports:
-      - "3000:3000"
+      - "3001:3000"
     environment:
       - VITE_API_URL=http://localhost:8000
     volumes:

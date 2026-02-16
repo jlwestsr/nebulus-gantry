@@ -14,20 +14,6 @@ import type { Message, MessageMeta, Conversation, Persona, DocumentScope } from 
 
 const OVERLORD_ROUTING_ENABLED = false; // Direct LLM mode for appliance
 
-const META_MARKER = '\n\n__META__';
-
-function extractMeta(text: string): { content: string; meta?: MessageMeta } {
-  const idx = text.indexOf(META_MARKER);
-  if (idx === -1) return { content: text };
-  const content = text.substring(0, idx);
-  try {
-    const meta = JSON.parse(text.substring(idx + META_MARKER.length)) as MessageMeta;
-    return { content, meta };
-  } catch {
-    return { content };
-  }
-}
-
 
 export function Chat() {
   const { currentConversationId, updateConversationTitle, createConversation } = useChatStore();
@@ -124,6 +110,7 @@ export function Chat() {
 
       try {
         let fullContent = '';
+        let streamMeta: MessageMeta | undefined;
 
         if (OVERLORD_ROUTING_ENABLED) {
           // Dispatch mode: route through Overlord
@@ -151,32 +138,32 @@ export function Chat() {
             }
           }
         } else {
-          // Legacy mode: direct LLM streaming
-          for await (const chunk of chatApi.sendMessage(
+          // Direct LLM streaming via SSE
+          for await (const event of chatApi.sendMessage(
             currentConversationId,
             content,
             model
           )) {
-            fullContent += chunk;
-            const displayContent = fullContent.includes(META_MARKER)
-              ? fullContent.substring(0, fullContent.indexOf(META_MARKER))
-              : fullContent;
-            setMessages((prev) =>
-              prev.map((msg) =>
-                msg.id === tempAssistantMessageId
-                  ? { ...msg, content: displayContent }
-                  : msg
-              )
-            );
+            if (event.type === 'content') {
+              fullContent += event.content;
+              setMessages((prev) =>
+                prev.map((msg) =>
+                  msg.id === tempAssistantMessageId
+                    ? { ...msg, content: fullContent }
+                    : msg
+                )
+              );
+            } else if (event.type === 'done') {
+              streamMeta = event.meta;
+            }
           }
         }
 
-        // Parse metadata from the final content (legacy mode only)
-        const { content: cleanContent, meta } = extractMeta(fullContent);
+        // Apply final content and metadata from done event
         setMessages((prev) =>
           prev.map((msg) =>
             msg.id === tempAssistantMessageId
-              ? { ...msg, content: cleanContent, meta }
+              ? { ...msg, content: fullContent, meta: streamMeta }
               : msg
           )
         );

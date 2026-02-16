@@ -333,3 +333,30 @@ Not scheduled. Intent-driven task intake, plan decomposition, multi-agent execut
 ### Git Remote URLs
 
 - **HTTPS → SSH**: Both `nebulus-edge` and `nebulus-gantry` remotes were switched from HTTPS to SSH (`git@github.com:jlwestsr/...`) because the Mac Mini doesn't have HTTPS credentials configured. The remote URL can revert to HTTPS after `set-url`, so verify with `git remote -v` before pushing.
+
+## 14. Session Notes (2026-02-11) — Architect Review #7 + MVA Hardening
+
+### Merged Branches
+
+| Branch | Scope | Tests |
+|--------|-------|-------|
+| `fix/rate-limiter-architect-review` | Rate limiter moved from `backend/middleware/` → `backend/utils/`, keyed by email (not IP) for NAT-friendly LAN, escalation capped at `min(count, 4)` (~4h max lockout) | 14 |
+| `fix/cors-tighten-spec` | CORS tightened per `mva-cors-config` spec: removed PATCH from methods, trimmed headers to `Content-Type` + `Authorization`, hardcoded `secure=False` for HTTP-only LAN | 5 |
+
+### Persona Seed Infrastructure
+
+- **Fixture created**: `backend/fixtures/personas/dealership_analyst.json` — Dealership Analyst persona with `is_default: true`, `temperature: 0.4`, automotive retail system prompt.
+- **Test file created**: `backend/tests/test_seed_personas.py` — 5 tests (create, idempotency, empty dir, malformed JSON, missing name). Uses in-memory SQLite with `StaticPool` per project patterns.
+- **Original sub-agent files were non-functional**: The Moto sub-agents created initial versions of the fixture and test file, but the tests lacked the `DATABASE_URL` env override and `StaticPool` needed for in-memory SQLite. Both files were rewritten.
+- **Seed script**: `backend/scripts/seed_personas.py` accepts optional `db` session and `fixtures_dir` for testability. Idempotent — checks for existing system persona by name before inserting.
+
+### Docker Bind-Mount File Ownership
+
+- **Recurring pitfall**: Docker Compose bind-mounts create files as `root:root` inside the container. On the host, `backend/data/` and `data/` directories end up root-owned, causing `sqlite3.OperationalError: attempt to write a readonly database`.
+- **Actual DB path**: `data/gantry.db` (relative to project root), NOT `backend/data/nebulus.db`. The `DATABASE_URL` setting is `sqlite:///./data/gantry.db`.
+- **Fix**: `sudo chown -R jlwestsr:jlwestsr data/` after any Docker rebuild that recreates the volume. SQLite requires write access to both the `.db` file AND its parent directory (for WAL/journal files).
+- **`backend/data/nebulus.db`**: This is an empty 0-byte file left over from an earlier Docker config. The real database is `data/gantry.db`.
+
+### Test Suite Status
+
+- **549 tests passing** (48s). Zero failures. 126 warnings (all Starlette cookie deprecation — harmless).

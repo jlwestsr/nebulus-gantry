@@ -401,11 +401,11 @@ async def send_message(  # noqa: C901
             llm_messages, model=llm_model, temperature=persona_temperature
         ):
             full_response += chunk
-            yield chunk
+            yield f"data: {json.dumps({'content': chunk})}\n\n"
 
         generation_time_ms = int((time.monotonic() - start_time) * 1000)
         meta = _build_token_meta(llm, llm_messages, full_response, generation_time_ms)
-        yield f"\n\nevent: done\ndata: {json.dumps(meta)}\n\n"
+        yield f"event: done\ndata: {json.dumps(meta)}\n\n"
 
         # Save assistant response after streaming completes
         assistant_msg = chat.add_message(conversation_id, "assistant", full_response)
@@ -542,7 +542,7 @@ async def dispatch_message(
 
             generation_time_ms = int((time.monotonic() - start_time) * 1000)
             meta = _build_token_meta(llm, messages, full_text, generation_time_ms)
-            yield f"\n\nevent: done\ndata: {json.dumps(meta)}\n\n"
+            yield f"event: done\ndata: {json.dumps(meta)}\n\n"
 
         return StreamingResponse(fallback_generate(), media_type="text/event-stream")
 
