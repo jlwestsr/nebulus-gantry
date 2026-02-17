@@ -6,6 +6,7 @@ import { PersonaSelector } from '../components/PersonaSelector';
 import { DocumentScopeSelector } from '../components/DocumentScopeSelector';
 import { SituationMap } from '../components/SituationMap';
 import { NotificationBlock } from '../components/NotificationBlock';
+import { ExportActions } from '../components/ExportActions';
 import { useChatStore } from '../stores/chatStore';
 import { useAuthStore } from '../stores/authStore';
 import { useDispatchStore } from '../stores/dispatchStore';
@@ -261,6 +262,10 @@ export function Chat() {
                   currentPersonaId={currentConversation?.persona_id ?? null}
                   currentPersonaName={currentConversation?.persona_name ?? null}
                   onPersonaChange={handlePersonaChange}
+                />
+                <ExportActions
+                  conversationId={currentConversationId}
+                  disabled={isSending || isLoading}
                 />
                 {!sidebarOpen && (
                   <button

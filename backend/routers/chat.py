@@ -249,18 +249,18 @@ def toggle_pin_conversation(
 @router.get("/conversations/{conversation_id}/export")
 def export_conversation(
     conversation_id: int,
-    format: str = Query(default="json", pattern="^(json|pdf)$"),
+    format: str = Query(default="json", pattern="^(json|pdf|excel)$"),
     user=Depends(get_current_user),
     db: DBSession = Depends(get_db),
 ):
-    """Export a conversation as JSON or PDF.
+    """Export a conversation as JSON, PDF, or Excel.
 
     Args:
         conversation_id: The conversation to export.
-        format: Export format - "json" or "pdf" (default: json).
+        format: Export format - "json", "pdf", or "excel" (default: json).
 
     Returns:
-        JSON data or PDF file download.
+        JSON data, PDF file download, or Excel file download.
     """
     from backend.services.export_service import ExportService
 
@@ -276,7 +276,7 @@ def export_conversation(
                 "Content-Disposition": f"attachment; filename=conversation-{conversation_id}.json"
             },
         )
-    else:
+    elif format == "pdf":
         pdf_bytes = export_service.export_pdf(conversation_id, user.id)
         if not pdf_bytes:
             raise HTTPException(status_code=404, detail="Conversation not found")
@@ -287,6 +287,53 @@ def export_conversation(
                 "Content-Disposition": f"attachment; filename=conversation-{conversation_id}.pdf"
             },
         )
+    else:  # excel
+        excel_bytes = export_service.export_spreadsheet(conversation_id, user.id)
+        if not excel_bytes:
+            raise HTTPException(status_code=404, detail="Conversation not found")
+        return Response(
+            content=excel_bytes,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={
+                "Content-Disposition": f"attachment; filename=conversation-{conversation_id}.xlsx"
+            },
+        )
+
+
+@router.get("/conversations/{conversation_id}/report")
+def export_report(
+    conversation_id: int,
+    user=Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+):
+    """Export a professional dealership analysis report as PDF.
+
+    Creates a structured business report (NOT a chat transcript) with:
+    - Cover page with dealership name and date
+    - Executive Summary with AI-extracted insights
+    - KPI Dashboard table with key metrics
+    - Recommendations section with prioritized action items
+
+    Args:
+        conversation_id: The conversation to export as a report.
+
+    Returns:
+        PDF file download.
+    """
+    from backend.services.export_service import ExportService
+
+    export_service = ExportService(db)
+    report_bytes = export_service.export_report(conversation_id, user.id)
+    if not report_bytes:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+
+    return Response(
+        content=report_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f"attachment; filename=dealership-report-{conversation_id}.pdf"
+        },
+    )
 
 
 @router.post("/conversations/{conversation_id}/messages")
