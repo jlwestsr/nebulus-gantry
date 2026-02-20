@@ -308,7 +308,7 @@ export function Chat() {
             <MessageInput
               onSend={handleSendMessage}
               disabled={isSending}
-              placeholder="Message Nebulus..."
+              placeholder="Message Moto..."
             />
           </>
         ) : (
@@ -331,10 +331,10 @@ function getGreeting(): string {
 }
 
 const QUICK_PROMPTS = [
-  { label: 'Analyze sales data', prompt: 'I have a CSV export from our DMS with this month\'s sales data. Help me analyze units sold, gross profit, and days to turn.' },
-  { label: 'Service dept metrics', prompt: 'Here are our service department numbers. Break down RO counts, effective labor rate, and hours per RO. Flag anything concerning.' },
-  { label: 'Inventory aging', prompt: 'Analyze our current inventory for aging issues. Show me units in 0-30, 31-60, 61-90, and 90+ day buckets with recommendations.' },
-  { label: 'F&I performance', prompt: 'Review our F&I numbers. What\'s our PVR, product penetration rates, and how do we compare to NADA benchmarks?' },
+  { label: 'Explain some code', prompt: 'Help me understand this code and suggest improvements for readability and performance.' },
+  { label: 'Brainstorm ideas', prompt: 'Help me brainstorm creative solutions for a technical challenge I\'m working on.' },
+  { label: 'Write documentation', prompt: 'Help me write clear, concise documentation for my project.' },
+  { label: 'Debug an issue', prompt: 'I\'m running into a bug. Help me trace the issue and find the root cause.' },
 ];
 
 function WelcomeScreen({ onSend, isSending }: { onSend: (content: string, model?: string) => void; isSending: boolean }) {
@@ -345,20 +345,8 @@ function WelcomeScreen({ onSend, isSending }: { onSend: (content: string, model?
     <div className="flex-1 flex flex-col">
       <div className="flex-1 flex items-center justify-center px-4">
         <div className="text-center max-w-2xl w-full">
-          <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-gradient-to-br from-blue-500/20 to-purple-500/20 border border-blue-500/30 flex items-center justify-center">
-            <svg
-              className="w-8 h-8 text-blue-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={1.5}
-                d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
-              />
-            </svg>
+          <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-gradient-to-br from-cyan-500/20 to-violet-500/20 border border-cyan-500/30 flex items-center justify-center">
+            <span className="text-3xl">🏍️</span>
           </div>
           <h2 className="text-xl sm:text-2xl font-semibold text-gray-200 mb-2">
             {getGreeting()}, {firstName}.
@@ -374,7 +362,7 @@ function WelcomeScreen({ onSend, isSending }: { onSend: (content: string, model?
                 key={item.label}
                 onClick={() => onSend(item.prompt)}
                 disabled={isSending}
-                className="text-left px-4 py-3 rounded-xl bg-gray-700/50 border border-gray-600/50 hover:border-blue-500/40 hover:bg-gray-700 text-sm text-gray-300 hover:text-gray-100 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="text-left px-4 py-3 rounded-xl bg-gray-700/50 border border-gray-600/50 hover:border-cyan-500/40 hover:bg-gray-700 text-sm text-gray-300 hover:text-gray-100 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {item.label}
               </button>
@@ -387,7 +375,7 @@ function WelcomeScreen({ onSend, isSending }: { onSend: (content: string, model?
       <MessageInput
         onSend={onSend}
         disabled={isSending}
-        placeholder="Message Nebulus..."
+        placeholder="Message Moto..."
       />
     </div>
   );

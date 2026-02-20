@@ -200,7 +200,7 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
                   {result.conversation_title}
                 </span>
                 <span className="text-xs text-gray-600 ml-auto flex-shrink-0">
-                  {result.role === 'user' ? 'You' : 'Nebulus'}
+                  {result.role === 'user' ? 'You' : 'Moto'}
                 </span>
               </div>
               {/* Message snippet */}

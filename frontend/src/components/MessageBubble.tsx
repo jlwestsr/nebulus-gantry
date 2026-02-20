@@ -42,7 +42,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
       <div
         className={`max-w-[85%] sm:max-w-[80%] rounded-2xl px-4 py-3 transition-shadow duration-200 ${
           isUser
-            ? 'bg-blue-600 text-white'
+            ? 'bg-cyan-700 text-white'
             : 'bg-gray-700 text-gray-100'
         }`}
       >

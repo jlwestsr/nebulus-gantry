@@ -26,7 +26,7 @@ export function ExportActions({ conversationId, disabled = false }: ExportAction
 
       if (type === 'report') {
         url = `/api/chat/conversations/${conversationId}/report`;
-        filename = `dealership-report-${conversationId}.pdf`;
+        filename = `report-${conversationId}.pdf`;
       } else {
         url = `/api/chat/conversations/${conversationId}/export?format=${format}`;
         const extension = format === 'excel' ? 'xlsx' : format;

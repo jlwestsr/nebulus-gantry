@@ -306,13 +306,12 @@ def export_report(
     user=Depends(get_current_user),
     db: DBSession = Depends(get_db),
 ):
-    """Export a professional dealership analysis report as PDF.
+    """Export conversation as a structured PDF report.
 
-    Creates a structured business report (NOT a chat transcript) with:
-    - Cover page with dealership name and date
+    Creates a business report with:
+    - Cover page with title and date
     - Executive Summary with AI-extracted insights
-    - KPI Dashboard table with key metrics
-    - Recommendations section with prioritized action items
+    - Key findings and recommendations
 
     Args:
         conversation_id: The conversation to export as a report.
@@ -331,7 +330,7 @@ def export_report(
         content=report_bytes,
         media_type="application/pdf",
         headers={
-            "Content-Disposition": f"attachment; filename=dealership-report-{conversation_id}.pdf"
+            "Content-Disposition": f"attachment; filename=report-{conversation_id}.pdf"
         },
     )
 
