@@ -10,6 +10,7 @@ import httpx
 import logging
 
 from backend.platform import get_llm_base_url
+from backend.services.llm_service import _get_llm_headers
 
 logger = logging.getLogger(__name__)
 
@@ -17,6 +18,7 @@ logger = logging.getLogger(__name__)
 class ModelService:
     def __init__(self):
         self.base_url = get_llm_base_url()
+        self.headers = _get_llm_headers()
 
     async def get_active_model(self) -> dict | None:
         """Query the LLM server for the currently loaded model.
@@ -26,7 +28,7 @@ class ModelService:
         Returns a dict with 'id' and 'name', or None if unavailable.
         """
         try:
-            async with httpx.AsyncClient(timeout=10.0) as client:
+            async with httpx.AsyncClient(timeout=10.0, headers=self.headers) as client:
                 # Try TabbyAPI-specific endpoint first
                 try:
                     response = await client.get(f"{self.base_url}/v1/model")
@@ -68,7 +70,7 @@ class ModelService:
             active_model = await self.get_active_model()
             active_id = active_model["id"] if active_model else None
 
-            async with httpx.AsyncClient(timeout=10.0) as client:
+            async with httpx.AsyncClient(timeout=10.0, headers=self.headers) as client:
                 response = await client.get(f"{self.base_url}/v1/models")
                 response.raise_for_status()
                 data = response.json()
@@ -92,7 +94,7 @@ class ModelService:
         with a warning on non-TabbyAPI servers (model switching not supported).
         """
         try:
-            async with httpx.AsyncClient(timeout=30.0) as client:
+            async with httpx.AsyncClient(timeout=30.0, headers=self.headers) as client:
                 response = await client.post(
                     f"{self.base_url}/v1/model/load",
                     json={"name": model_id},
@@ -119,7 +121,7 @@ class ModelService:
         with a warning on non-TabbyAPI servers (model unloading not supported).
         """
         try:
-            async with httpx.AsyncClient(timeout=30.0) as client:
+            async with httpx.AsyncClient(timeout=30.0, headers=self.headers) as client:
                 response = await client.post(
                     f"{self.base_url}/v1/model/unload",
                 )

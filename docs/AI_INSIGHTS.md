@@ -360,3 +360,23 @@ Not scheduled. Intent-driven task intake, plan decomposition, multi-agent execut
 ### Test Suite Status
 
 - **549 tests passing** (48s). Zero failures. 126 warnings (all Starlette cookie deprecation — harmless).
+
+## 15. Session Notes (2026-02-19) — Reboot Recovery & Infrastructure Hardening
+
+### Gantry Down After System Reboot
+
+- **Root cause**: Gantry's `docker-compose.yml` had no `restart` policy on either service. After a system reboot, the Prime stack (`restart: unless-stopped`) came back automatically but Gantry's backend and frontend stayed down (exited 2 days prior).
+- **Fix**: Added `restart: unless-stopped` to both `backend` and `frontend` services in `docker-compose.yml`. Gantry will now survive reboots like the Prime stack.
+- **Rebuilt and verified**: `docker compose up -d --build` — both containers healthy, backend at `:8000` (200), frontend at `:3001` (200).
+
+### Open WebUI Decommissioned
+
+- **Action**: Open WebUI container stopped and restart policy changed to `restart: "no"` in `nebulus-prime/docker-compose.yml`. Gantry is now the primary chat UI — Open WebUI is retained in the compose file but will not auto-start.
+- **Port 3000 freed**: Open WebUI was on `127.0.0.1:3000`. This port is now available if Gantry frontend needs to move from 3001 → 3000 in a future cleanup.
+
+### Infrastructure Checklist
+
+- All Docker services that should survive reboots must have `restart: unless-stopped`
+- Prime services (tabby, dozzle, chromadb, mcp-server): already had restart policy ✅
+- Gantry services (backend, frontend): added restart policy ✅
+- Open WebUI: explicitly disabled ✅

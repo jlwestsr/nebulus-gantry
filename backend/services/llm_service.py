@@ -1,8 +1,17 @@
 import json
+import os
 import httpx
 from typing import AsyncGenerator
 
 from backend.platform import get_llm_base_url, get_default_model
+
+
+def _get_llm_headers() -> dict:
+    """Build auth headers for LLM API if NEBULUS_LLM_API_KEY is set."""
+    api_key = os.getenv("NEBULUS_LLM_API_KEY")
+    if api_key:
+        return {"Authorization": f"Bearer {api_key}"}
+    return {}
 
 
 class LLMService:
@@ -17,6 +26,7 @@ class LLMService:
 
     def __init__(self):
         self.base_url = get_llm_base_url()
+        self.headers = _get_llm_headers()
         self.last_usage: dict | None = None
 
     async def stream_chat(
@@ -47,7 +57,7 @@ class LLMService:
         if temperature is not None:
             request_body["temperature"] = temperature
 
-        async with httpx.AsyncClient(timeout=60.0) as client:
+        async with httpx.AsyncClient(timeout=60.0, headers=self.headers) as client:
             try:
                 async with client.stream(
                     "POST",
@@ -80,7 +90,7 @@ class LLMService:
         """
         Non-streaming chat completion. Returns full response.
         """
-        async with httpx.AsyncClient(timeout=60.0) as client:
+        async with httpx.AsyncClient(timeout=60.0, headers=self.headers) as client:
             try:
                 response = await client.post(
                     f"{self.base_url}/v1/chat/completions",
