@@ -2,12 +2,11 @@ services:
   backend:
     build: ./backend
     restart: unless-stopped
-    ports:
-      - "8000:8000"
+    network_mode: host
     environment:
       - DATABASE_URL=sqlite:///./data/gantry.db
-      - NEBULUS_CHROMA_URL=http://chromadb:8000
-      - NEBULUS_LLM_URL=${NEBULUS_LLM_URL:-http://tabby:5000}
+      - NEBULUS_CHROMA_URL=http://127.0.0.1:8001
+      - NEBULUS_LLM_URL=${NEBULUS_LLM_URL:-http://127.0.0.1:18789}
       - NEBULUS_LLM_API_KEY=${NEBULUS_LLM_API_KEY:-}
       - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:5173,http://localhost:3000,http://localhost:3001}
       - SECRET_KEY=dev-secret-change-in-production
@@ -19,9 +18,6 @@ services:
       - ../nebulus-core/src:/core:ro
       - ../nebulus-atom:/atom:ro
       - ${HOME}/.atom:/root/.atom:ro
-    networks:
-      - default
-      - nebulus
     command: uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload
 
   frontend:

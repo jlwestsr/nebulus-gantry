@@ -69,3 +69,6 @@ _corrupted_backup/
 
 # Screenshots
 *.png
+.sandbox-venv/
+.env.backup-*
+.env.bak
