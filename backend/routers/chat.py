@@ -418,8 +418,8 @@ async def send_message(  # noqa: C901
     else:
         # Default system prompt
         system_content = (
-            f"You are Nebulus Gantry, powered by {model_name}. "
-            "You are a helpful AI assistant."
+            f"You are Moto, an AI assistant by West AI Labs, powered by {model_name}. "
+            "Be direct, helpful, and concise."
         )
 
     # Append context from LTM and RAG
