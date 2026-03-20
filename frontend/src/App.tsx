@@ -10,6 +10,7 @@ import { Admin } from './pages/Admin';
 import { Settings } from './pages/Settings';
 import { Overlord } from './pages/Overlord';
 import { Personas } from './pages/Personas';
+import { Orchestrator } from './pages/Orchestrator';
 
 function App() {
   const checkAuth = useAuthStore((state) => state.checkAuth);
@@ -33,6 +34,7 @@ function App() {
                   <Route path="/" element={<Chat />} />
                   <Route path="/admin" element={<Admin />} />
                   <Route path="/overlord" element={<Overlord />} />
+                  <Route path="/orchestrator" element={<Orchestrator />} />
                   <Route path="/settings" element={<Settings />} />
                   <Route path="/personas" element={<Personas />} />
                 </Routes>

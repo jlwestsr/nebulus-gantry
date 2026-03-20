@@ -132,6 +132,12 @@ export function Layout({ children }: LayoutProps) {
                       </Link>
                     )}
                     <Link
+                      to="/orchestrator"
+                      className="text-sm text-gray-400 hover:text-gray-200 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50 rounded px-2 py-1"
+                    >
+                      Orchestrator
+                    </Link>
+                    <Link
                       to="/admin"
                       className="text-sm text-gray-400 hover:text-gray-200 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50 rounded px-2 py-1"
                     >
