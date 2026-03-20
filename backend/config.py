@@ -51,6 +51,10 @@ def _get_https_enabled() -> bool:
     return os.getenv("HTTPS_ENABLED", "false").lower() in ("true", "1", "yes")
 
 
+def _get_atom_base_url() -> str:
+    return os.getenv("ATOM_BASE_URL", "http://localhost:8010")
+
+
 @dataclass
 class Settings:
     database_url: str = field(default_factory=_get_database_url)
@@ -60,6 +64,7 @@ class Settings:
     cors_origins: list[str] = field(default_factory=_get_cors_origins)
     bind_host: str = field(default_factory=_get_bind_host)
     https_enabled: bool = field(default_factory=_get_https_enabled)
+    atom_base_url: str = field(default_factory=_get_atom_base_url)
 
 
 settings = Settings()
