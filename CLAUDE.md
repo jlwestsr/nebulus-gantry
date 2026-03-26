@@ -15,7 +15,7 @@ Version 2 is a complete rewrite. The previous Chainlit/vanilla-JS codebase has b
 | LLM | TabbyAPI (OpenAI-compatible endpoint) |
 | Memory | ChromaDB (vector search), NetworkX (entity knowledge graph) |
 | Auth | Session cookies (httponly, bcrypt-hashed passwords), admin/user roles |
-| Deployment | Docker Compose, external `nebulus_ai-network` |
+| Deployment | Docker Compose, external `nebulus-prime_ai-network` (configurable via `NEBULUS_NETWORK` env var) |
 
 ## Architecture
 
@@ -33,7 +33,7 @@ Version 2 is a complete rewrite. The previous Chainlit/vanilla-JS codebase has b
                         └─────────────────┘
 ```
 
-All services communicate over the external Docker network `nebulus_ai-network`.
+All services communicate over the external Docker network `nebulus-prime_ai-network` (override with `NEBULUS_NETWORK` env var).
 
 ## Critical Directives
 
