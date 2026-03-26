@@ -15,7 +15,7 @@ Version 2 is a complete rewrite. The previous Chainlit/vanilla-JS codebase has b
 | LLM | TabbyAPI (OpenAI-compatible endpoint) |
 | Memory | ChromaDB (vector search), NetworkX (entity knowledge graph) |
 | Auth | Session cookies (httponly, bcrypt-hashed passwords), admin/user roles |
-| Deployment | Docker Compose, external `nebulus_ai-network` |
+| Deployment | Docker Compose, external `nebulus-prime_ai-network` |
 
 ## Architecture
 
@@ -33,7 +33,7 @@ Version 2 is a complete rewrite. The previous Chainlit/vanilla-JS codebase has b
                         └─────────────────┘
 ```
 
-All services communicate over the external Docker network `nebulus_ai-network`.
+All services communicate over the external Docker network `nebulus-prime_ai-network`.
 
 ## Critical Directives
 
@@ -84,12 +84,12 @@ docker compose exec backend pytest backend/tests/ -v
 | `AI_DIRECTIVES.md` | Strict operational rules for AI agents |
 | `WORKFLOW.md` | Development workflow and SOPs |
 | `docs/AI_INSIGHTS.md` | Long-term memory for AI agents |
-| `docs/features/` | Feature specifications |
+| `docs/features/archive/` | Feature specifications (current specs live here) |
 
 ## Workflow for Features
 
 1. **Discovery**: Read `docs/AI_INSIGHTS.md`, check existing code in `backend/` and `frontend/src/`
-2. **Proposal**: Create implementation plan and feature spec in `docs/features/`
+2. **Proposal**: Create implementation plan and feature spec in `docs/features/archive/`
 3. **Implementation**: Branch from `develop`, write code + tests
 4. **Delivery**: Verify with `pytest` and `bin/gantry validate`, merge to `develop`, update `docs/AI_INSIGHTS.md`
 
