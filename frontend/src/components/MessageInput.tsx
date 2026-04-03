@@ -12,7 +12,7 @@ interface MessageInputProps {
 export function MessageInput({
   onSend,
   disabled = false,
-  placeholder = 'Message Moto...',
+  placeholder = 'Message Gantry...',
 }: MessageInputProps) {
   const [content, setContent] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -120,11 +120,10 @@ export function MessageInput({
                     setSelectedModel(m.id);
                     setShowModelPicker(false);
                   }}
-                  className={`w-full text-left px-3 py-2 text-sm transition-colors ${
-                    m.id === selectedModel
+                  className={`w-full text-left px-3 py-2 text-sm transition-colors ${m.id === selectedModel
                       ? 'bg-blue-500/15 text-blue-400'
                       : 'text-gray-300 hover:bg-gray-700'
-                  }`}
+                    }`}
                 >
                   <div className="flex items-center justify-between">
                     <span className="font-mono text-xs truncate">{m.name}</span>
@@ -152,11 +151,10 @@ export function MessageInput({
           <button
             onClick={handleSubmit}
             disabled={!canSubmit}
-            className={`p-2 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50 ${
-              canSubmit
+            className={`p-2 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50 ${canSubmit
                 ? 'text-white bg-blue-600 hover:bg-blue-500 active:scale-95'
                 : 'text-gray-500 cursor-not-allowed'
-            }`}
+              }`}
             aria-label="Send message"
           >
             <svg
