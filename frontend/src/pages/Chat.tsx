@@ -68,10 +68,10 @@ export function Chat() {
     setCurrentConversation((prev) =>
       prev
         ? {
-            ...prev,
-            persona_id: persona?.id ?? null,
-            persona_name: persona?.name ?? null,
-          }
+          ...prev,
+          persona_id: persona?.id ?? null,
+          persona_name: persona?.name ?? null,
+        }
         : null
     );
   }, []);
@@ -308,7 +308,7 @@ export function Chat() {
             <MessageInput
               onSend={handleSendMessage}
               disabled={isSending}
-              placeholder="Message Moto..."
+              placeholder="Message Gantry..."
             />
           </>
         ) : (
@@ -375,7 +375,7 @@ function WelcomeScreen({ onSend, isSending }: { onSend: (content: string, model?
       <MessageInput
         onSend={onSend}
         disabled={isSending}
-        placeholder="Message Moto..."
+        placeholder="Message Gantry..."
       />
     </div>
   );
