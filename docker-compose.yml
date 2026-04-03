@@ -8,6 +8,7 @@ services:
       - NEBULUS_CHROMA_URL=http://127.0.0.1:8001
       - NEBULUS_LLM_URL=${NEBULUS_LLM_URL:-http://127.0.0.1:18789}
       - NEBULUS_LLM_API_KEY=${NEBULUS_LLM_API_KEY:-}
+      - NEBULUS_DEFAULT_MODEL=${NEBULUS_DEFAULT_MODEL:-gemma4:26b}
       - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:5173,http://localhost:3000,http://localhost:3001}
       - SECRET_KEY=dev-secret-change-in-production
       - PYTHONPATH=/app:/atom:/core
@@ -26,7 +27,7 @@ services:
     ports:
       - "3001:3000"
     environment:
-      - VITE_API_URL=http://localhost:8000
+      - VITE_API_URL=
     volumes:
       - ./frontend:/app
       - /app/node_modules

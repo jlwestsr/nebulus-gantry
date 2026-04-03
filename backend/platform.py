@@ -88,8 +88,11 @@ def get_chroma_settings() -> dict:
 def get_default_model() -> str:
     """Return the default LLM model name.
 
-    Priority: adapter.default_model → "default".
+    Priority: NEBULUS_DEFAULT_MODEL → adapter.default_model → "default".
     """
+    env = os.getenv("NEBULUS_DEFAULT_MODEL")
+    if env:
+        return env
     adapter = _load_adapter()
     if adapter is not None:
         try:

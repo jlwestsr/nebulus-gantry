@@ -17,7 +17,7 @@ export const useUIStore = create<UIState>((set) => ({
   closeSidebar: () => set({ isSidebarOpen: false }),
   checkOverlord: async () => {
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+      const apiUrl = import.meta.env.VITE_API_URL ?? '';
       const res = await fetch(`${apiUrl}/api/overlord/available`);
       if (res.ok) {
         const data = await res.json();
